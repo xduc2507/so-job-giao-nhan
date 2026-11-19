@@ -149,7 +149,7 @@
   async function sample(input, opts) {
     opts = opts || {};
     const key = getKey();
-    if (!key) { openSettings(); throw { code: "sampling_disabled", message: "Chưa nhập API key Claude. Bấm “Cài đặt” ở góc trên để nhập." }; }
+    if (!key) { openSettings("nokey"); throw { code: "sampling_disabled", message: "Chưa có API key Claude nên chưa đọc ảnh được. Bấm “Tạo job trống” để gõ tay, hoặc nhập key trong “Cài đặt”." }; }
     const prompt = typeof input === "string" ? input : (input || []).map(m => m.content).join("\n\n");
     const content = [];
     for (const img of asList(opts.images).slice(0, 5)) {
@@ -218,10 +218,11 @@
     return d;
   }
   let settingsOpen = false;
-  function openSettings() {
+  function openSettings(reason) {
     if (settingsOpen) return; settingsOpen = true;
     const k = getKey();
     const d = overlay(`<h2>Cài đặt</h2>
+      ${reason === "nokey" ? `<div class="banner">Muốn Claude đọc ảnh thì cần API key Claude của bạn (tính phí theo lượt dùng ở console.anthropic.com). Chưa có key: bấm <b>Đóng</b>, rồi bấm <b>Tạo job trống</b> hoặc <b>+ Tạo job</b> để gõ tay.</div>` : ""}
       <p>Bản dùng thử trên GitHub Pages. Dữ liệu chỉ nằm <b>trong trình duyệt này</b>: máy khác, trình duyệt khác sẽ thấy sổ trống. Nhớ sao lưu thường xuyên.</p>
       <label class="fld"><span>API key Claude (lấy ở console.anthropic.com → API keys)</span>
         <input id="sj-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="${esc(k)}"></label>
@@ -269,7 +270,7 @@
   onReady(() => {
     const top = $(".top"); if (!top) return;
     const b = document.createElement("button");
-    b.className = "ghost sm"; b.textContent = "Cài đặt"; b.onclick = openSettings;
+    b.className = "ghost sm"; b.textContent = "Cài đặt"; b.onclick = () => openSettings();
     top.appendChild(b);
   });
 
