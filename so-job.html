@@ -749,7 +749,7 @@ function renderMain(){
   }
   if(S.view==="plan"){renderPlan(el);return}
   el.dataset.v=S.view;
-  if(!S.jobs.length){el.innerHTML=`<div class="empty"><b>Chưa có job nào</b>Bấm “+ Tạo job từ ảnh”, rồi dán ảnh chụp email hoặc Zalo (Ctrl+V). Bạn cũng có thể dán ảnh thẳng vào trang này.</div>`;return}
+  if(!S.jobs.length&&S.view==="list"){el.innerHTML=`<div class="empty"><b>Chưa có job nào</b>Bấm “+ Tạo job” để gõ tay, hoặc “+ Từ ảnh” rồi dán ảnh chụp email / Zalo (Ctrl+V). Bạn cũng có thể dán ảnh thẳng vào trang này.</div>`;return}
   if(S.view==="list"){
     const jobs=visibleJobs();
     if(!jobs.length){el.innerHTML=`<div class="empty"><b>Không có job khớp bộ lọc</b>Đổi bộ lọc trạng thái hoặc chọn “Tất cả”.</div>`;return}
