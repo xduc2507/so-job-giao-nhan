@@ -40,7 +40,10 @@ Chi phí đọc ảnh tính vào tài khoản Claude API của bạn (console.an
 
 ### 3. Bản tĩnh trên GitHub Pages (dùng thử, miễn phí)
 Thư mục `docs/` là bản không cần máy chủ: `docs/index.html` = `so-job.html` + `static-shim.js`.
-- Dữ liệu lưu trong IndexedDB của **từng trình duyệt** (không đồng bộ giữa các máy). Nút **Cài đặt** có sao lưu / khôi phục file JSON.
+- Có `firebase-config.js`: dữ liệu lưu **online** trên Firebase Firestore, đăng nhập bằng Google, mọi máy thấy chung một sổ. Quy tắc Firestore chỉ cho các email trong danh sách đọc / ghi (Firebase console → Firestore → Rules). Nút **Cài đặt** có "Đưa job đang lưu trên máy này lên kho online".
+- Không có `firebase-config.js`: dữ liệu lưu trong IndexedDB của **từng trình duyệt** (không đồng bộ giữa các máy).
+- Nút **Cài đặt** có sao lưu / khôi phục file JSON.
+- Nút **Đọc chữ (miễn phí)** đọc chữ trong ảnh bằng Tesseract ngay trên máy, không cần API key.
 - Đọc ảnh: mỗi người tự nhập API key Claude trong **Cài đặt**; key chỉ lưu ở trình duyệt đó và gọi thẳng `api.anthropic.com`.
 - Sửa giao diện xong thì chạy `php build-pages.php` để dựng lại `docs/`, rồi commit và push.
 - Bật: GitHub repo → Settings → Pages → Branch `main`, thư mục `/docs`.

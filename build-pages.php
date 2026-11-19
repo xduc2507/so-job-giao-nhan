@@ -10,6 +10,11 @@ if (!is_dir($out)) mkdir($out, 0755, true);
 $html = (string) file_get_contents($root . '/so-job.html');
 $ver = substr(sha1_file($root . '/static-shim.js'), 0, 10);
 $shim = '<script src="static-shim.js?v=' . $ver . '"></script>' . "\n";
+// Kho online (Firebase): chỉ chèn khi có firebase-config.js (cấu hình web của Firebase là thông tin công khai)
+if (is_file($root . '/firebase-config.js')) {
+    copy($root . '/firebase-config.js', $out . '/firebase-config.js');
+    $shim = '<script src="firebase-config.js?v=' . substr(sha1_file($root . '/firebase-config.js'), 0, 10) . '"></script>' . "\n" . $shim;
+}
 $pos = strpos($html, '<script>');
 if ($pos === false) { fwrite(STDERR, "Không thấy <script> trong so-job.html\n"); exit(1); }
 $html = substr($html, 0, $pos) . $shim . substr($html, $pos);

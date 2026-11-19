@@ -201,7 +201,7 @@
   /* ---------- assets: ảnh gốc thu nhỏ, lưu thẳng trong job ---------- */
   const assets = {
     async upload(blob) {
-      const b = await shrink(blob, 1400, 0.8);
+      const b = FB ? await shrink(blob, 1000, 0.62) : await shrink(blob, 1400, 0.8); // Firestore: tối đa 1 MB mỗi job
       const url = await toDataURL(b);
       return { id: url, url, sizeBytes: b.size, contentType: b.type };
     },
@@ -223,7 +223,8 @@
     const k = getKey();
     const d = overlay(`<h2>Cài đặt</h2>
       ${reason === "nokey" ? `<div class="banner">Muốn Claude đọc ảnh thì cần API key Claude của bạn (tính phí theo lượt dùng ở console.anthropic.com). Chưa có key: bấm <b>Đóng</b>, rồi bấm <b>Tạo job trống</b> hoặc <b>+ Tạo job</b> để gõ tay.</div>` : ""}
-      <p>Bản dùng thử trên GitHub Pages. Dữ liệu chỉ nằm <b>trong trình duyệt này</b>: máy khác, trình duyệt khác sẽ thấy sổ trống. Nhớ sao lưu thường xuyên.</p>
+      ${FB ? `<p>Dữ liệu lưu <b>online</b> (Firebase)${fuser ? ", đang đăng nhập <b>" + esc(fuser.email || "") + "</b>" : ""}. Điện thoại và máy tính đăng nhập cùng tài khoản sẽ thấy chung một sổ.</p>`
+        : `<p>Bản dùng thử trên GitHub Pages. Dữ liệu chỉ nằm <b>trong trình duyệt này</b>: máy khác, trình duyệt khác sẽ thấy sổ trống. Nhớ sao lưu thường xuyên.</p>`}
       <label class="fld"><span>API key Claude (lấy ở console.anthropic.com → API keys)</span>
         <input id="sj-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="${esc(k)}"></label>
       <p class="note">Key chỉ lưu trong trình duyệt này và chỉ gửi tới api.anthropic.com. Đừng nhập key trên máy dùng chung. Không có key vẫn tạo job trống và nhập tay được.</p>
@@ -235,6 +236,7 @@
         <button id="sj-exp">Tải file sao lưu (.json)</button>
         <button id="sj-imp">Khôi phục từ file…</button>
         <input id="sj-file" type="file" accept="application/json,.json" hidden>
+        ${FB ? '<button id="sj-mig">Đưa job đang lưu trên máy này lên kho online</button>' : ""}
       </div>
       <div class="mrow"><button id="sj-close">Đóng</button></div>`);
     const msg = (t, err) => { const n = $("#sj-msg", d); n.textContent = t; n.className = "note" + (err ? " err" : ""); };
@@ -245,10 +247,20 @@
       if (!/^sk-ant-[\w-]{20,}$/.test(v)) { msg("Key phải bắt đầu bằng sk-ant-…", true); return; }
       try { localStorage.setItem(KEY_LS, v); msg("Đã lưu key."); } catch (e) { msg("Trình duyệt chặn lưu (chế độ ẩn danh?).", true); }
     };
+    const mig = $("#sj-mig", d);
+    if (mig) mig.onclick = async () => {
+      mig.disabled = true; msg("Đang đọc dữ liệu trên máy này…");
+      try {
+        const rows = (await allDocs()).filter(([k]) => COLS.includes(k.split("/")[0]));
+        if (!rows.length) { msg("Trình duyệt này không có job nào lưu trên máy."); mig.disabled = false; return; }
+        const n = await cloudPut(rows, true);
+        msg(n ? `Đã đưa ${n} mục lên kho online (bỏ qua mục đã có).` : "Mọi mục trên máy này đã có trên kho online.");
+      } catch (e) { msg("Chưa đưa lên được: " + (e.message || e.code || e), true); mig.disabled = false; }
+    };
     const clr = $("#sj-clear", d);
     if (clr) clr.onclick = () => { try { localStorage.removeItem(KEY_LS); } catch (e) {} $("#sj-key", d).value = ""; msg("Đã xoá key."); };
     $("#sj-exp", d).onclick = async () => {
-      const rows = await allDocs();
+      const rows = FB ? await cloudAll() : await allDocs();
       const blob = new Blob([JSON.stringify({ app: "so-job", version: 1, exportedAt: new Date().toISOString(), docs: rows.map(([k, v]) => ({ path: k, data: v })) })], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob); a.download = "so-job-" + new Date().toISOString().slice(0, 10) + ".json";
@@ -261,6 +273,7 @@
         const j = JSON.parse(await f.text());
         if (!j || j.app !== "so-job" || !Array.isArray(j.docs)) throw new Error("File không phải bản sao lưu Sổ Job.");
         const good = j.docs.filter(x => x && typeof x.path === "string" && /^[a-z]+\/.+/.test(x.path) && x.data && typeof x.data === "object");
+        if (FB) { msg("Đang ghi lên kho online…"); const n = await cloudPut(good.map(x => [x.path, x.data]), false); msg("Đã khôi phục " + n + " mục lên kho online."); return; }
         await tx("readwrite", s => { good.forEach(x => s.put(x.data, x.path)); });
         msg("Đã khôi phục " + good.length + " mục. Đang tải lại…");
         setTimeout(() => location.reload(), 800);
@@ -297,6 +310,96 @@
     return out.filter(Boolean).join("\n\n");
   };
 
+  /* ---------- kho online (Firebase): bật khi có firebase-config.js ---------- */
+  const FB = window.SOJOB_FIREBASE && window.SOJOB_FIREBASE.apiKey ? window.SOJOB_FIREBASE : null;
+  const COLS = ["jobs", "meta", "partners", "todos"];
+  const FBV = "10.12.2";
+  function addScript(src) {
+    return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Không tải được " + src.split("/").pop() + ". Kiểm tra mạng.")); document.head.appendChild(s); });
+  }
+  let fdb = null, fauth = null, fuser = null;
+  async function cloudAll() {
+    const rows = [];
+    for (const c of COLS) { const s = await fdb.collection(c).get(); s.docs.forEach(d => rows.push([c + "/" + d.id, d.data()])); }
+    return rows;
+  }
+  async function cloudPut(rows, onlyMissing) {
+    let n = 0;
+    for (let i = 0; i < rows.length; i += 400) {
+      const part = rows.slice(i, i + 400);
+      let todo = part;
+      if (onlyMissing) {
+        todo = [];
+        for (const [p, v] of part) { const s = await fdb.doc(p).get(); if (!s.exists) todo.push([p, v]); }
+      }
+      if (!todo.length) continue;
+      const b = fdb.batch();
+      todo.forEach(([p, v]) => b.set(fdb.doc(p), JSON.parse(JSON.stringify(v))));
+      await b.commit(); n += todo.length;
+    }
+    return n;
+  }
+  function loginScreen(err) {
+    onReady(() => {
+      let d = document.getElementById("sj-login");
+      if (!d) { d = overlay(""); d.id = "sj-login"; }
+      const sheet = d.querySelector(".sheet");
+      sheet.style.maxWidth = "420px"; sheet.style.marginTop = "14vh";
+      sheet.innerHTML = `<h2>Đăng nhập Sổ Job</h2>
+        <p>Dữ liệu lưu online. Đăng nhập cùng tài khoản Google trên điện thoại và máy tính để thấy chung một sổ.</p>
+        ${err ? `<div class="banner">${esc(err)}</div>` : ""}
+        <div class="mrow" style="justify-content:stretch"><button class="primary" id="sj-g" style="flex:1;padding:10px">Đăng nhập bằng Google</button></div>
+        ${fuser ? `<div class="mrow"><button class="ghost" id="sj-out2">Đăng xuất ${esc(fuser.email || "")}</button></div>` : ""}`;
+      sheet.querySelector("#sj-g").onclick = async () => {
+        const p = new firebase.auth.GoogleAuthProvider();
+        p.setCustomParameters({ prompt: "select_account" });
+        try { await fauth.signInWithPopup(p); }
+        catch (e) {
+          if (e && (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment")) { try { await fauth.signInWithRedirect(p); return; } catch (e2) { e = e2; } }
+          if (e && e.code === "auth/popup-closed-by-user") return;
+          loginScreen("Không đăng nhập được: " + (e && (e.message || e.code)));
+        }
+      };
+      const o = sheet.querySelector("#sj-out2"); if (o) o.onclick = () => fauth.signOut();
+    });
+  }
+  function userBar() {
+    onReady(() => {
+      const top = $(".top"); if (!top || $("#sj-user")) return;
+      const s = document.createElement("button");
+      s.id = "sj-user"; s.className = "ghost sm"; s.title = "Đăng xuất " + (fuser.email || "");
+      s.textContent = "Đăng xuất"; s.onclick = () => { if (confirm("Đăng xuất " + (fuser.email || "") + "?")) fauth.signOut(); };
+      top.appendChild(s);
+    });
+  }
+  const cloudReady = !FB ? null : (async () => {
+    for (const f of ["app", "auth", "firestore"]) await addScript(`https://www.gstatic.com/firebasejs/${FBV}/firebase-${f}-compat.js`);
+    firebase.initializeApp(FB);
+    fauth = firebase.auth();
+    fdb = firebase.firestore();
+    fdb.settings({ ignoreUndefinedProperties: true, merge: true });
+    try { await fdb.enablePersistence({ synchronizeTabs: true }); } catch (e) { /* trình duyệt không hỗ trợ: vẫn chạy online */ }
+    let first = true;
+    return new Promise(res => {
+      fauth.onAuthStateChanged(async u => {
+        if (!u) { if (!first) { location.reload(); return; } first = false; fuser = null; loginScreen(); return; }
+        first = false; fuser = u;
+        try { await fdb.doc("meta/templates").get(); }
+        catch (e) {
+          if (e && e.code === "permission-denied") { loginScreen(`Tài khoản ${u.email} chưa được cấp quyền dùng sổ này. Nhờ chủ sổ thêm email vào quy tắc Firestore, hoặc đăng xuất để chọn tài khoản khác.`); return; }
+        }
+        window.SOJOB_USER = u.displayName || u.email || "";
+        const l = document.getElementById("sj-login"); if (l) l.remove();
+        userBar();
+        res(fdb);
+      });
+    });
+  })().catch(e => { onReady(() => { const b = $("#banner"); if (b) b.innerHTML = `<div class="banner">Không kết nối được kho online: ${esc(e.message || e)}</div>`; }); return null; });
+
   const caps = { db, sample, assets };
-  window.claude = Object.freeze({ use: async name => caps[name] || null });
+  window.claude = Object.freeze({ use: async name => {
+    if (cloudReady && name === "db") return await cloudReady;
+    if (cloudReady) await cloudReady;
+    return caps[name] || null;
+  } });
 })();
