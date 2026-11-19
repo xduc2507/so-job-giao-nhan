@@ -139,6 +139,9 @@ body.view-board .back{display:inline-block}
 .col.over{border-color:var(--accent);border-top-color:var(--accent)}
 .col-h{padding:9px 12px 8px;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid var(--line);background:var(--surface);border-radius:4px 4px 0 0}
 .col-h .nm{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:700;font-size:13.5px}
+.col-h .nr{display:flex;gap:6px;align-items:center}
+.col-h .add{border:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;padding:0 6px;min-height:24px;border-radius:4px}
+.col-h .add:hover{background:var(--surface-2);color:var(--ink)}
 .col-h .nm .n{font-family:var(--f-mono);font-size:12px;font-weight:500;color:var(--muted);background:var(--surface-2);border-radius:999px;padding:0 8px}
 .col-h .sub{font-size:11.5px;color:var(--muted)}
 .col-h .sub .bad{color:var(--bad);font-weight:600}
@@ -317,7 +320,8 @@ table.q .num{text-align:right}
 <header class="top">
   <div class="brand"><i aria-hidden="true"></i><b>Sổ Job Giao Nhận</b></div>
   <input id="q" type="search" placeholder="Tìm job, FWD, công ty, số B/L…" aria-label="Tìm job">
-  <button id="btnNew" class="primary">+ Tạo job từ ảnh</button>
+  <button id="btnManual" title="Tạo job bằng cách gõ tay, không cần ảnh / email">+ Tạo job</button>
+  <button id="btnNew" class="primary" title="Dán ảnh chụp email / Zalo để Claude tạo job">+ Từ ảnh</button>
 </header>
 
 <div class="app">
@@ -363,7 +367,7 @@ table.q .num{text-align:right}
     </div>
   </div>
 </div>
-<button class="kb-fab" id="kbFab" aria-label="Tạo job mới" title="Tạo job mới">+</button>
+<button class="kb-fab" id="kbFab" aria-label="Tạo job nhập tay" title="Tạo job nhập tay">+</button>
 <div id="toast" hidden></div>
 
 <script src="static-shim.js?v=f42c3ba011"></script>
@@ -518,7 +522,7 @@ function ask({title,text,fields=[],ok,danger}){
     d.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" style="max-width:460px;margin-top:12vh"><h2>${esc(title)}</h2>${text?`<p>${esc(text)}</p>`:""}
       <form style="display:flex;flex-direction:column;gap:10px">${fields.map(f=>`<label class="fld"><span>${esc(f.label)}</span>${f.type==="select"
         ?`<select name="${f.id}"><option value="">— Chọn —</option>${f.options.map(o=>`<option ${o===f.value?"selected":""}>${esc(o)}</option>`).join("")}</select>`
-        :`<input name="${f.id}" type="${f.type||"text"}" value="${esc(f.value||"")}" autocomplete="off" ${f.id==="debitAmount"?'inputmode="decimal"':""}>`}</label>`).join("")}
+        :`<input name="${f.id}" type="${f.type||"text"}" value="${esc(f.value||"")}" autocomplete="off" ${f.id==="debitAmount"?'inputmode="decimal"':""} ${f.list?`list="ask-${f.id}"`:""}>${f.list?`<datalist id="ask-${f.id}">${f.list.map(o=>`<option value="${esc(o)}">`).join("")}</datalist>`:""}`}</label>`).join("")}
       <div class="mrow"><span class="note err" data-e></span><button type="button" data-c>Huỷ bỏ</button><button class="primary${danger?" bad":""}" type="submit">${esc(ok||"OK")}</button></div></form></div>`;
     document.body.appendChild(d);
     const esck=e=>{if(e.key==="Escape"){e.stopPropagation();done(null)}};
@@ -678,7 +682,7 @@ function renderBoard(el){
     else arr.sort((a,b)=>(isLate(b)-isLate(a))||((b.priority==="Gấp")-(a.priority==="Gấp"))||(a.stageAt||0)-(b.stageAt||0));
     const lt=arr.filter(isLate).length,lim=num(S.stall[st]);
     const sub=!isOpen(st)?(n>arr.length?`${arr.length} gần nhất / ${n}`:`${n} job`):`${n} job${lt?` · <span class="bad">${lt} đứng yên / quá hạn</span>`:""}${lim?` · ngưỡng ${lim} ngày`:""}`;
-    return `<div class="col c${ci}" data-col="${esc(st)}"><div class="col-h"><span class="nm">${esc(COLNAME[st]||st)}<span class="n">${n}</span></span><span class="sub">${sub}</span></div>
+    return `<div class="col c${ci}" data-col="${esc(st)}"><div class="col-h"><span class="nm">${esc(COLNAME[st]||st)}<span class="nr">${isOpen(st)?`<button class="add" data-addcol="${esc(st)}" title="Tạo job ở cột “${esc(st)}”" aria-label="Tạo job ở cột ${esc(st)}">+</button>`:""}<span class="n">${n}</span></span></span><span class="sub">${sub}</span></div>
       <div class="col-b">${arr.map(kanbanCard).join("")||'<span class="none">Kéo thẻ vào đây</span>'}</div></div>`;
   }).join("");
   el.innerHTML=`<div class="kb-bar"><select id="kbGroup" aria-label="Lọc theo FWD / công ty"><option value="__all">Tất cả FWD / cty (${S.jobs.length})</option>${groups.map(g=>`<option value="${esc(g)}" ${S.group===g?"selected":""}>${esc(g)}</option>`).join("")}</select>
@@ -956,6 +960,7 @@ $("#content").addEventListener("click",e=>{
   const del=e.target.closest("[data-todel]");
   if(del){const id=del.dataset.todel,path="todos/"+id;S.todos=S.todos.filter(x=>x.id!==id);clearTimeout(timers[path]);delete timers[path];dirty.delete(path);
     (chains[path]||Promise.resolve()).then(()=>db&&db.doc(path).delete()).catch(()=>toast("Chưa xoá được, thử lại."));renderPlan($("#content"));return}
+  const ac=e.target.closest("[data-addcol]");if(ac){manualJob(ac.dataset.addcol);return}
   const km=e.target.closest("[data-kmenu]");
   if(km){e.stopPropagation();kmenu&&kmenu.dataset.id===km.dataset.kmenu?closeKmenu():openKmenu(km);return}
   const rs=e.target.closest("[data-reset]");
@@ -966,7 +971,25 @@ $("#prof").addEventListener("click",onOpenClick);
 $("#content").addEventListener("keydown",e=>{
   if(e.key==="Enter"&&(e.target.id==="pa-text"||e.target.id==="pa-due")&&!e.isComposing){e.preventDefault();addPlanItem();return}
   if(e.key==="Enter"&&e.target.matches(".row")){openJob(e.target.dataset.open)}});
-$("#kbFab").addEventListener("click",()=>$("#btnNew").click());
+/* Tạo job nhập tay: khi không có ảnh / email (khách gọi điện, dặn miệng…) */
+async function manualJob(status){
+  const known=[...new Set(S.jobs.flatMap(x=>[x.fwd,x.company]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"vi"));
+  const v=await ask({title:"Tạo job nhập tay",text:status&&status!==STAGES[0]?`Job sẽ nằm ở cột “${status}”. Các thông tin khác điền sau trong phiếu job.`:"Chỉ cần tiêu đề, các thông tin khác điền sau trong phiếu job.",ok:"Tạo job",
+    fields:[{id:"title",label:"Tiêu đề (VD: Khai nhập 2x40 máy móc cho Cty A)",required:true},
+      {id:"who",label:"FWD / công ty",list:known,value:S.group!=="__all"&&S.group!==NOGROUP?S.group:""},
+      {id:"service",label:"Loại dịch vụ",type:"select",options:SERVICES,value:S.svc||"HQ",required:true},
+      {id:"type",label:"Loại việc (để trống: tự chọn theo dịch vụ)",type:"select",options:TYPES},
+      {id:"deadline",label:"Hạn xử lý (không bắt buộc)",type:"date"},
+      {id:"summary",label:"Ghi chú / yêu cầu của khách"}]});
+  if(!v)return;
+  const type=v.type||(v.service==="VC"?"Vận chuyển":"Khai HQ nhập");
+  const asCompany=!!v.who&&!S.jobs.some(j=>j.fwd===v.who)&&S.jobs.some(j=>j.company===v.who);
+  await createJob({title:v.title,fwd:asCompany?"":v.who,company:asCompany?v.who:"",
+    service:v.service,type,deadline:v.deadline,summary:v.summary,source:"Điện thoại",tasks:tplTasks(type),status:status||(type==="Báo giá"?"Báo giá":STAGES[0])});
+  toast(`Đã tạo ${cur()?.code}. Điền thêm thông tin ở phiếu job.`);
+}
+$("#btnManual").addEventListener("click",()=>manualJob());
+$("#kbFab").addEventListener("click",()=>manualJob());
 $("#content").addEventListener("change",e=>{
   if(e.target.id==="kbGroup"){S.group=e.target.value;S.sel=null;renderAll(true);return}
   const td=e.target.dataset.ptodo;
