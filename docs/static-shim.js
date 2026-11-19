@@ -149,7 +149,7 @@
   async function sample(input, opts) {
     opts = opts || {};
     const key = getKey();
-    if (!key) { openSettings("nokey"); throw { code: "sampling_disabled", message: "Chưa có API key Claude nên chưa đọc ảnh được. Bấm “Tạo job trống” để gõ tay, hoặc nhập key trong “Cài đặt”." }; }
+    if (!key) throw { code: "sampling_disabled", message: "Chưa có API key Claude. Bấm “Đọc chữ (miễn phí)” để đọc chữ trong ảnh không cần key, hoặc nhập key trong “Cài đặt” để Claude tự tách thông tin." };
     const prompt = typeof input === "string" ? input : (input || []).map(m => m.content).join("\n\n");
     const content = [];
     for (const img of asList(opts.images).slice(0, 5)) {
@@ -273,6 +273,29 @@
     b.className = "ghost sm"; b.textContent = "Cài đặt"; b.onclick = () => openSettings();
     top.appendChild(b);
   });
+
+  /* ---------- đọc chữ trong ảnh miễn phí (Tesseract, chạy ngay trên máy) ---------- */
+  let ocrWorker = null;
+  function loadScript(src) {
+    return new Promise((res, rej) => { if (window.Tesseract) return res(); const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Không tải được bộ đọc chữ. Kiểm tra mạng.")); document.head.appendChild(s); });
+  }
+  let ocrProgress = null;
+  window.SOJOB_OCR = async (files, onProgress, signal) => {
+    ocrProgress = onProgress;
+    if (!ocrWorker) ocrWorker = (async () => {
+      await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+      return window.Tesseract.createWorker("vie", 1, { logger: m => { if (ocrProgress) try { ocrProgress(m.status, m.progress || 0); } catch (e) {} } });
+    })().catch(e => { ocrWorker = null; throw e; });
+    const w = await ocrWorker;
+    const out = [];
+    for (const f of asList(files)) {
+      if (signal && signal.aborted) throw { code: "cancelled", message: "Đã dừng." };
+      const { data } = await w.recognize(f);
+      out.push((data && data.text || "").trim());
+    }
+    if (signal && signal.aborted) throw { code: "cancelled", message: "Đã dừng." };
+    return out.filter(Boolean).join("\n\n");
+  };
 
   const caps = { db, sample, assets };
   window.claude = Object.freeze({ use: async name => caps[name] || null });

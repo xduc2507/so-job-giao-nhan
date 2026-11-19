@@ -366,6 +366,7 @@ table.q .num{text-align:right}
       <button id="btnBlank" class="ghost">Tạo job trống</button>
       <button id="btnStop" hidden>Dừng</button>
       <button id="btnClose">Đóng</button>
+      <button id="btnOcr" hidden title="Đọc chữ trong ảnh ngay trên máy, không cần API key; bạn tự điền các ô còn thiếu">Đọc chữ (miễn phí)</button>
       <button id="btnAnalyze" class="primary">Đọc ảnh & tạo job</button>
     </div>
   </div>
@@ -1174,6 +1175,52 @@ $("#btnAnalyze").addEventListener("click",async()=>{
     toast(`Đã tạo ${cur()?.code}: ${data.fwd||data.company||"chưa rõ FWD"}. Kiểm tra lại thông tin bên phải.`);
   }catch(e){if(e?.code==="cancelled")note("Đã dừng.");else note((window.SOJOB_BLOB_BASE!=null&&e?.message)?esc(e.message):ERR[e?.code]||"Có lỗi khi gọi Claude ("+esc(e?.code||"không rõ")+"). Thử lại.",true)}
   finally{btn.disabled=false;$("#btnStop").hidden=true;ctl=null}
+});
+
+/* ---------- đọc chữ miễn phí (không cần Claude): chép chữ trong ảnh + đoán vài trường ---------- */
+function guessFromText(t){
+  const text=String(t||""),up=text.toUpperCase(),low=normName(text);
+  const m=(re,i=1)=>{const r=text.match(re);return r?String(r[i]).trim():""};
+  const conts=[...new Set((up.match(/\b[A-Z]{3}U\s?\d{7}\b/g)||[]).map(x=>x.replace(/\s/g,"")))];
+  const qty=m(/\b(\d{1,2}\s*[xX×]\s*(?:20|40|45)\s*(?:'|DC|GP|HC|HQ|RF|OT|FR)?)/);
+  const cont=[qty.replace(/\s/g,"").replace("×","x"),conts.slice(0,6).join(", ")].filter(Boolean).join(" · ");
+  const bl=m(/(?:\bM?H?B\/?L\b|\bBILL\b|\bBOOKING\b|\bBKG\b|vận đơn)\s*(?:NO\.?|NUMBER|số)?\s*[:#.]?\s*([A-Z0-9][A-Z0-9-]{5,})/i);
+  const mst=m(/(?:\bMST\b|mã số thuế|tax\s*code)[^\d\n]{0,25}(\d{10}(?:-\d{3})?)/i);
+  const tkNo=m(/(?:tờ khai|\bTK\b|số TK)[^\d\n]{0,20}(\d{12})/i)||m(/\b((?:10|30)\d{10})\b/);
+  const known=[...new Set(S.jobs.flatMap(j=>[j.fwd,j.company]).filter(Boolean))].sort((a,b)=>b.length-a.length);
+  const hit=known.find(n=>normName(n).length>=3&&low.includes(normName(n)));
+  const isFwd=hit&&S.jobs.some(j=>j.fwd===hit);
+  const vc=/van chuyen|trucking|keo cont|xe cont|xe tai|giao hang|dong hang|ha cont|nang ha/.test(low);
+  const hq=/khai|thong quan|hai quan|to khai|\bc\/o\b|kiem hoa|customs/.test(low);
+  const service=vc&&hq?"HQ+VC":vc?"VC":"HQ";
+  const type=/bao gia|hoi gia|xin gia|quotation|\brate\b/.test(low)?"Báo giá":service==="VC"?"Vận chuyển":/xuat khau|khai xuat|\bexport\b/.test(low)?"Khai HQ xuất":"Khai HQ nhập";
+  const lines=text.split(/\n+/).map(s=>s.trim()).filter(s=>s.length>=6&&!/^(from|to|cc|sent|date|gửi|đến|ngày|re:|fw:)\b/i.test(s));
+  const subj=m(/(?:subject|tiêu đề|chủ đề)\s*[:：]\s*(.+)/i);
+  const title=(subj||lines[0]||"Job đọc từ ảnh").replace(/^(re|fw|fwd)\s*:\s*/i,"").slice(0,90);
+  return{title,fwd:hit&&isFwd?hit:"",company:hit&&!isFwd?hit:"",service,type,bl,cont,mst,tkNo,
+    summary:text.replace(/\s+/g," ").slice(0,400),source:"Khác",tasks:tplTasks(type),status:type==="Báo giá"?"Báo giá":STAGES[0]};
+}
+$("#btnOcr").hidden=!window.SOJOB_OCR;
+$("#btnOcr").addEventListener("click",async()=>{
+  const text=$("#rawtext").value.trim();
+  if(!pending.length&&!text){note("Dán ảnh hoặc nội dung tin nhắn trước.",true);return}
+  ctl=new AbortController();const btn=$("#btnOcr");btn.disabled=true;$("#btnAnalyze").disabled=true;$("#btnStop").hidden=false;
+  const ST={"loading tesseract core":"Đang tải bộ đọc chữ","initializing tesseract":"Đang khởi động","loading language traineddata":"Đang tải dữ liệu tiếng Việt (lần đầu ~1,5 MB)","initializing api":"Đang khởi động","recognizing text":"Đang đọc chữ"};
+  note('<span class="spin"></span>Đang tải bộ đọc chữ… (lần đầu mất vài giây)');
+  try{
+    let all=text;
+    if(pending.length){
+      const got=await window.SOJOB_OCR(pending.map(p=>p.file),(st,p)=>{if(ST[st])note(`<span class="spin"></span>${ST[st]}… ${Math.round(p*100)}%`)},ctl.signal);
+      all=[got,text].filter(Boolean).join("\n\n");
+    }
+    if(!all.trim()){note("Không đọc được chữ nào trong ảnh. Thử ảnh rõ hơn, hoặc bấm “Tạo job trống”.",true);return}
+    note('<span class="spin"></span>Đang lưu job…');
+    const data=guessFromText(all);data.raw=all;data.images=await uploadPending();
+    closeModal();await createJob(data);
+    const found=[data.fwd||data.company,data.bl&&"B/L",data.cont&&"cont",data.mst&&"MST",data.tkNo&&"tờ khai"].filter(Boolean);
+    toast(`Đã tạo ${cur()?.code} từ chữ đọc được${found.length?" (tự điền: "+found.join(", ")+")":""}. Kiểm tra và điền thêm ở phiếu job.`);
+  }catch(e){if(e?.code==="cancelled"||ctl?.signal.aborted)note("Đã dừng.");else note("Không đọc được chữ: "+esc(e?.message||e),true)}
+  finally{btn.disabled=false;$("#btnAnalyze").disabled=false;$("#btnStop").hidden=true;ctl=null}
 });
 
 /* ---------- toast ---------- */
