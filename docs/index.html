@@ -1,0 +1,899 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="same-origin"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,"Segoe UI",sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Sổ Job Giao Nhận</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: bàn điều phối 3 cột — nhóm FWD | danh sách / bảng quy trình / kế hoạch | phiếu job */
+:root{
+  --bg:#EEF1F4; --surface:#FFFFFF; --surface-2:#F6F8FA; --ink:#15212C; --muted:#5A6A79; --line:#D8DFE6;
+  --accent:#C2541D; --accent-ink:#FFFFFF; --accent-soft:#FAE8DC;
+  --ok:#1E7A4C; --ok-soft:#DFF2E8; --warn:#A86A12; --warn-soft:#FBF0D9; --bad:#B42318; --bad-soft:#FBE3E0; --info:#2558A6; --info-soft:#E1EAF8;
+  --violet:#6B46C1; --violet-soft:#ECE6FA;
+  --f-body:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E151B; --surface:#16202A; --surface-2:#1B2733; --ink:#E4ECF3; --muted:#91A2B2; --line:#283541;
+  --accent:#E57A43; --accent-ink:#1A0F08; --accent-soft:#3A2417;
+  --ok:#52C48C; --ok-soft:#173226; --warn:#E0AE4B; --warn-soft:#352915; --bad:#F2766B; --bad-soft:#3A1C1A; --info:#7EA8EA; --info-soft:#1B2A40;
+  --violet:#B39BF0; --violet-soft:#29213F;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0E151B; --surface:#16202A; --surface-2:#1B2733; --ink:#E4ECF3; --muted:#91A2B2; --line:#283541;
+  --accent:#E57A43; --accent-ink:#1A0F08; --accent-soft:#3A2417;
+  --ok:#52C48C; --ok-soft:#173226; --warn:#E0AE4B; --warn-soft:#352915; --bad:#F2766B; --bad-soft:#3A1C1A; --info:#7EA8EA; --info-soft:#1B2A40;
+  --violet:#B39BF0; --violet-soft:#29213F;
+  color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:6px 12px}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+button.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+button.ghost:hover{color:var(--ink);background:var(--surface-2)}
+button.sm{padding:3px 9px;font-size:12.5px}
+button:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
+textarea{resize:vertical}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h2,h3{text-wrap:balance}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);
+  display:flex;gap:12px;align-items:center;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;white-space:nowrap}
+.brand i{width:22px;height:14px;border-radius:2px;background:repeating-linear-gradient(90deg,var(--accent) 0 3px,transparent 3px 5px);display:inline-block}
+.top input{max-width:340px;margin-left:auto}
+.app{display:grid;grid-template-columns:220px minmax(0,1fr) minmax(0,460px);gap:16px;align-items:start;
+  padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+#side{display:flex;flex-direction:column;gap:2px;position:sticky;top:72px;max-height:calc(100vh - 90px);overflow:auto}
+.side-h{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 10px 4px}
+.g{display:flex;justify-content:space-between;align-items:center;gap:8px;border:0;background:transparent;text-align:left;padding:7px 10px;border-radius:6px;width:100%}
+.g:hover{background:var(--surface)}
+.g.on{background:var(--surface);box-shadow:inset 3px 0 0 var(--accent);font-weight:600}
+.g span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g .n{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+
+#main{min-width:0;display:flex;flex-direction:column;gap:12px}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tabs{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:2px;flex-wrap:wrap}
+.tabs button{border:0;background:transparent;padding:5px 12px;border-radius:5px;color:var(--muted)}
+.tabs button.on{background:var(--ink);color:var(--surface);font-weight:600}
+.bar .sp{flex:1}
+.bar select{width:auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.list{display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--surface-2)}
+.row.on{background:var(--accent-soft)}
+.row .code{font-family:var(--f-mono);font-size:12px;color:var(--muted);grid-row:span 2;align-self:start;padding-top:2px}
+.row .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .meta{display:flex;gap:6px;flex-wrap:wrap;color:var(--muted);font-size:12.5px;grid-column:2/4;align-items:center}
+.row .right{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:1px 8px;border-radius:999px;white-space:nowrap;background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.pill.fwd{color:var(--ink);font-weight:500}
+.st0{background:var(--info-soft);color:var(--info);border-color:transparent}
+.st1{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.st2{background:var(--violet-soft);color:var(--violet);border-color:transparent}
+.st3{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.st4{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.st5{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.st6{background:var(--ok);color:var(--surface);border-color:transparent}
+.st7{text-decoration:line-through}
+.wait{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.dl-over{background:var(--bad-soft);color:var(--bad);border-color:transparent;font-weight:600}
+.dl-today{background:var(--warn-soft);color:var(--warn);border-color:transparent;font-weight:600}
+.urgent{color:var(--bad);font-weight:700;font-size:12px}
+.ex{background:var(--surface-2);color:var(--muted);border:1px dashed var(--muted);font-size:11px;padding:0 6px;border-radius:4px;letter-spacing:.04em}
+.grp-h{padding:8px 14px;font-size:12px;font-weight:600;color:var(--muted);background:var(--surface-2);border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+.grp-h:first-child{border-radius:var(--r) var(--r) 0 0}
+.empty{padding:32px 20px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
+.plan-task{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;padding:9px 14px;border-bottom:1px solid var(--line)}
+.plan-task input{margin-top:3px}
+.plan-task .sub{grid-column:2;font-size:12.5px;color:var(--muted);cursor:pointer}
+.plan-task .sub:hover{color:var(--accent)}
+.plan-task .sub2{grid-column:2;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.plan-add{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,220px) 150px auto;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface-2);border-radius:var(--r) var(--r) 0 0}
+@media (max-width:780px){.plan-add{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.plan-add #pa-text{grid-column:1/-1}}
+
+/* partner profile */
+.prof{padding:16px;display:flex;flex-direction:column;gap:12px}
+.prof-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.prof-h h2{margin:0;font-size:19px}
+.prof-h span{color:var(--muted);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.stat{background:var(--surface-2);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat span{font-size:11.5px;color:var(--muted)}
+.stat b{font-family:var(--f-mono);font-size:15px;overflow-wrap:anywhere}
+.stat.debt b{color:var(--bad)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}
+details summary{cursor:pointer;color:var(--muted);font-size:13px;font-weight:600}
+.hwrap{overflow-x:auto;margin-top:8px}
+table.h{border-collapse:collapse;width:100%;min-width:520px;font-size:13px}
+table.h th{text-align:left;font-size:11px;color:var(--muted);font-weight:600;padding:4px 6px;border-bottom:1px solid var(--line)}
+table.h td{padding:4px 6px;border-bottom:1px dashed var(--line)}
+table.h .num{text-align:right}
+
+/* board */
+.kb{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:10px;overflow-x:auto;padding:10px}
+.col{background:var(--surface-2);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:8px;min-height:240px;border:2px solid transparent}
+.col.over{border-color:var(--accent)}
+.col-h{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;padding:2px 4px}
+.col-h .mono{color:var(--muted);font-weight:500}
+.kc{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:8px 10px;display:flex;flex-direction:column;gap:5px;cursor:grab}
+.kc.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.kc.dragging{opacity:.4}
+.kc .t{font-weight:600;font-size:13px;overflow-wrap:anywhere}
+.kc .m{display:flex;gap:5px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
+.kc .mv{display:flex;justify-content:space-between}
+.kc .mv button{padding:4px 14px;font-size:14px;min-height:32px}
+
+/* templates */
+.tpl{padding:16px;display:flex;flex-direction:column;gap:14px}
+.tpl p{margin:0;color:var(--muted)}
+.tpl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.tpl-item{display:flex;flex-direction:column;gap:4px}
+.tpl-item .h{display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.tpl-item textarea{font-size:13px;line-height:1.55}
+
+/* detail */
+#detail{position:sticky;top:72px;max-height:calc(100vh - 90px);overflow:auto;min-width:0}
+.d{display:flex;flex-direction:column}
+.d-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.d-head .l1{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.d-head input.title{font-size:17px;font-weight:700;border-color:transparent;padding:4px 6px;margin-left:-6px}
+.d-head input.title:hover,.d-head input.title:focus{border-color:var(--line)}
+.stages{display:flex;gap:2px;overflow-x:auto}
+.stages button{flex:1;border:0;border-radius:0;padding:5px 4px;font-size:11.5px;background:var(--surface-2);color:var(--muted);white-space:nowrap;min-width:58px}
+.stages button:first-child{border-radius:5px 0 0 5px}
+.stages button:last-child{border-radius:0 5px 5px 0}
+.stages button.past{background:var(--ok-soft);color:var(--ok)}
+.stages button.now{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.chk{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer}
+.sec{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.sec:last-child{border-bottom:0}
+.sec h3{margin:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sec h3 .acts{letter-spacing:0;text-transform:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 10px}
+.fld{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fld>span{font-size:12px;color:var(--muted)}
+.fld.full{grid-column:1/-1}
+.task{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center}
+.task input[type=text]{border-color:transparent;padding:4px 6px}
+.task input[type=text]:hover,.task input[type=text]:focus{border-color:var(--line)}
+.task.done input[type=text]{text-decoration:line-through;color:var(--muted)}
+.x{border:0;background:transparent;color:var(--muted);padding:2px 6px}
+.x:hover{color:var(--bad)}
+.prog{height:4px;background:var(--surface-2);border-radius:2px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--ok)}
+.qwrap{overflow-x:auto}
+table.q{border-collapse:collapse;width:100%;min-width:600px}
+table.q th{font-size:11px;font-weight:600;color:var(--muted);text-align:left;padding:4px;border-bottom:1px solid var(--line)}
+table.q td{padding:3px 2px;border-bottom:1px dashed var(--line);vertical-align:middle}
+table.q td input,table.q td select{padding:4px 5px}
+table.q .num{text-align:right}
+.hint{border:0;background:transparent;color:var(--info);font-size:11.5px;padding:0 2px;text-align:left;white-space:nowrap}
+.hint:hover{text-decoration:underline}
+.hint.none{color:var(--muted);cursor:default;text-decoration:none}
+.tot{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:13px}
+.tot b{font-family:var(--f-mono);font-size:15px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumbs a img,.thumbs img{width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--line);display:block}
+.empty-detail{padding:40px 24px;color:var(--muted);text-align:center}
+.back{display:none}
+.danger{color:var(--bad)}
+.danger.arm{background:var(--bad);color:#fff;border-color:var(--bad)}
+
+.modal{position:fixed;inset:0;z-index:30;background:rgba(10,16,22,.5);display:flex;align-items:flex-start;justify-content:center;overflow:auto;
+  padding-block:calc(40px + env(safe-area-inset-top,0px)) 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.sheet{background:var(--surface);border-radius:12px;width:100%;max-width:620px;padding:20px;display:flex;flex-direction:column;gap:12px;border:1px solid var(--line)}
+.sheet h2{margin:0;font-size:18px}
+.sheet p{margin:0;color:var(--muted)}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:26px 16px;text-align:center;color:var(--muted);background:var(--surface-2)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop label{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline}
+.drop input{display:none}
+.kbd{font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--surface)}
+.pthumb{position:relative}
+.pthumb button{position:absolute;top:-6px;right:-6px;border-radius:999px;padding:0 6px;font-size:12px}
+.mrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.mrow .note{margin-right:auto;color:var(--muted);font-size:13px}
+.mrow .note.err{color:var(--bad)}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--surface);padding:8px 16px;border-radius:8px;font-size:13px;max-width:calc(100% - 32px)}
+.banner{background:var(--warn-soft);color:var(--warn);padding:8px 12px;border-radius:6px;font-size:13px}
+.copybox{width:100%;min-height:160px;font-family:var(--f-mono);font-size:12px}
+
+@media (max-width:1180px){
+  .app{grid-template-columns:minmax(0,1fr) minmax(0,420px)}
+  #side{grid-column:1/-1;flex-direction:row;overflow-x:auto;position:static;gap:6px;max-height:none}
+  .side-h{display:none}
+  .g{width:auto;flex:none;border:1px solid var(--line);background:var(--surface)}
+  .g.on{box-shadow:none;border-color:var(--accent)}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:780px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .top input{max-width:none}
+  .top .brand b{display:none}
+  #detail{display:none}
+  body.has-detail #detail{display:block;position:fixed;inset:0;z-index:20;max-height:none;border-radius:0;
+    padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .back{display:inline-block}
+  .grid3{grid-template-columns:1fr 1fr}
+  .tpl-grid{grid-template-columns:minmax(0,1fr)}
+}
+</style>
+
+<header class="top">
+  <div class="brand"><i aria-hidden="true"></i><b>Sổ Job Giao Nhận</b></div>
+  <input id="q" type="search" placeholder="Tìm job, FWD, công ty, số B/L…" aria-label="Tìm job">
+  <button id="btnNew" class="primary">+ Tạo job từ ảnh</button>
+</header>
+
+<div class="app">
+  <aside id="side" aria-label="Nhóm theo FWD / công ty"></aside>
+  <main id="main">
+    <div id="banner"></div>
+    <div class="bar">
+      <div class="tabs" role="tablist">
+        <button data-view="list" class="on">Danh sách</button>
+        <button data-view="board">Quy trình</button>
+        <button data-view="plan">Kế hoạch việc</button>
+        <button data-view="tpl">Mẫu checklist</button>
+      </div>
+      <span class="sp"></span>
+      <select id="fStatus" aria-label="Lọc trạng thái">
+        <option value="open">Đang mở</option>
+        <option value="all">Tất cả</option>
+        <option value="done">Đã thu / huỷ</option>
+      </select>
+    </div>
+    <div id="prof" class="card" hidden></div>
+    <div id="content" class="card"><div class="empty"><span class="spin"></span>Đang tải job…</div></div>
+  </main>
+  <section id="detail" class="card" aria-label="Chi tiết job"></section>
+</div>
+
+<div id="modal" class="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <h2 id="mTitle">Tạo job mới</h2>
+    <p>Chụp màn hình email hoặc tin Zalo, dán vào đây. Claude đọc ảnh, tách FWD / công ty, chọn loại việc, áp checklist mẫu và thêm các việc riêng của lô.</p>
+    <div id="drop" class="drop" tabindex="0">
+      Nhấn <span class="kbd">Ctrl</span> + <span class="kbd">V</span> để dán ảnh, kéo thả ảnh vào đây, hoặc
+      <label for="file">chọn ảnh</label><input id="file" type="file" accept="image/*" multiple>
+    </div>
+    <div id="pthumbs" class="thumbs"></div>
+    <textarea id="rawtext" rows="4" placeholder="Hoặc dán nội dung chữ của email / tin nhắn (có thể dùng kèm ảnh)"></textarea>
+    <div class="mrow">
+      <span id="mNote" class="note"></span>
+      <button id="btnBlank" class="ghost">Tạo job trống</button>
+      <button id="btnStop" hidden>Dừng</button>
+      <button id="btnClose">Đóng</button>
+      <button id="btnAnalyze" class="primary">Đọc ảnh & tạo job</button>
+    </div>
+  </div>
+</div>
+<div id="toast" hidden></div>
+
+<script src="static-shim.js?v=f42c3ba011"></script>
+<script>
+const TYPES=["Báo giá","Khai HQ nhập","Khai HQ xuất","Vận chuyển","Chứng từ / C/O","Kiểm tra chuyên ngành","Khác"];
+const MODES=["","Sea FCL","Sea LCL","Air","Road","Express"];
+const STAGES=["Mới","Báo giá","Chốt","Làm hàng","Thông quan","Debit","Đã thu","Huỷ"];
+const LEGACY={"Đang làm":"Làm hàng","Chờ phản hồi":"Báo giá","Đã báo giá":"Báo giá","Hoàn tất":"Đã thu"};
+const PRIOS=["Gấp","Thường","Thấp"];
+const SOURCES=["Email","Zalo","Điện thoại","Khác"];
+const CURS=["VND","USD"];
+const NOGROUP="Chưa rõ FWD / cty";
+const BLOB=window.SOJOB_BLOB_BASE??"/_blob/";
+const DEFAULT_TPL={
+  "Báo giá":["Xác nhận thông tin lô: hàng, số lượng, tuyến, incoterm","Tra mã HS, thuế suất, chính sách mặt hàng","Hỏi giá vận chuyển / nâng hạ / local charge","Lập báo giá và gửi khách","Theo dõi phản hồi báo giá"],
+  "Khai HQ nhập":["Nhận bộ chứng từ: invoice, packing list, B/L, C/O","Kiểm tra chứng từ, đối chiếu C/O","Tra mã HS, kiểm tra KTCN / giấy phép","Lấy lệnh giao hàng (D/O)","Truyền tờ khai ECUS","Nộp thuế, theo dõi phân luồng","Thông quan, lấy mã vạch, thanh lý","Giao hàng về kho","Lập debit gửi khách"],
+  "Khai HQ xuất":["Nhận invoice, packing list, booking","Truyền tờ khai xuất ECUS","Theo dõi phân luồng, thông quan","Hạ cont / thanh lý, vào sổ tàu","Xin C/O (nếu có)","Lập debit gửi khách"],
+  "Vận chuyển":["Xác nhận địa chỉ đóng / giao hàng, thời gian","Đặt xe / cont","Theo dõi giao nhận, lấy biên bản giao hàng","Lập debit gửi khách"],
+  "Chứng từ / C/O":["Nhận chứng từ từ khách","Kiểm tra, khai C/O trên hệ thống","Nộp hồ sơ, nhận C/O","Gửi bản scan / bản gốc cho khách"],
+  "Kiểm tra chuyên ngành":["Xác định thủ tục KTCN theo mã HS","Chuẩn bị hồ sơ đăng ký","Nộp đăng ký, lấy mẫu","Nhận kết quả, bổ sung vào tờ khai"],
+  "Khác":[]
+};
+const stIdx=s=>Math.max(0,STAGES.indexOf(s));
+const isOpen=s=>!["Đã thu","Huỷ"].includes(s);
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const TODAY=()=>ymd(new Date());
+const dmy=s=>s?s.slice(8,10)+"/"+s.slice(5,7)+"/"+s.slice(2,4):"";
+const num=v=>{if(typeof v==="number")return isFinite(v)?v:0;let t=String(v??"").replace(/[^\d.\-]/g,"");if((t.match(/\./g)||[]).length>1||/^\-?\d{1,3}\.\d{3}$/.test(t))t=t.replace(/\./g,"");const n=Number(t);return isFinite(n)?n:0};
+const fmt=(n,c)=>(Number(n)||0).toLocaleString("vi-VN",{maximumFractionDigits:c==="USD"?2:0});
+const normName=s=>String(s||"").replace(/[đĐ]/g,"d").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
+const slug=s=>normName(s).replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,80)||"u"+[...String(s)].reduce((h,c)=>(h*31+c.codePointAt(0))>>>0,7).toString(36);
+function dayDiff(s){if(!s||!/^\d{4}-\d{2}-\d{2}$/.test(s))return null;const[y,m,d]=s.split("-").map(Number);const t=new Date(y,m-1,d);const n=new Date();n.setHours(0,0,0,0);return Math.round((t-n)/864e5)}
+function dlPill(s,open=true){const k=dayDiff(s);if(k===null)return"";let cls="",txt;
+  if(open&&k<0){cls="dl-over";txt=`Quá hạn ${-k} ngày`}else if(open&&k===0){cls="dl-today";txt="Hạn hôm nay"}else if(open&&k===1){txt="Hạn mai"}else txt="Hạn "+s.slice(8)+"/"+s.slice(5,7);
+  return `<span class="pill ${cls}">${txt}</span>`}
+const groupKey=j=>(j.fwd||"").trim()||(j.company||"").trim()||NOGROUP;
+const stPill=s=>`<span class="pill st${stIdx(s)}">${esc(s)}</span>`;
+
+const S={jobs:[],sel:null,group:"__all",view:"list",q:"",fStatus:"open",loaded:false,tpl:JSON.parse(JSON.stringify(DEFAULT_TPL)),partners:{},todos:[]};
+let db=null,sample=null,assets=null;
+const dirty=new Set(),timers={},chains={};
+
+/* ---------- persistence ---------- */
+function cur(){return S.jobs.find(j=>j.id===S.sel)||null}
+function body(j){const b={...j};delete b.id;return b}
+function saveDoc(path,getBody,delay=500){
+  dirty.add(path);clearTimeout(timers[path]);
+  timers[path]=setTimeout(()=>{
+    delete timers[path];
+    const snap=JSON.parse(JSON.stringify(getBody()));
+    chains[path]=(chains[path]||Promise.resolve()).then(()=>db&&db.doc(path).set(snap))
+      .catch(e=>toast(e?.code==="quota_exceeded"?"Hết dung lượng lưu trữ, hãy xoá bớt job cũ.":"Chưa lưu được: "+(e?.message||e?.code||"lỗi")))
+      .finally(()=>{if(!timers[path])dirty.delete(path)});
+  },delay);
+}
+function queueSave(j){j.updatedAt=Date.now();saveDoc("jobs/"+j.id,()=>body(j))}
+function saveTpl(){saveDoc("meta/templates",()=>({byType:S.tpl}),700)}
+function partnerOf(name){const k=slug(name);return S.partners[k]||(S.partners[k]={name,phone:"",email:"",note:""})}
+function savePartner(name){const k=slug(name);saveDoc("partners/"+k,()=>S.partners[k],700)}
+
+function nextCode(){
+  const d=new Date();const p=`J${String(d.getFullYear()).slice(2)}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+  const n=S.jobs.filter(j=>(j.code||"").startsWith(p)).length+1;return `${p}-${pad(n)}`;
+}
+function newId(){try{if(db)return db.collection("jobs").doc().id}catch(e){}return "j"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function tplTasks(type){return (S.tpl[type]||[]).map(t=>({text:t,done:false}))}
+async function createJob(data){
+  const j=Object.assign({
+    code:nextCode(),title:"",fwd:"",company:"",contact:"",source:"Email",type:"Khác",mode:"",pol:"",pod:"",
+    cargo:"",incoterm:"",refs:"",deadline:"",priority:"Thường",status:"Mới",waiting:false,summary:"",questions:"",
+    tasks:[],quote:[],vat:0,quoteNote:"",quoteSentAt:"",debitAmount:0,debitCurrency:"VND",debitDate:"",paidDate:"",
+    raw:"",images:[],createdAt:Date.now(),updatedAt:Date.now()
+  },data);
+  j.id=newId();
+  S.jobs.unshift(j);S.sel=j.id;
+  if(db){try{await db.doc("jobs/"+j.id).set(body(j))}catch(e){toast("Chưa lưu được job: "+(e?.message||e?.code))}}
+  else toast("Đang ở chế độ tạm: job sẽ mất khi tải lại trang.");
+  renderAll(true);
+  return j;
+}
+function totals(j){const t={};(j.quote||[]).forEach(q=>{const c=q.currency||"VND";t[c]=(t[c]||0)+num(q.qty)*num(q.price)});return t}
+function setStatus(j,st){
+  j.status=st;
+  if(st==="Báo giá"&&!j.quoteSentAt&&(j.quote||[]).length)j.quoteSentAt=TODAY();
+  if(st==="Debit"&&!j.debitDate)j.debitDate=TODAY();
+  if(st==="Đã thu"&&!j.paidDate)j.paidDate=TODAY();
+  if(!isOpen(st))j.waiting=false;
+  queueSave(j);
+}
+
+/* ---------- price memory ---------- */
+function priceLines(filterKey){
+  const out=[];
+  S.jobs.forEach(j=>{if(filterKey&&groupKey(j)!==filterKey)return;
+    const date=j.quoteSentAt||ymd(new Date(j.createdAt||Date.now()));
+    (j.quote||[]).forEach(q=>{if(num(q.price)>0&&q.name)out.push({name:q.name,n:normName(q.name),price:num(q.price),currency:q.currency||"VND",unit:q.unit||"",date,code:j.code,id:j.id,key:groupKey(j),route:[j.pol,j.pod].filter(Boolean).join(" → "),mode:j.mode})})});
+  return out.sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
+}
+function lastPrice(name,key,exceptId){
+  const n=normName(name);if(!n)return null;
+  const all=priceLines().filter(x=>x.id!==exceptId&&x.n===n);
+  return all.find(x=>x.key===key)||all[0]||null;
+}
+function hintHtml(q,j,i){
+  const h=lastPrice(q.name,groupKey(j),j.id);
+  if(!h)return `<span class="hint none">—</span>`;
+  const same=h.key===groupKey(j);
+  return `<button class="hint" data-act="useprice" data-i="${i}" title="${esc(h.key)} · ${esc(h.code)} · ${dmy(h.date)}">${fmt(h.price,h.currency)} ${h.currency}${same?"":" *"}</button>`;
+}
+
+/* ---------- render: side ---------- */
+function visibleJobs(ignoreStatus){
+  const q=S.q.toLowerCase();
+  return S.jobs.filter(j=>{
+    if(!ignoreStatus){if(S.fStatus==="open"&&!isOpen(j.status))return false;if(S.fStatus==="done"&&isOpen(j.status))return false}
+    if(S.group!=="__all"&&groupKey(j)!==S.group)return false;
+    if(q){const h=[j.code,j.title,j.fwd,j.company,j.contact,j.refs,j.cargo,j.pol,j.pod,j.summary].join(" ").toLowerCase();if(!h.includes(q))return false}
+    return true;
+  }).sort((a,b)=>{
+    const pa=a.priority==="Gấp"?0:1,pb=b.priority==="Gấp"?0:1;
+    const da=a.deadline||"9999",dbb=b.deadline||"9999";
+    return (isOpen(b.status)-isOpen(a.status))||(da<dbb?-1:da>dbb?1:0)||(pa-pb)||(b.createdAt||0)-(a.createdAt||0);
+  });
+}
+function renderSide(){
+  const m=new Map();
+  S.jobs.forEach(j=>{const k=groupKey(j);const o=m.get(k)||{open:0,all:0,companies:new Set()};o.all++;if(isOpen(j.status))o.open++;if(j.company&&j.fwd)o.companies.add(j.company);m.set(k,o)});
+  const keys=[...m.keys()].sort((a,b)=>a===NOGROUP?1:b===NOGROUP?-1:m.get(b).open-m.get(a).open||a.localeCompare(b,"vi"));
+  if(S.group!=="__all"&&!m.has(S.group))S.group="__all";
+  $("#side").innerHTML=`<div class="side-h">FWD / Công ty</div>
+    <button class="g ${S.group==="__all"?"on":""}" data-g="__all"><span>Tất cả</span><span class="n">${S.jobs.filter(j=>isOpen(j.status)).length}</span></button>`+
+    keys.map(k=>`<button class="g ${S.group===k?"on":""}" data-g="${esc(k)}" title="${esc([...m.get(k).companies].join(", "))}"><span>${esc(k)}</span><span class="n">${m.get(k).open}</span></button>`).join("");
+}
+
+/* ---------- render: partner profile ---------- */
+function renderProfile(force){
+  const el=$("#prof");
+  const show=S.group!=="__all"&&S.group!==NOGROUP&&(S.view==="list"||S.view==="board");
+  el.hidden=!show;if(!show){el.dataset.k="";return}
+  if(!force&&el.dataset.k===S.group&&el.contains(document.activeElement))return;
+  el.dataset.k=S.group;
+  const key=S.group,jobs=S.jobs.filter(j=>groupKey(j)===key),p=partnerOf(key);
+  const open=jobs.filter(j=>isOpen(j.status)).length;
+  const last=jobs.reduce((a,j)=>Math.max(a,j.createdAt||0),0);
+  const debt={},paid={},yr=String(new Date().getFullYear());
+  jobs.forEach(j=>{const c=j.debitCurrency||"VND",a=num(j.debitAmount);if(!a)return;
+    if(j.status==="Debit")debt[c]=(debt[c]||0)+a;
+    if(j.status==="Đã thu"&&(j.paidDate||"").startsWith(yr))paid[c]=(paid[c]||0)+a});
+  const money=o=>Object.keys(o).length?Object.entries(o).map(([c,v])=>`${fmt(v,c)} ${c}`).join("<br>"):"0";
+  const quotes=jobs.filter(j=>j.quoteSentAt).length;
+  const contacts=[...new Set(jobs.map(j=>j.contact).filter(Boolean))];
+  const companies=[...new Set(jobs.map(j=>j.company).filter(c=>c&&c!==key))];
+  const hist=priceLines(key);
+  el.innerHTML=`<div class="prof">
+    <div class="prof-h"><h2>${esc(key)}</h2><span>${jobs.length} job · lần gần nhất ${last?new Date(last).toLocaleDateString("vi-VN"):"—"}</span></div>
+    <div class="stats">
+      <div class="stat"><span>Job đang mở</span><b>${open}</b></div>
+      <div class="stat debt"><span>Công nợ chờ thu</span><b>${money(debt)}</b></div>
+      <div class="stat"><span>Đã thu năm ${yr}</span><b>${money(paid)}</b></div>
+      <div class="stat"><span>Báo giá đã gửi</span><b>${quotes}</b></div>
+    </div>
+    <div class="grid3">
+      <label class="fld"><span>Điện thoại / Zalo</span><input id="p-phone" data-p="phone" value="${esc(p.phone)}"></label>
+      <label class="fld"><span>Email</span><input id="p-email" data-p="email" value="${esc(p.email)}"></label>
+      <label class="fld"><span>Ghi chú (điều khoản, hạn thanh toán…)</span><input id="p-note" data-p="note" value="${esc(p.note)}"></label>
+    </div>
+    ${contacts.length||companies.length?`<div class="chips">${contacts.length?`<span style="color:var(--muted)">Liên hệ:</span>${contacts.map(c=>`<span class="pill">${esc(c)}</span>`).join("")}`:""}${companies.length?`<span style="color:var(--muted)">Chủ hàng:</span>${companies.map(c=>`<span class="pill">${esc(c)}</span>`).join("")}`:""}</div>`:""}
+    <details ${hist.length&&hist.length<=8?"open":""}><summary>Lịch sử giá đã báo (${hist.length})</summary>
+      ${hist.length?`<div class="hwrap"><table class="h"><thead><tr><th>Ngày</th><th>Job</th><th>Hạng mục</th><th class="num">Đơn giá</th><th>Tuyến</th></tr></thead><tbody>
+      ${hist.slice(0,40).map(h=>`<tr><td class="mono">${dmy(h.date)}</td><td class="mono"><a href="#" data-open="${h.id}">${esc(h.code)}</a></td><td>${esc(h.name)}</td><td class="num mono">${fmt(h.price,h.currency)} ${h.currency}${h.unit?"/"+esc(h.unit):""}</td><td>${esc([h.route,h.mode].filter(Boolean).join(" · "))}</td></tr>`).join("")}
+      </tbody></table></div>`:`<p style="margin:6px 0 0;color:var(--muted);font-size:13px">Chưa có giá nào. Giá sẽ được ghi nhớ khi bạn điền đơn giá vào báo giá của job.</p>`}
+    </details>
+  </div>`;
+}
+
+/* ---------- render: main views ---------- */
+function jobRow(j){
+  const done=(j.tasks||[]).filter(t=>t.done).length,all=(j.tasks||[]).length;
+  const who=[j.fwd,j.company].filter(Boolean);
+  return `<div class="row ${S.sel===j.id?"on":""}" data-open="${j.id}" tabindex="0">
+    <span class="code">${esc(j.code)}</span>
+    <span class="t">${j.priority==="Gấp"?'<span class="urgent">GẤP · </span>':""}${esc(j.title||"(chưa có tiêu đề)")}</span>
+    <span class="right">${j.example?'<span class="ex">VÍ DỤ</span>':""}${j.waiting?'<span class="pill wait">Chờ khách</span>':""}${dlPill(j.deadline,isOpen(j.status))}${stPill(j.status)}</span>
+    <span class="meta">${who.map((w,i)=>`<span class="pill ${i===0?"fwd":""}">${esc(w)}</span>`).join("")}<span>${esc(j.type)}</span>${j.mode?`<span>· ${esc(j.mode)}</span>`:""}${j.pol||j.pod?`<span>· ${esc(j.pol||"?")} → ${esc(j.pod||"?")}</span>`:""}${all?`<span>· việc ${done}/${all}</span>`:""}</span>
+  </div>`;
+}
+function kanbanCard(j){
+  const done=(j.tasks||[]).filter(t=>t.done).length,all=(j.tasks||[]).length,i=stIdx(j.status);
+  return `<div class="kc ${S.sel===j.id?"on":""}" draggable="true" data-drag="${j.id}" data-open="${j.id}">
+    <span class="mono" style="font-size:11.5px;color:var(--muted)">${esc(j.code)}${j.example?' <span class="ex">VÍ DỤ</span>':""}</span>
+    <span class="t">${j.priority==="Gấp"?'<span class="urgent">GẤP · </span>':""}${esc(j.title||"(chưa có tiêu đề)")}</span>
+    <span class="m"><span class="pill fwd">${esc(groupKey(j))}</span>${j.waiting?'<span class="pill wait">Chờ khách</span>':""}${dlPill(j.deadline,isOpen(j.status))}</span>
+    <span class="m">${esc(j.type)}${all?` · việc ${done}/${all}`:""}${num(j.debitAmount)?` · <span class="mono">${fmt(j.debitAmount,j.debitCurrency)} ${esc(j.debitCurrency||"VND")}</span>`:""}</span>
+    <span class="mv"><button class="ghost" data-move="${j.id}:-1" ${i<=0?"disabled":""} aria-label="Lùi giai đoạn">‹</button><button class="ghost" data-move="${j.id}:1" ${i>=6?"disabled":""} aria-label="Sang giai đoạn sau">›</button></span>
+  </div>`;
+}
+function renderMain(){
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===S.view));
+  $("#fStatus").hidden=S.view!=="list";
+  renderProfile();
+  const el=$("#content");
+  if(!S.loaded)return;
+  if(S.view==="tpl"){
+    if(el.dataset.v==="tpl"&&el.contains(document.activeElement))return;
+    el.dataset.v="tpl";
+    el.innerHTML=`<div class="tpl"><p>Mỗi dòng là một bước. Khi tạo job, app tự thêm các bước của đúng loại việc, Claude chỉ bổ sung việc riêng của lô. Thay đổi được lưu tự động.</p>
+      <div class="tpl-grid">${TYPES.map(t=>`<div class="tpl-item"><span class="h">${esc(t)}<button class="ghost sm" data-reset="${esc(t)}">Khôi phục mặc định</button></span>
+      <textarea id="tpl-${slug(t)}" data-tpl="${esc(t)}" rows="${Math.max(4,(S.tpl[t]||[]).length+1)}" placeholder="Chưa có bước nào">${esc((S.tpl[t]||[]).join("\n"))}</textarea></div>`).join("")}</div></div>`;
+    return;
+  }
+  if(S.view==="plan"){renderPlan(el);return}
+  el.dataset.v=S.view;
+  if(!S.jobs.length){el.innerHTML=`<div class="empty"><b>Chưa có job nào</b>Bấm “+ Tạo job từ ảnh”, rồi dán ảnh chụp email hoặc Zalo (Ctrl+V). Bạn cũng có thể dán ảnh thẳng vào trang này.</div>`;return}
+  if(S.view==="list"){
+    const jobs=visibleJobs();
+    if(!jobs.length){el.innerHTML=`<div class="empty"><b>Không có job khớp bộ lọc</b>Đổi bộ lọc trạng thái hoặc chọn “Tất cả”.</div>`;return}
+    if(S.group==="__all"){
+      const m=new Map();jobs.forEach(j=>{const k=groupKey(j);(m.get(k)||m.set(k,[]).get(k)).push(j)});
+      el.innerHTML=`<div class="list">`+[...m.entries()].map(([k,arr])=>`<div class="grp-h"><span>${esc(k)}</span><span class="mono">${arr.length}</span></div>`+arr.map(jobRow).join("")).join("")+`</div>`;
+    }else el.innerHTML=`<div class="list">${jobs.map(jobRow).join("")}</div>`;
+  }else if(S.view==="board"){
+    const jobs=visibleJobs(true).filter(j=>j.status!=="Huỷ");
+    el.innerHTML=`<div class="kb">${STAGES.slice(0,7).map(st=>{
+      let arr=jobs.filter(j=>(j.status||"Mới")===st);
+      if(st==="Đã thu")arr=arr.sort((a,b)=>(b.paidDate||"").localeCompare(a.paidDate||"")).slice(0,15);
+      return `<div class="col" data-col="${esc(st)}"><div class="col-h">${stPill(st)}<span class="mono">${arr.length}</span></div>${arr.map(kanbanCard).join("")}</div>`}).join("")}</div>`;
+  }
+}
+function renderPlan(el){
+  if(el.dataset.v!=="plan"||!$("#pa-text")){
+    el.dataset.v="plan";
+    el.innerHTML=`<div class="plan-add">
+      <input id="pa-text" placeholder="Gõ việc cần làm rồi nhấn Enter" aria-label="Việc cần làm">
+      <select id="pa-job" aria-label="Thuộc job"></select>
+      <input id="pa-due" type="date" aria-label="Hạn">
+      <button id="pa-add" class="primary">Thêm</button></div><div id="planList"></div>`;
+  }
+  const sel=$("#pa-job");
+  if(document.activeElement!==sel){
+    const v=sel.value,opts=S.jobs.filter(j=>isOpen(j.status)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    sel.innerHTML=`<option value="">Việc riêng (không thuộc job)</option>`+opts.map(j=>`<option value="${esc(j.id)}">${esc(j.code)} · ${esc(groupKey(j))} · ${esc((j.title||"").slice(0,40))}</option>`).join("");
+    if(opts.some(j=>j.id===v))sel.value=v;
+  }
+  const q=S.q.toLowerCase(),items=[];
+  visibleJobs(true).filter(j=>isOpen(j.status)).forEach(j=>(j.tasks||[]).forEach((t,i)=>{if(!t.done)items.push({j,t,i,due:t.due||j.deadline||""})}));
+  if(S.group==="__all")S.todos.filter(t=>!t.done&&(!q||String(t.text).toLowerCase().includes(q))).forEach(t=>items.push({todo:t,due:t.due||""}));
+  const L=$("#planList");
+  if(!items.length){L.innerHTML=`<div class="empty"><b>Chưa có việc nào đang chờ</b>Gõ việc vào ô phía trên, chọn job (hoặc để “Việc riêng”) và ngày hạn rồi nhấn Enter.</div>`;return}
+  const B=[["Quá hạn",k=>k!==null&&k<0],["Hôm nay",k=>k===0],["7 ngày tới",k=>k!==null&&k>0&&k<=7],["Sau đó",k=>k!==null&&k>7],["Chưa có hạn",k=>k===null]];
+  L.innerHTML=B.map(([name,f])=>{
+    const arr=items.filter(x=>f(dayDiff(x.due))).sort((a,b)=>(a.due||"").localeCompare(b.due||""));if(!arr.length)return"";
+    return `<div class="grp-h"><span>${name}</span><span class="mono">${arr.length}</span></div>`+arr.map(x=>{
+      if(x.todo){const t=x.todo;return `<div class="plan-task"><input type="checkbox" data-ptodo="${esc(t.id)}" id="pd-${esc(t.id)}" aria-label="Đánh dấu xong">
+        <label for="pd-${esc(t.id)}">${esc(t.text)}</label>
+        <span class="sub2">Việc riêng${t.due?" · hạn "+dmy(t.due):""}<button class="x" data-todel="${esc(t.id)}" aria-label="Xoá việc">✕</button></span></div>`}
+      const{j,t,i}=x;return `<div class="plan-task"><input type="checkbox" data-ptask="${j.id}:${i}" id="pt-${j.id}-${i}" aria-label="Đánh dấu xong">
+        <label for="pt-${j.id}-${i}">${j.priority==="Gấp"?'<span class="urgent">GẤP · </span>':""}${esc(t.text)}</label>
+        <span class="sub" data-open="${j.id}">${esc(j.code)} · ${esc(j.title)} · ${esc(groupKey(j))} · ${esc(j.status)}${x.due?" · hạn "+dmy(x.due):""}${t.due?" (riêng việc này)":""}</span></div>`}).join("");
+  }).join("");
+}
+function addPlanItem(){
+  const ti=$("#pa-text"),text=ti.value.trim();if(!text){ti.focus();return}
+  const jid=$("#pa-job").value,due=$("#pa-due").value;
+  if(jid){const j=S.jobs.find(x=>x.id===jid);if(!j)return;(j.tasks=j.tasks||[]).push(due?{text,done:false,due}:{text,done:false});queueSave(j);if(S.sel===jid)renderDetail(true);toast("Đã thêm vào "+j.code+".")}
+  else{let id;try{id=db?db.collection("todos").doc().id:null}catch(e){}id=id||"t"+Date.now().toString(36);
+    const t={id,text,due,done:false,createdAt:Date.now()};S.todos.push(t);saveDoc("todos/"+id,()=>{const b={...t};delete b.id;return b},0);toast("Đã thêm việc riêng.")}
+  ti.value="";renderPlan($("#content"));ti.focus();
+}
+
+/* ---------- render: detail ---------- */
+const opt=(arr,v)=>arr.map(o=>`<option ${o===v?"selected":""} value="${esc(o)}">${esc(o||"—")}</option>`).join("");
+const F=(f,label,val,cls="",type="text")=>`<label class="fld ${cls}"><span>${label}</span><input id="f-${f}" data-f="${f}" type="${type}" value="${esc(val)}"></label>`;
+const SEL=(f,label,arr,val,cls="")=>`<label class="fld ${cls}"><span>${label}</span><select id="f-${f}" data-f="${f}">${opt(arr,val)}</select></label>`;
+function renderDetail(force){
+  const el=$("#detail"),j=cur();
+  if(!force&&j&&el.dataset.id===j.id&&el.contains(document.activeElement))return;
+  el.dataset.id=j?j.id:"";
+  document.body.classList.toggle("has-detail",!!j);
+  if(!j){el.innerHTML=`<div class="empty-detail">Chọn một job để xem việc cần làm, báo giá và công nợ.</div>`;return}
+  const tasks=j.tasks||[],done=tasks.filter(t=>t.done).length,si=stIdx(j.status);
+  const knownNames=[...new Set(S.jobs.flatMap(x=>[x.fwd,x.company]).filter(Boolean))];
+  const itemNames=[...new Set(S.jobs.flatMap(x=>(x.quote||[]).map(q=>q.name)).filter(Boolean))];
+  const tpl=S.tpl[j.type]||[],have=new Set(tasks.map(t=>normName(t.text))),missing=tpl.filter(t=>!have.has(normName(t))).length;
+  el.innerHTML=`<div class="d">
+  <div class="d-head">
+    <div class="l1"><button class="ghost back" data-act="close">← Danh sách</button><span class="mono" style="color:var(--muted)">${esc(j.code)}${j.example?' <span class="ex">VÍ DỤ</span>':""}</span>
+      <span class="acts"><label class="chk"><input type="checkbox" id="f-waiting" data-f="waiting" ${j.waiting?"checked":""}>Chờ khách</label>${j.status==="Huỷ"?`<button class="sm" data-st="Mới">Mở lại</button>`:`<button class="ghost sm" data-st="Huỷ">Huỷ job</button>`}</span></div>
+    <div class="stages" role="group" aria-label="Giai đoạn">${STAGES.slice(0,7).map((s,i)=>`<button data-st="${esc(s)}" class="${j.status==="Huỷ"?"":i<si?"past":i===si?"now":""}">${esc(s)}</button>`).join("")}</div>
+    <input class="title" id="f-title" data-f="title" value="${esc(j.title)}" placeholder="Tiêu đề job" aria-label="Tiêu đề job">
+    <div class="grid2">
+      <label class="fld"><span>FWD / đại lý</span><input id="f-fwd" data-f="fwd" list="names" value="${esc(j.fwd)}"></label>
+      <label class="fld"><span>Công ty / chủ hàng</span><input id="f-company" data-f="company" list="names" value="${esc(j.company)}"></label>
+    </div>
+    <datalist id="names">${knownNames.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
+    <datalist id="items">${itemNames.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
+  </div>
+  <div class="sec"><h3>Việc cần làm <span class="mono">${done}/${tasks.length}</span></h3>
+    ${tasks.length?`<div class="prog"><i style="width:${done/tasks.length*100}%"></i></div>`:""}
+    ${tasks.map((t,i)=>`<div class="task ${t.done?"done":""}"><input type="checkbox" id="t-c-${i}" data-tdone="${i}" ${t.done?"checked":""} aria-label="Xong"><input type="text" id="t-${i}" data-t="${i}" value="${esc(t.text)}"><button class="x" data-act="tdel" data-i="${i}" aria-label="Xoá việc">✕</button></div>`).join("")}
+    <div class="task"><span></span><input type="text" id="t-new" placeholder="+ Thêm việc, Enter để lưu"><span></span></div>
+    <div class="acts">${missing?`<button class="sm" data-act="applyTpl">Thêm ${missing} bước mẫu “${esc(j.type)}”</button>`:""}${tasks.length?`<button class="ghost sm" data-act="saveTpl">Lưu checklist này làm mẫu “${esc(j.type)}”</button>`:""}</div>
+  </div>
+  <div class="sec"><h3>Thông tin lô</h3>
+    <div class="grid3">
+      ${SEL("type","Loại việc",TYPES,j.type)}${SEL("mode","Phương thức",MODES,j.mode)}${SEL("priority","Ưu tiên",PRIOS,j.priority)}
+      ${F("deadline","Hạn xử lý",j.deadline,"","date")}${SEL("source","Nguồn",SOURCES,j.source)}${F("incoterm","Incoterm",j.incoterm)}
+      ${F("pol","Nơi đi (POL)",j.pol)}${F("pod","Nơi đến (POD)",j.pod)}${F("refs","Số BK / BL / TK",j.refs)}
+    </div>
+    <div class="grid2">${F("contact","Người liên hệ",j.contact,"full")}${F("cargo","Hàng hoá / số lượng",j.cargo,"full")}</div>
+    <label class="fld"><span>Tóm tắt yêu cầu</span><textarea id="f-summary" data-f="summary" rows="3">${esc(j.summary)}</textarea></label>
+    <label class="fld"><span>Cần hỏi lại khách</span><textarea id="f-questions" data-f="questions" rows="2">${esc(j.questions)}</textarea></label>
+  </div>
+  <div class="sec"><h3>Báo giá <span class="acts"><button class="ghost sm" data-act="fillPrices">Điền giá lần trước</button><button class="ghost sm" data-act="qadd">+ Thêm dòng</button></span></h3>
+    ${(j.quote||[]).length?`<div class="qwrap"><table class="q"><thead><tr><th style="width:32%">Hạng mục</th><th class="num" style="width:8%">SL</th><th style="width:10%">ĐVT</th><th class="num" style="width:15%">Đơn giá</th><th style="width:9%">Tiền tệ</th><th class="num">Thành tiền</th><th>Giá lần trước</th><th></th></tr></thead><tbody>
+    ${j.quote.map((q,i)=>`<tr><td><input id="q-${i}-name" data-q="${i}:name" list="items" value="${esc(q.name)}"></td><td><input class="num mono" id="q-${i}-qty" data-q="${i}:qty" value="${esc(q.qty)}" inputmode="decimal"></td><td><input id="q-${i}-unit" data-q="${i}:unit" value="${esc(q.unit)}"></td><td><input class="num mono" id="q-${i}-price" data-q="${i}:price" value="${esc(q.price)}" inputmode="decimal"></td><td><select id="q-${i}-currency" data-q="${i}:currency">${opt(CURS,q.currency||"VND")}</select></td><td class="num mono" data-amt="${i}">${fmt(num(q.qty)*num(q.price),q.currency)}</td><td data-hint="${i}">${hintHtml(q,j,i)}</td><td><button class="x" data-act="qdel" data-i="${i}" aria-label="Xoá dòng">✕</button></td></tr>`).join("")}
+    </tbody></table></div><span style="font-size:11.5px;color:var(--muted)">Giá lần trước lấy từ cùng FWD; dấu * là giá báo cho FWD khác.</span>`:`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có hạng mục. Bấm “+ Thêm dòng”.</p>`}
+    <div class="grid2"><label class="fld"><span>VAT (%)</span><input id="f-vat" data-f="vat" type="number" min="0" step="1" value="${esc(j.vat||0)}"></label><div class="tot" id="qtot"></div></div>
+    <label class="fld"><span>Ghi chú báo giá</span><textarea id="f-quoteNote" data-f="quoteNote" rows="2" placeholder="VD: Giá chưa gồm local charge, kiểm hoá, lưu kho…">${esc(j.quoteNote)}</textarea></label>
+    <div class="acts"><button data-act="copyQuote" class="primary">Copy báo giá</button><button data-act="copyBrief">Copy tóm tắt job</button>${j.quoteSentAt?`<span style="font-size:12px;color:var(--muted)">Đã gửi báo giá ${dmy(j.quoteSentAt)}</span>`:""}</div>
+    <div id="copyFallback"></div>
+  </div>
+  <div class="sec"><h3>Debit & thanh toán <button class="ghost sm" data-act="debitFromQuote" style="letter-spacing:0;text-transform:none">Lấy tổng từ báo giá</button></h3>
+    <div class="grid2">
+      <label class="fld"><span>Số tiền debit</span><input class="mono" id="f-debitAmount" data-f="debitAmount" inputmode="decimal" value="${esc(num(j.debitAmount)?j.debitAmount:"")}" placeholder="0"></label>
+      ${SEL("debitCurrency","Tiền tệ",CURS,j.debitCurrency||"VND")}
+      ${F("debitDate","Ngày gửi debit",j.debitDate,"","date")}${F("paidDate","Ngày khách trả",j.paidDate,"","date")}
+    </div>
+    <span style="font-size:12px;color:var(--muted)">Điền ngày gửi debit → job sang “Debit”. Điền ngày khách trả → job sang “Đã thu”.</span>
+  </div>
+  ${(j.images||[]).length||j.raw?`<div class="sec"><h3>Nguồn gốc</h3>
+    <div class="thumbs">${(j.images||[]).map(id=>`<a href="${BLOB}${esc(id)}" target="_blank" rel="noopener"><img src="${BLOB}${esc(id)}" alt="Ảnh chụp gốc"></a>`).join("")}</div>
+    ${j.raw?`<textarea id="f-raw" data-f="raw" rows="3">${esc(j.raw)}</textarea>`:""}</div>`:""}
+  <div class="sec"><div class="acts" style="justify-content:space-between"><span style="color:var(--muted);font-size:12px">Tạo ${new Date(j.createdAt||Date.now()).toLocaleString("vi-VN")}</span><button class="danger" data-act="del">Xoá job</button></div></div>
+  </div>`;
+  renderTotals(j);
+}
+function renderTotals(j){
+  const t=totals(j),vat=num(j.vat),el=$("#qtot");if(!el)return;
+  const ks=Object.keys(t);if(!ks.length){el.innerHTML="";return}
+  el.innerHTML=ks.map(c=>`<span>Cộng ${c}: <span class="mono">${fmt(t[c],c)}</span></span>${vat?`<span>VAT ${vat}%: <span class="mono">${fmt(t[c]*vat/100,c)}</span></span>`:""}<span>Tổng ${c}: <b>${fmt(t[c]*(1+vat/100),c)}</b></span>`).join("");
+}
+function renderAll(forceDetail){renderSide();renderMain();renderDetail(forceDetail)}
+
+/* ---------- text exports ---------- */
+function quoteText(j){
+  const L=[`BÁO GIÁ${j.title?" – "+j.title:""}`];
+  const to=j.fwd||j.company;if(to)L.push(`Kính gửi: ${to}${j.contact?" (Attn: "+j.contact+")":""}`);
+  const route=[j.pol||j.pod?`${j.pol||"?"} → ${j.pod||"?"}`:"",j.mode,j.incoterm].filter(Boolean).join(" | ");if(route)L.push(`Tuyến: ${route}`);
+  if(j.cargo)L.push(`Hàng: ${j.cargo}`);L.push("");
+  (j.quote||[]).forEach((q,i)=>L.push(`${i+1}. ${q.name}: ${fmt(q.qty)} ${q.unit||""} × ${fmt(q.price,q.currency)} = ${fmt(num(q.qty)*num(q.price),q.currency)} ${q.currency||"VND"}`));
+  const t=totals(j),vat=num(j.vat);L.push("");
+  Object.keys(t).forEach(c=>{L.push(`Cộng: ${fmt(t[c],c)} ${c}`);if(vat){L.push(`VAT ${vat}%: ${fmt(t[c]*vat/100,c)} ${c}`);L.push(`Tổng cộng: ${fmt(t[c]*(1+vat/100),c)} ${c}`)}});
+  if(j.quoteNote)L.push("","Ghi chú: "+j.quoteNote);
+  return L.join("\n").replace(/\n{3,}/g,"\n\n").trim();
+}
+function briefText(j){
+  const L=[`[${j.code}] ${j.title}`,`FWD/Cty: ${[j.fwd,j.company].filter(Boolean).join(" / ")||"—"}`,`Giai đoạn: ${j.status}${j.waiting?" (chờ khách)":""}`,`Loại: ${j.type}${j.mode?" · "+j.mode:""}${j.pol||j.pod?` · ${j.pol||"?"} → ${j.pod||"?"}`:""}`];
+  if(j.cargo)L.push("Hàng: "+j.cargo);if(j.refs)L.push("Số tham chiếu: "+j.refs);if(j.deadline)L.push("Hạn: "+j.deadline.split("-").reverse().join("/"));
+  if(j.summary)L.push("Yêu cầu: "+j.summary);
+  if((j.tasks||[]).length){L.push("Việc cần làm:");j.tasks.forEach(t=>L.push(`${t.done?"[x]":"[ ]"} ${t.text}`))}
+  if(j.questions)L.push("Cần hỏi lại: "+j.questions);
+  return L.join("\n");
+}
+async function copy(text){
+  try{await navigator.clipboard.writeText(text);toast("Đã copy, dán vào Zalo hoặc email.");$("#copyFallback").innerHTML=""}
+  catch(e){$("#copyFallback").innerHTML=`<textarea class="copybox" id="copybox" readonly>${esc(text)}</textarea>`;const b=$("#copybox");b.focus();b.select();toast("Trình xem chặn copy tự động: đã bôi đen sẵn, nhấn Ctrl+C.")}
+}
+
+/* ---------- events: main ---------- */
+$("#q").addEventListener("input",e=>{S.q=e.target.value;renderMain()});
+$("#fStatus").addEventListener("change",e=>{S.fStatus=e.target.value;renderMain()});
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{S.view=b.dataset.view;renderMain()}));
+$("#side").addEventListener("click",e=>{const g=e.target.closest("[data-g]");if(!g)return;S.group=g.dataset.g;renderSide();renderProfile(true);renderMain()});
+function openJob(id){S.sel=id;renderMain();renderDetail(true);if(window.matchMedia("(min-width:781px)").matches)$("#detail").scrollTop=0}
+function onOpenClick(e){
+  if(e.target.closest("button,input,select,textarea,label"))return;
+  const o=e.target.closest("[data-open]");if(o){e.preventDefault();openJob(o.dataset.open)}
+}
+$("#content").addEventListener("click",e=>{
+  if(e.target.closest("#pa-add")){addPlanItem();return}
+  const del=e.target.closest("[data-todel]");
+  if(del){const id=del.dataset.todel,path="todos/"+id;S.todos=S.todos.filter(x=>x.id!==id);clearTimeout(timers[path]);delete timers[path];dirty.delete(path);
+    (chains[path]||Promise.resolve()).then(()=>db&&db.doc(path).delete()).catch(()=>toast("Chưa xoá được, thử lại."));renderPlan($("#content"));return}
+  const mv=e.target.closest("[data-move]");
+  if(mv){const[id,d]=mv.dataset.move.split(":");const j=S.jobs.find(x=>x.id===id);if(!j)return;const n=Math.min(6,Math.max(0,stIdx(j.status)+Number(d)));setStatus(j,STAGES[n]);renderAll(S.sel===id);return}
+  const rs=e.target.closest("[data-reset]");
+  if(rs){const t=rs.dataset.reset;S.tpl[t]=[...(DEFAULT_TPL[t]||[])];saveTpl();$("#content").dataset.v="";renderMain();toast("Đã khôi phục mẫu “"+t+"”.");return}
+  onOpenClick(e);
+});
+$("#prof").addEventListener("click",onOpenClick);
+$("#content").addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&(e.target.id==="pa-text"||e.target.id==="pa-due")&&!e.isComposing){e.preventDefault();addPlanItem();return}
+  if(e.key==="Enter"&&e.target.matches(".row")){openJob(e.target.dataset.open)}});
+$("#content").addEventListener("change",e=>{
+  const td=e.target.dataset.ptodo;
+  if(td){const t=S.todos.find(x=>x.id===td);if(!t)return;t.done=true;t.doneAt=Date.now();saveDoc("todos/"+td,()=>{const b={...t};delete b.id;return b},0);setTimeout(()=>renderPlan($("#content")),250);return}
+  const p=e.target.dataset.ptask;if(!p)return;const[id,i]=p.split(":");const j=S.jobs.find(x=>x.id===id);if(!j)return;
+  j.tasks[+i].done=true;queueSave(j);setTimeout(()=>{renderAll(S.sel===id)},250);
+});
+$("#content").addEventListener("input",e=>{
+  const t=e.target.dataset.tpl;if(!t)return;
+  S.tpl[t]=e.target.value.split("\n").map(s=>s.trim()).filter((s,i,a)=>s&&a.findIndex(x=>normName(x)===normName(s))===i);saveTpl();renderDetail();
+});
+$("#prof").addEventListener("input",e=>{
+  const f=e.target.dataset.p;if(!f||S.group==="__all")return;
+  const p=partnerOf(S.group);p.name=S.group;p[f]=e.target.value;savePartner(S.group);
+});
+/* drag & drop on board */
+let dragId=null;
+$("#content").addEventListener("dragstart",e=>{const c=e.target.closest?.("[data-drag]");if(!c)return;dragId=c.dataset.drag;c.classList.add("dragging");try{e.dataTransfer.setData("text/plain",dragId);e.dataTransfer.effectAllowed="move"}catch(_){}});
+$("#content").addEventListener("dragend",e=>{dragId=null;e.target.closest?.("[data-drag]")?.classList.remove("dragging");document.querySelectorAll(".col.over").forEach(c=>c.classList.remove("over"))});
+$("#content").addEventListener("dragover",e=>{const c=e.target.closest("[data-col]");if(!c||!dragId)return;e.preventDefault();document.querySelectorAll(".col.over").forEach(x=>x!==c&&x.classList.remove("over"));c.classList.add("over")});
+$("#content").addEventListener("drop",e=>{const c=e.target.closest("[data-col]");if(!c||!dragId)return;e.preventDefault();
+  const j=S.jobs.find(x=>x.id===dragId);dragId=null;if(!j||j.status===c.dataset.col){renderMain();return}
+  setStatus(j,c.dataset.col);toast(`${j.code} → ${j.status}`);renderAll(S.sel===j.id)});
+
+/* ---------- events: detail ---------- */
+const D=$("#detail");
+const LISTF=["title","fwd","company","deadline","priority","type","mode","pol","pod","waiting","debitAmount","debitCurrency"];
+function syncStages(j){const si=stIdx(j.status);D.querySelectorAll(".stages button").forEach((b,i)=>b.className=j.status==="Huỷ"?"":i<si?"past":i===si?"now":"")}
+D.addEventListener("input",e=>{
+  const j=cur();if(!j)return;const t=e.target,f=t.dataset.f;
+  if(f){
+    let v=t.type==="checkbox"?t.checked:t.value;
+    if(f==="vat"||f==="debitAmount")v=num(v);
+    j[f]=v;
+    if(f==="debitDate"&&v&&stIdx(j.status)<5&&j.status!=="Huỷ"){j.status="Debit";syncStages(j)}
+    if(f==="paidDate"&&v&&j.status!=="Huỷ"){j.status="Đã thu";j.waiting=false;syncStages(j);const w=D.querySelector("#f-waiting");if(w)w.checked=false}
+    queueSave(j);
+    if(LISTF.includes(f)||f==="debitDate"||f==="paidDate"){renderSide();renderMain()}
+    if(f==="vat")renderTotals(j);
+    if(f==="type"){renderDetail(true)}
+  }
+  else if(t.dataset.t!==undefined){j.tasks[+t.dataset.t].text=t.value;queueSave(j)}
+  else if(t.dataset.q){const[i,fl]=t.dataset.q.split(":");const q=j.quote[+i];
+    q[fl]=(fl==="qty"||fl==="price")?t.value.replace(/[^\d.,\-]/g,"").replace(/,(?=\d{1,2}$)/,".").replace(/,/g,""):t.value;
+    queueSave(j);const a=D.querySelector(`[data-amt="${i}"]`);if(a)a.textContent=fmt(num(q.qty)*num(q.price),q.currency);
+    if(fl==="name"){const h=D.querySelector(`[data-hint="${i}"]`);if(h)h.innerHTML=hintHtml(q,j,+i)}
+    renderTotals(j)}
+});
+D.addEventListener("change",e=>{
+  const j=cur();if(!j)return;const t=e.target;
+  if(t.dataset.tdone!==undefined){j.tasks[+t.dataset.tdone].done=t.checked;
+    if(j.tasks.length&&j.tasks.every(x=>x.done)&&isOpen(j.status))toast("Xong hết việc. Chuyển giai đoạn tiếp theo nếu đã chốt.");
+    queueSave(j);renderAll(true)}
+});
+D.addEventListener("keydown",e=>{
+  if(e.target.id==="t-new"&&e.key==="Enter"&&e.target.value.trim()){const j=cur();(j.tasks=j.tasks||[]).push({text:e.target.value.trim(),done:false});queueSave(j);renderAll(true);$("#t-new")?.focus()}
+});
+D.addEventListener("click",e=>{
+  const j=cur();
+  const st=e.target.closest("[data-st]");
+  if(st&&j){setStatus(j,st.dataset.st);renderAll(true);return}
+  const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
+  if(a==="close"){S.sel=null;renderAll(true);return}
+  if(!j)return;
+  if(a==="tdel"){j.tasks.splice(+b.dataset.i,1);queueSave(j);renderAll(true)}
+  if(a==="applyTpl"){const have=new Set((j.tasks||[]).map(t=>normName(t.text)));const add=(S.tpl[j.type]||[]).filter(t=>!have.has(normName(t))).map(t=>({text:t,done:false}));j.tasks=add.concat(j.tasks||[]);queueSave(j);renderAll(true);toast(`Đã thêm ${add.length} bước mẫu.`)}
+  if(a==="saveTpl"){S.tpl[j.type]=(j.tasks||[]).map(t=>t.text).filter(Boolean);saveTpl();renderAll(true);toast(`Đã lưu ${S.tpl[j.type].length} bước làm mẫu “${j.type}”.`)}
+  if(a==="qadd"){(j.quote=j.quote||[]).push({name:"",qty:1,unit:"lô",price:0,currency:"VND"});queueSave(j);renderDetail(true);D.querySelector(`#q-${j.quote.length-1}-name`)?.focus()}
+  if(a==="qdel"){j.quote.splice(+b.dataset.i,1);queueSave(j);renderDetail(true)}
+  if(a==="useprice"){const q=j.quote[+b.dataset.i];const h=lastPrice(q.name,groupKey(j),j.id);if(h){q.price=h.price;q.currency=h.currency;if(!q.unit)q.unit=h.unit;queueSave(j);renderDetail(true)}}
+  if(a==="fillPrices"){let n=0;(j.quote||[]).forEach(q=>{if(num(q.price)>0)return;const h=lastPrice(q.name,groupKey(j),j.id);if(h){q.price=h.price;q.currency=h.currency;if(!q.unit)q.unit=h.unit;n++}});
+    if(n){queueSave(j);renderDetail(true)}toast(n?`Đã điền giá cũ cho ${n} dòng. Kiểm tra lại trước khi gửi.`:"Không có dòng nào (đơn giá = 0) tìm được giá cũ cùng tên.")}
+  if(a==="copyQuote"){copy(quoteText(j));if(!j.quoteSentAt){j.quoteSentAt=TODAY();if(stIdx(j.status)<1)j.status="Báo giá";queueSave(j);renderSide();renderMain();syncStages(j)}}
+  if(a==="copyBrief")copy(briefText(j));
+  if(a==="debitFromQuote"){const t=totals(j),vat=num(j.vat),c=t.VND!==undefined?"VND":Object.keys(t)[0];
+    if(!c){toast("Báo giá chưa có dòng nào.");return}
+    if(Object.keys(t).length>1)toast("Báo giá có nhiều loại tiền: chỉ lấy tổng "+c+".");j.debitAmount=Math.round(t[c]*(1+vat/100)*100)/100;j.debitCurrency=c;queueSave(j);renderAll(true)}
+  if(a==="del"){
+    if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="Bấm lần nữa để xoá vĩnh viễn";setTimeout(()=>{if(b.isConnected){b.classList.remove("arm");b.textContent="Xoá job"}},4000);return}
+    const id=j.id,path="jobs/"+id;S.jobs=S.jobs.filter(x=>x.id!==id);S.sel=null;clearTimeout(timers[path]);delete timers[path];dirty.delete(path);
+    (chains[path]||Promise.resolve()).then(()=>db&&db.doc(path).delete()).then(()=>toast("Đã xoá job "+j.code+".")).catch(()=>toast("Chưa xoá được, thử lại."));
+    renderAll(true);
+  }
+});
+
+/* ---------- modal: capture & analyze ---------- */
+let pending=[],ctl=null;
+const M=$("#modal");
+function openModal(){M.hidden=false;note("");renderPending();setTimeout(()=>$("#drop").focus(),30)}
+function closeModal(){if(ctl)ctl.abort();M.hidden=true;pending.forEach(p=>URL.revokeObjectURL(p.url));pending=[];$("#rawtext").value=""}
+function addFiles(files){
+  [...files].filter(f=>f&&f.type&&f.type.startsWith("image/")).forEach(f=>pending.push({file:f,url:URL.createObjectURL(f)}));
+  if(pending.length>5){pending.slice(5).forEach(p=>URL.revokeObjectURL(p.url));pending=pending.slice(0,5);note("Tối đa 5 ảnh mỗi job.",true)}
+  renderPending();
+}
+function renderPending(){$("#pthumbs").innerHTML=pending.map((p,i)=>`<div class="pthumb"><img src="${p.url}" alt="Ảnh ${i+1}"><button data-rm="${i}" aria-label="Bỏ ảnh">✕</button></div>`).join("")}
+function note(t,err){const n=$("#mNote");n.innerHTML=t;n.className="note"+(err?" err":"")}
+$("#pthumbs").addEventListener("click",e=>{const b=e.target.closest("[data-rm]");if(!b)return;URL.revokeObjectURL(pending[+b.dataset.rm].url);pending.splice(+b.dataset.rm,1);renderPending()});
+$("#btnNew").addEventListener("click",openModal);
+$("#btnClose").addEventListener("click",closeModal);
+M.addEventListener("click",e=>{if(e.target===M)closeModal()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!M.hidden)closeModal()});
+$("#file").addEventListener("change",e=>{addFiles(e.target.files);e.target.value=""});
+const drop=$("#drop");
+["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over")}));
+drop.addEventListener("drop",e=>addFiles(e.dataTransfer.files));
+document.addEventListener("paste",e=>{
+  const files=[...(e.clipboardData?.items||[])].filter(i=>i.kind==="file").map(i=>i.getAsFile()).filter(Boolean);
+  if(!files.length)return;
+  if(D.contains(document.activeElement))return;
+  e.preventDefault();if(M.hidden)openModal();addFiles(files);
+});
+async function uploadPending(){
+  const ids=[];if(!assets||!pending.length)return ids;
+  for(const p of pending){try{const r=await assets.upload(p.file);ids.push(r.id)}catch(e){}}
+  return ids;
+}
+$("#btnBlank").addEventListener("click",async()=>{const raw=$("#rawtext").value.trim();const imgs=await uploadPending();closeModal();await createJob({raw,images:imgs,title:raw?raw.split("\n")[0].slice(0,70):""});$("#f-title")?.focus()});
+
+function prompt(text,known){
+  const today=new Date();
+  const tpl=TYPES.map(t=>`- ${t}: ${(S.tpl[t]||[]).join("; ")||"(không có)"}`).join("\n");
+  return `Bạn là trợ lý cho một nhân viên giao nhận / khai báo hải quan ở Việt Nam. Ảnh (và/hoặc văn bản) dưới đây là ảnh chụp email hoặc tin nhắn Zalo giao việc hoặc hỏi giá.
+Hôm nay là ${["Chủ nhật","Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7"][today.getDay()]}, ${ymd(today)}.
+FWD / công ty đã có trong sổ: ${known.length?known.join("; "):"(chưa có)"}. Nếu người gửi trùng với một tên trên (kể cả viết tắt, viết hoa khác), dùng ĐÚNG tên đã có.
+
+Phân biệt: "fwd" là forwarder / đại lý / logistics giao việc hoặc hỏi giá cho mình; "company" là công ty chủ hàng (người nhập/xuất khẩu). Nếu chỉ có một bên, điền bên đó, bên kia để "".
+
+Checklist mẫu đã có sẵn theo loại việc (app tự thêm, KHÔNG lặp lại trong tasks):
+${tpl}
+
+Trả lời DUY NHẤT một JSON object, không thêm chữ nào khác:
+{"fwd":"","company":"","contact":"tên, SĐT/email nếu thấy","source":"Email|Zalo|Khác","title":"tiêu đề ngắn ≤ 70 ký tự, nêu việc + hàng/tuyến","type":"${TYPES.join("|")}","mode":"${MODES.filter(Boolean).join("|")}| (rỗng nếu không rõ)","pol":"","pod":"","cargo":"mô tả hàng, số kiện, trọng lượng, số cont nếu có","incoterm":"","refs":"số booking, B/L, invoice, tờ khai nếu có","deadline":"YYYY-MM-DD hoặc \\"\\" (quy đổi 'mai', 'thứ 6', 'trước 15h' theo ngày hôm nay)","priority":"Gấp|Thường|Thấp","summary":"1-3 câu tóm tắt khách cần gì","tasks":["CHỈ những việc riêng của lô này mà checklist mẫu của loại việc chưa có, bắt đầu bằng động từ, 0-5 việc"],"quote":[{"name":"hạng mục phí","qty":1,"unit":"lô|cont|tờ khai|kg|cbm|bộ","price":0,"currency":"VND|USD"}],"questions":["thông tin còn thiếu cần hỏi lại khách"]}
+
+Quy tắc: không bịa số liệu; giá nào tin nhắn không ghi thì để price 0. Nếu là yêu cầu báo giá, liệt kê các hạng mục phí thường gặp cho đúng loại dịch vụ đó (VD khai HQ: phí khai báo hải quan, phí nâng hạ, phí vận chuyển nội địa, phí kiểm hoá nếu có…), đặt tên hạng mục ngắn gọn và nhất quán. Viết tiếng Việt có dấu.${text?`\n\nNội dung chữ người dùng dán thêm:\n"""\n${text.slice(0,12000)}\n"""`:""}`;
+}
+function normalize(r){
+  r=(r&&typeof r==="object"&&!Array.isArray(r))?r:{};
+  const s=v=>typeof v==="string"?v.trim():(v==null?"":String(v));
+  const pick=(v,arr,d)=>arr.includes(s(v))?s(v):d;
+  const dl=/^\d{4}-\d{2}-\d{2}$/.test(s(r.deadline))?s(r.deadline):"";
+  const list=v=>Array.isArray(v)?v:(v?[v]:[]);
+  const type=pick(r.type,TYPES,"Khác");
+  const tasks=tplTasks(type),have=new Set(tasks.map(t=>normName(t.text)));
+  list(r.tasks).map(t=>s(typeof t==="object"&&t?t.text:t)).filter(t=>t&&!have.has(normName(t))).slice(0,8).forEach(t=>{if(!have.has(normName(t))){have.add(normName(t));tasks.push({text:t,done:false})}});
+  const quote=list(r.quote).filter(q=>q&&typeof q==="object").map(q=>({name:s(q.name),qty:num(q.qty)||1,unit:s(q.unit),price:num(q.price),currency:CURS.includes(s(q.currency))?s(q.currency):"VND"})).filter(q=>q.name).slice(0,25);
+  const fwd=s(r.fwd),company=s(r.company),key=fwd||company||NOGROUP;
+  quote.forEach(q=>{if(!q.price){const h=lastPrice(q.name,key,null);if(h){q.price=h.price;q.currency=h.currency;if(!q.unit)q.unit=h.unit}}});
+  return{fwd,company,contact:s(r.contact),source:pick(r.source,SOURCES,"Khác"),title:s(r.title).slice(0,120),
+    type,mode:pick(r.mode,MODES,""),pol:s(r.pol),pod:s(r.pod),cargo:s(r.cargo),incoterm:s(r.incoterm),refs:s(r.refs),
+    deadline:dl,priority:pick(r.priority,PRIOS,"Thường"),summary:s(r.summary),tasks,quote,
+    status:type==="Báo giá"?"Báo giá":"Mới",
+    questions:list(r.questions).map(s).filter(Boolean).join("\n")};
+}
+const ERR={not_granted:"Bạn chưa cho phép trang dùng Claude. Dùng “Tạo job trống” để nhập tay.",sampling_disabled:"Tài khoản này không dùng được Claude ở đây.",
+  rate_limited:"Claude đang bận hoặc bạn đã chạm giới hạn sử dụng. Thử lại sau ít phút.",images_unavailable:"Chế độ xem này không gửi được ảnh cho Claude. Dán nội dung chữ thay cho ảnh.",
+  image_rejected:"Ảnh không đọc được hoặc quá lớn. Chụp lại ảnh nhỏ hơn.",invalid_json:"Claude trả kết quả không đúng định dạng. Bấm thử lại.",
+  refused:"Claude không xử lý được nội dung này.",session_expired:"Phiên đăng nhập đã hết hạn, hãy đăng nhập lại.",prompt_too_large:"Nội dung quá dài, hãy cắt bớt."};
+$("#btnStop").addEventListener("click",()=>ctl?.abort());
+$("#btnAnalyze").addEventListener("click",async()=>{
+  const text=$("#rawtext").value.trim();
+  if(!pending.length&&!text){note("Dán ảnh hoặc nội dung tin nhắn trước.",true);return}
+  if(!sample){note("Không gọi được Claude ở chế độ xem này. Dùng “Tạo job trống” để nhập tay.",true);return}
+  ctl=new AbortController();const btn=$("#btnAnalyze");btn.disabled=true;$("#btnStop").hidden=false;
+  note('<span class="spin"></span>Claude đang đọc '+(pending.length?pending.length+" ảnh":"nội dung")+"… (thường 10–40 giây)");
+  const known=[...new Set(S.jobs.flatMap(j=>[j.fwd,j.company]).filter(Boolean))].slice(0,120);
+  const opts={signal:ctl.signal,cache:false};if(pending.length)opts.images=pending.map(p=>p.file);
+  try{
+    const r=await sample.json(prompt(text,known),opts);
+    note('<span class="spin"></span>Đang lưu job…');
+    const data=normalize(r);data.raw=text;data.images=await uploadPending();
+    closeModal();await createJob(data);
+    toast(`Đã tạo ${cur()?.code}: ${data.fwd||data.company||"chưa rõ FWD"}. Kiểm tra lại thông tin bên phải.`);
+  }catch(e){if(e?.code==="cancelled")note("Đã dừng.");else note((window.SOJOB_BLOB_BASE!=null&&e?.message)?esc(e.message):ERR[e?.code]||"Có lỗi khi gọi Claude ("+esc(e?.code||"không rõ")+"). Thử lại.",true)}
+  finally{btn.disabled=false;$("#btnStop").hidden=true;ctl=null}
+});
+
+/* ---------- toast ---------- */
+let tt;function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,3500)}
+
+/* ---------- boot ---------- */
+function fixJob(j){if(LEGACY[j.status]){if(j.status==="Chờ phản hồi")j.waiting=true;j.status=LEGACY[j.status]}if(!STAGES.includes(j.status))j.status="Mới";return j}
+renderAll(true);
+(async()=>{
+  const use=n=>window.claude?.use?window.claude.use(n).catch(()=>null):Promise.resolve(null);
+  [db,sample,assets]=await Promise.all([use("db"),use("sample"),use("assets")]);
+  if(!db){S.loaded=true;$("#banner").innerHTML=`<div class="banner">Không kết nối được kho lưu job. Bạn vẫn tạo job được, nhưng sẽ mất khi tải lại trang.</div>`;renderAll(true);return}
+  const timer=setTimeout(()=>{if(!S.loaded){S.loaded=true;$("#banner").innerHTML=`<div class="banner">Chưa tải được dữ liệu, đang thử lại…</div>`;renderAll()}},10000);
+  const fail=err=>{clearTimeout(timer);S.loaded=true;$("#banner").innerHTML=`<div class="banner">Mất kết nối kho dữ liệu (${esc(err?.code)}). Tải lại trang để thử lại.</div>`;renderAll()};
+  db.collection("jobs").onSnapshot(snap=>{
+    const local=new Map(S.jobs.map(j=>[j.id,j]));
+    S.jobs=snap.docs.map(d=>dirty.has("jobs/"+d.id)&&local.has(d.id)?local.get(d.id):fixJob(Object.assign({id:d.id},JSON.parse(JSON.stringify(d.data())))));
+    local.forEach((j,id)=>{if(dirty.has("jobs/"+id)&&!S.jobs.some(x=>x.id===id))S.jobs.push(j)});
+    if(!snap.metadata.fromCache){clearTimeout(timer);$("#banner").innerHTML=""}
+    S.loaded=true;if(S.sel&&!cur())S.sel=null;renderAll(false);
+  },fail);
+  db.doc("meta/templates").onSnapshot(d=>{
+    if(dirty.has("meta/templates"))return;
+    const by=d.exists?d.data().byType:null;
+    S.tpl=Object.assign(JSON.parse(JSON.stringify(DEFAULT_TPL)),by?JSON.parse(JSON.stringify(by)):{});
+    if(S.view==="tpl")renderMain();renderDetail();
+  },()=>{});
+  db.collection("todos").onSnapshot(snap=>{
+    const local=new Map(S.todos.map(t=>[t.id,t]));
+    S.todos=snap.docs.map(d=>dirty.has("todos/"+d.id)&&local.has(d.id)?local.get(d.id):Object.assign({id:d.id},JSON.parse(JSON.stringify(d.data()))));
+    local.forEach((t,id)=>{if(dirty.has("todos/"+id)&&!S.todos.some(x=>x.id===id))S.todos.push(t)});
+    if(S.view==="plan"&&S.loaded)renderPlan($("#content"));
+  },()=>{});
+  db.collection("partners").onSnapshot(snap=>{
+    snap.docs.forEach(d=>{if(!dirty.has("partners/"+d.id))S.partners[d.id]=JSON.parse(JSON.stringify(d.data()))});
+    renderProfile();
+  },()=>{});
+})();
+</script>
+</body></html>

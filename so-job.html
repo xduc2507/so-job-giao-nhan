@@ -296,7 +296,7 @@ const PRIOS=["Gấp","Thường","Thấp"];
 const SOURCES=["Email","Zalo","Điện thoại","Khác"];
 const CURS=["VND","USD"];
 const NOGROUP="Chưa rõ FWD / cty";
-const BLOB=window.SOJOB_BLOB_BASE||"/_blob/";
+const BLOB=window.SOJOB_BLOB_BASE??"/_blob/";
 const DEFAULT_TPL={
   "Báo giá":["Xác nhận thông tin lô: hàng, số lượng, tuyến, incoterm","Tra mã HS, thuế suất, chính sách mặt hàng","Hỏi giá vận chuyển / nâng hạ / local charge","Lập báo giá và gửi khách","Theo dõi phản hồi báo giá"],
   "Khai HQ nhập":["Nhận bộ chứng từ: invoice, packing list, B/L, C/O","Kiểm tra chứng từ, đối chiếu C/O","Tra mã HS, kiểm tra KTCN / giấy phép","Lấy lệnh giao hàng (D/O)","Truyền tờ khai ECUS","Nộp thuế, theo dõi phân luồng","Thông quan, lấy mã vạch, thanh lý","Giao hàng về kho","Lập debit gửi khách"],
@@ -854,7 +854,7 @@ $("#btnAnalyze").addEventListener("click",async()=>{
     const data=normalize(r);data.raw=text;data.images=await uploadPending();
     closeModal();await createJob(data);
     toast(`Đã tạo ${cur()?.code}: ${data.fwd||data.company||"chưa rõ FWD"}. Kiểm tra lại thông tin bên phải.`);
-  }catch(e){if(e?.code==="cancelled")note("Đã dừng.");else note((window.SOJOB_BLOB_BASE&&e?.message)?esc(e.message):ERR[e?.code]||"Có lỗi khi gọi Claude ("+esc(e?.code||"không rõ")+"). Thử lại.",true)}
+  }catch(e){if(e?.code==="cancelled")note("Đã dừng.");else note((window.SOJOB_BLOB_BASE!=null&&e?.message)?esc(e.message):ERR[e?.code]||"Có lỗi khi gọi Claude ("+esc(e?.code||"không rõ")+"). Thử lại.",true)}
   finally{btn.disabled=false;$("#btnStop").hidden=true;ctl=null}
 });
 
