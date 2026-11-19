@@ -1,0 +1,6 @@
+# Chỉ bỏ qua ở thư mục gốc (tránh khớp nhầm Config.php, Data/ trong vendor)
+/config.php
+/uploads/
+/data/
+/.user.ini
+/.claude/

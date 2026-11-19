@@ -1,0 +1,16 @@
+{
+    "name": "xduc2507/so-job-giao-nhan",
+    "description": "Sổ Job Giao Nhận - bản chạy độc lập (PHP + MySQL + Claude API)",
+    "type": "project",
+    "require": {
+        "php": ">=8.1",
+        "anthropic-ai/sdk": "^1.0",
+        "guzzlehttp/guzzle": "^7.9"
+    },
+    "config": {
+        "platform": {
+            "php": "8.1.0"
+        },
+        "optimize-autoloader": true
+    }
+}

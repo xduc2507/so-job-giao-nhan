@@ -15,21 +15,54 @@ Sổ quản lý công việc cho nhân viên giao nhận / khai báo hải quan.
 - **Kế hoạch việc**: gom việc chưa xong theo hạn (Quá hạn / Hôm nay / 7 ngày tới…). Gõ tay việc riêng hoặc việc thuộc job.
 - **Báo giá và debit**: VAT, tổng theo VND / USD, nút copy báo giá để dán vào Zalo hoặc email.
 
-## Chạy ở đâu
+## Hai cách chạy
 
-Trang được thiết kế để chạy như một **Artifact trên claude.ai**. Nó dùng các khả năng mà claude.ai cấp cho trang qua `window.claude.use(...)`:
+Giao diện nằm trong một file duy nhất, `so-job.html`, dùng chung cho cả hai cách. Trang gọi `window.claude.use("db" | "sample" | "assets")` để lưu dữ liệu, đọc ảnh bằng Claude và lưu ảnh gốc.
 
-| Khả năng | Dùng để |
+### 1. Artifact trên claude.ai
+claude.ai tự cung cấp ba khả năng trên. Người dùng cần tài khoản Claude, và việc đọc ảnh tính vào hạn mức của chính họ.
+
+### 2. Bản chạy độc lập (PHP + MySQL), ví dụ trên Hostinger
+`index.php` lấy `so-job.html`, chèn `shim.js` vào. `shim.js` dựng lại `window.claude.use(...)` bằng các API PHP:
+
+| File | Việc |
 |---|---|
-| `db` | Lưu job, mẫu checklist, hồ sơ FWD, việc riêng; đồng bộ giữa các máy |
-| `sample` (kèm ảnh) | Gọi Claude đọc ảnh chụp và trả về JSON |
-| `assets` | Lưu ảnh chụp gốc của job |
+| `api/auth.php` | Đăng nhập, đăng xuất (session PHP) |
+| `api/db.php` | Kho tài liệu JSON trong MySQL; trình duyệt hỏi lại mỗi 6 giây để đồng bộ giữa các máy |
+| `api/ai.php` | Gửi ảnh + lời nhắc tới Claude API (Claude Opus 5.5) qua thư viện chính thức `anthropic-ai/sdk` |
+| `api/upload.php`, `api/file.php` | Lưu và xem ảnh chụp gốc (chỉ người đã đăng nhập) |
+| `api/users.php` | Quản trị viên thêm, xoá, đổi mật khẩu người dùng |
+| `install.php` | Trang cài đặt một lần: nhập MySQL, API key, tài khoản quản trị → tạo `config.php` rồi tự khoá |
 
-Mở file `so-job.html` trực tiếp trong trình duyệt hoặc qua GitHub Pages thì **không có** các khả năng trên. Trang vẫn chạy ở chế độ tạm: tạo job trống và nhập tay được, nhưng không đọc ảnh bằng Claude và dữ liệu mất khi tải lại trang.
+Thư mục `vendor/` đã có sẵn thư viện (không cần chạy Composer trên host). Yêu cầu PHP 8.1 trở lên, có `curl`, `pdo_mysql`, `mbstring`, `fileinfo`.
 
-Muốn chạy độc lập ngoài claude.ai cần thay hai phần:
-1. Kho dữ liệu: đổi lớp `db` sang Firebase / Supabase / API riêng (cùng kiểu `doc().set()`, `collection().onSnapshot()`).
-2. Đọc ảnh: gọi Claude API qua một backend nhỏ, **không** đặt API key trong file HTML.
+Chi phí đọc ảnh tính vào tài khoản Claude API của bạn (console.anthropic.com), khoảng vài trăm đến một nghìn đồng mỗi lần tạo job từ ảnh, tuỳ số ảnh và độ dài tin nhắn.
+
+## Cài lên Hostinger (Web / Cloud Hosting)
+
+1. **Tạo database**: hPanel → Websites → *Quản lý* → **Databases → Management** → tạo database MySQL mới, ghi lại tên database, user và mật khẩu.
+2. **Lấy API key Claude**: vào console.anthropic.com → API keys → Create key. Nạp tiền (Billing) nếu tài khoản chưa có số dư.
+3. **Đưa code lên** (chọn một cách):
+   - **Git** (khuyên dùng): hPanel → **Advanced → Git** → repository `https://github.com/xduc2507/so-job-giao-nhan.git`, branch `main`, thư mục cài đặt ví dụ `public_html/sojob` (thư mục phải trống) → *Create* → *Deploy*. Lần sau cập nhật chỉ cần bấm *Redeploy*.
+   - **File Manager**: tải ZIP của repo trên GitHub (Code → Download ZIP), tải lên `public_html/sojob` và giải nén.
+4. **Cài đặt**: mở `https://tên-miền-của-bạn/sojob/install.php`, điền thông tin ở bước 1, 2 và tạo tài khoản quản trị.
+5. Mở `https://tên-miền-của-bạn/sojob/`, đăng nhập. Bấm **Người dùng** ở góc trên để tạo tài khoản cho đồng nghiệp.
+
+Nếu đọc ảnh báo hết giờ: hPanel → **Advanced → PHP Configuration** → tăng `max_execution_time` lên 300 và `upload_max_filesize` lên 12M.
+
+## Chạy thử trên máy
+
+```bash
+composer install
+php -S 127.0.0.1:8099
+```
+Mở `http://127.0.0.1:8099/install.php` (cần MySQL), hoặc tự tạo `config.php` theo `config.sample.php` với `db_dsn` dạng `sqlite:/đường/dẫn/test.sqlite` rồi gọi `ensure_schema(pdo())` trong `lib.php` để tạo bảng.
+
+## Bảo mật
+- `config.php` (mật khẩu MySQL, API key) không nằm trong Git, `.htaccess` chặn tải trực tiếp.
+- API key chỉ ở máy chủ, trình duyệt không bao giờ thấy.
+- Mọi API ghi dữ liệu yêu cầu đăng nhập và header riêng của app (chống CSRF).
+- Ảnh gốc lưu trong `uploads/`, chặn truy cập trực tiếp, chỉ xem qua `api/file.php` khi đã đăng nhập.
 
 ## Cấu trúc dữ liệu
 

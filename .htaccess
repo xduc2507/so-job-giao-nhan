@@ -1,0 +1,23 @@
+Options -Indexes
+DirectoryIndex index.php
+
+# Không cho tải trực tiếp file cấu hình, thư viện và mã nguồn nội bộ
+<FilesMatch "^(config\.php|config\.sample\.php|lib\.php|composer\.(json|lock)|README\.md|so-job\.html|\.gitignore)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+RedirectMatch 404 ^.*/\.git(/|$)
+RedirectMatch 404 ^.*/vendor/
+RedirectMatch 404 ^.*/uploads/
+
+# Ảnh chụp từ điện thoại có thể vài MB
+<IfModule mod_php.c>
+  php_value upload_max_filesize 12M
+  php_value post_max_size 60M
+  php_value max_execution_time 300
+</IfModule>
