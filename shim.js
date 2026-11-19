@@ -34,6 +34,7 @@
   const ready = call("api/auth.php").then(j => {
     me = j.user || null;
     if (!me) { showLogin(); return never; }
+    window.SOJOB_USER = me.username; // ghi vào lịch sử hoạt động của job
     addUserBar();
     return me;
   }, e => { showBanner(e.message); return never; });
