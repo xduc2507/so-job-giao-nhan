@@ -199,9 +199,33 @@
   sample.limits = async () => ({ maxPromptBytes: 262144, images: { maxCount: 5, maxInputBytes: 10 * 1024 * 1024, mediaTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"] } });
 
   /* ---------- assets: ảnh gốc thu nhỏ, lưu thẳng trong job ---------- */
+  /* Nén ảnh chụp màn hình nhỏ nhất mà chữ vẫn đọc được: rộng tối đa 1000px (ảnh dài thì cao tối đa 4000px),
+   * WebP (Safari cũ không có thì JPEG), giảm chất lượng dần cho tới khi dưới ~120 KB. */
+  async function compactForStore(blob) {
+    try {
+      if (!blob || !/^image\//.test(blob.type) || typeof createImageBitmap !== "function") return blob;
+      const bmp = await createImageBitmap(blob);
+      const W = bmp.width, H = bmp.height, TARGET = 120 * 1024;
+      let k = Math.min(1, 1000 / W, 4000 / H), out = null;
+      for (let round = 0; round < 3; round++) {
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(W * k)); c.height = Math.max(1, Math.round(H * k));
+        const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+        for (const q of [0.6, 0.48, 0.38]) {
+          let b = await new Promise(r => c.toBlob(r, "image/webp", q));
+          if (!b || b.type !== "image/webp") b = await new Promise(r => c.toBlob(r, "image/jpeg", q + 0.05));
+          if (b) out = b;
+          if (b && b.size <= TARGET) { bmp.close && bmp.close(); return b; }
+        }
+        k *= 0.8; // vẫn nặng: thu nhỏ thêm một chút
+      }
+      bmp.close && bmp.close();
+      return out && out.size < blob.size ? out : blob;
+    } catch (e) { return blob; }
+  }
   const assets = {
     async upload(blob) {
-      const b = FB ? await shrink(blob, 1000, 0.62) : await shrink(blob, 1400, 0.8); // Firestore: tối đa 1 MB mỗi job
+      const b = await compactForStore(blob);
       const url = await toDataURL(b);
       return { id: url, url, sizeBytes: b.size, contentType: b.type };
     },

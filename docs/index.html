@@ -268,6 +268,15 @@ table.q .num{text-align:right}
 .tot b{font-family:var(--f-mono);font-size:15px}
 .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumbs a{cursor:zoom-in}
+.lb{position:fixed;inset:0;z-index:40;background:rgba(5,10,8,.92);display:flex;flex-direction:column}
+.lb-bar{display:flex;gap:8px;align-items:center;padding:10px 12px;color:#fff;font-size:13px;padding-top:max(10px,env(safe-area-inset-top,0px))}
+.lb-bar span{margin-right:auto;opacity:.8}
+.lb-bar button{background:rgba(255,255,255,.14);border:0;color:#fff;min-height:36px;padding:6px 12px}
+.lb-wrap{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch}
+.lb-wrap img{max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in;background:#fff}
+.lb.zoom .lb-wrap{display:block}
+.lb.zoom .lb-wrap img{max-width:none;max-height:none;width:auto;cursor:zoom-out}
 .thumbs a img,.thumbs img{width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--line);display:block}
 .empty-detail{padding:40px 24px;color:var(--muted);text-align:center}
 .back{display:none}
@@ -375,7 +384,7 @@ table.q .num{text-align:right}
 <div id="toast" hidden></div>
 
 <script src="firebase-config.js?v=45d05b0fe0"></script>
-<script src="static-shim.js?v=b4efd8e1c4"></script>
+<script src="static-shim.js?v=9d16a9a109"></script>
 <script>
 const TYPES=["Báo giá","Khai HQ nhập","Khai HQ xuất","Vận chuyển","Chứng từ / C/O","Kiểm tra chuyên ngành","Khác"];
 const MODES=["","Sea FCL","Sea LCL","Air","Road","Express"];
@@ -409,11 +418,14 @@ const DEFAULT_TPL={
 const stIdx=s=>Math.max(0,STAGES.indexOf(s));
 const isOpen=s=>s!==DONE&&s!==FAIL;
 const svcOf=j=>SERVICES.includes(j.service)?j.service:(j.type==="Vận chuyển"?"VC":"HQ");
-const route=j=>ROUTES[svcOf(j)].map(i=>STAGES[i]);
+const VEHICLES=["Xe cont","Xe tải"];
+const isTruck=j=>j.vehicle==="Xe tải";
+const route=j=>ROUTES[svcOf(j)].filter(i=>!(i===6&&isTruck(j))).map(i=>STAGES[i]);
 const hasVC=j=>svcOf(j)!=="HQ";
+const needDeposit=j=>hasVC(j)&&!isTruck(j);
 function nextStage(j){const r=route(j),i=r.indexOf(j.status);if(i>=0)return r[i+1]||null;const si=stIdx(j.status);return r.find(s=>stIdx(s)>si)||null}
 function prevStage(j){const r=route(j),i=r.indexOf(j.status);if(i>=0)return i>0?r[i-1]:null;const si=stIdx(j.status);return [...r].reverse().find(s=>stIdx(s)<si)||null}
-const depositPending=j=>hasVC(j)&&isOpen(j.status)&&stIdx(j.status)>=6&&!["Đã hoàn","Không có cược"].includes(j.deposit);
+const depositPending=j=>needDeposit(j)&&isOpen(j.status)&&stIdx(j.status)>=6&&!["Đã hoàn","Không có cược"].includes(j.deposit);
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -468,7 +480,7 @@ async function createJob(data){
   const j=Object.assign({
     code:nextCode(),title:"",fwd:"",company:"",contact:"",source:"Email",type:"Khác",mode:"",pol:"",pod:"",
     cargo:"",incoterm:"",refs:"",deadline:"",priority:"Thường",status:"Mới nhận",summary:"",questions:"",
-    service:"",mst:"",bl:"",cont:"",tkNo:"",lane:"",truck:"",deposit:"",blocker:"",returnNote:"",
+    service:"",vehicle:"",yard:"",cbm:"",mst:"",bl:"",cont:"",tkNo:"",lane:"",truck:"",deposit:"",blocker:"",returnNote:"",
     tasks:[],quote:[],vat:0,quoteNote:"",quoteSentAt:"",debitAmount:0,debitCurrency:"VND",debitDate:"",paidDate:"",
     raw:"",images:[],createdAt:Date.now(),updatedAt:Date.now(),stageAt:Date.now(),history:[]
   },data);
@@ -509,7 +521,7 @@ async function moveJob(j,target){
     if(!v)return false;j.returnNote=v.n;setStatus(j,target,"return",v.n);return true}
   const passed=STAGES.slice(fi+1,ti+1).filter(s=>r.includes(s)||s===target),need=[];
   passed.forEach(s=>(REQ[s]||[]).forEach(q=>{if(!(q[0]==="debitAmount"?num(j.debitAmount):String(j[q[0]]||"").trim()))need.push(q)}));
-  if(target===DONE&&hasVC(j)&&!["Đã hoàn","Không có cược"].includes(j.deposit))need.push(["deposit","Hoàn cược cont","select",DEPOSIT.slice(2)]);
+  if(target===DONE&&needDeposit(j)&&!["Đã hoàn","Không có cược"].includes(j.deposit))need.push(["deposit","Hoàn cược cont","select",DEPOSIT.slice(2)]);
   const undone=(j.tasks||[]).filter(t=>!t.done).length,off=!r.includes(target),warnTasks=ti>=7&&undone>0;
   if(need.length||off||warnTasks){
     const msg=[off?`“${target}” không nằm trong quy trình ${svcOf(j)}.`:"",warnTasks?`Còn ${undone} việc chưa đánh dấu xong.`:"",need.length?"Điền các mục dưới đây để chuyển:":"Vẫn chuyển?"].filter(Boolean).join(" ");
@@ -568,7 +580,7 @@ function visibleJobs(ignoreStatus){
     if(!ignoreStatus){if(S.fStatus==="open"&&!isOpen(j.status))return false;if(S.fStatus==="done"&&isOpen(j.status))return false}
     if(S.group!=="__all"&&groupKey(j)!==S.group)return false;
     if(S.svc&&svcOf(j)!==S.svc)return false;
-    if(q){const h=[j.code,j.title,j.fwd,j.company,j.contact,j.refs,j.cargo,j.pol,j.pod,j.summary,j.mst,j.bl,j.cont,j.tkNo,j.truck,j.blocker].join(" ").toLowerCase();if(!h.includes(q))return false}
+    if(q){const h=[j.code,j.title,j.fwd,j.company,j.contact,j.refs,j.cargo,j.pol,j.pod,j.summary,j.mst,j.bl,j.cont,j.tkNo,j.truck,j.yard,j.blocker].join(" ").toLowerCase();if(!h.includes(q))return false}
     return true;
   }).sort((a,b)=>{
     const pa=a.priority==="Gấp"?0:1,pb=b.priority==="Gấp"?0:1;
@@ -658,7 +670,7 @@ function kanbanCard(j){
   const done=(j.tasks||[]).filter(t=>t.done).length,all=(j.tasks||[]).length,who=groupKey(j),svc=svcOf(j);
   const desc=[j.cargo||j.summary,j.pol||j.pod?`${j.pol||"?"} → ${j.pod||"?"}`:""].filter(Boolean).join(" · ");
   const tags=[`<span class="sv sv-${svc==="HQ"?"hq":svc==="VC"?"vc":"both"}">${svc}</span>`,j.priority==="Gấp"?'<span class="u">GẤP</span>':"",
-    j.bl?`<span title="Số B/L">${esc(j.bl)}</span>`:"",j.cont?`<span title="Số cont">${esc(j.cont)}</span>`:"",
+    j.bl?`<span title="Số B/L">${esc(j.bl)}</span>`:"",hasVC(j)&&isTruck(j)?'<span>Xe tải</span>':"",hasVC(j)&&isTruck(j)&&j.cbm?`<span title="Số khối">${esc(j.cbm)} m³</span>`:"",hasVC(j)&&!isTruck(j)&&j.yard?`<span title="Bãi hạ cont">Hạ: ${esc(j.yard)}</span>`:"",j.cont?`<span title="${isTruck(j)?"Xe / tải trọng":"Số cont"}">${esc(j.cont)}</span>`:"",
     j.lane?`<span class="ln ln-${j.lane==="Xanh"?"g":j.lane==="Vàng"?"y":"r"}">Luồng ${esc(j.lane)}</span>`:"",
     depositPending(j)?'<span class="w">Chưa hoàn cược</span>':"",
     num(j.debitAmount)&&stIdx(j.status)>=7?`<span class="mono">${fmt(j.debitAmount,j.debitCurrency)} ${esc(j.debitCurrency||"VND")}</span>`:"",j.example?'<span>VÍ DỤ</span>':""].join("");
@@ -877,8 +889,8 @@ function renderDetail(force){
     <div class="grid3">
       <label class="fld"><span>Loại dịch vụ</span><select id="f-service" data-f="service">${SERVICES.map(s=>`<option value="${s}" ${svcOf(j)===s?"selected":""}>${s} · ${SERVICE_NAME[s]}</option>`).join("")}</select></label>
       ${F("mst","MST khách",j.mst)}${F("bl","Số B/L",j.bl)}
-      ${F("cont","Số cont (VD 3x40')",j.cont)}${F("tkNo","Số tờ khai",j.tkNo)}${SEL("lane","Luồng",LANES,j.lane||"")}
-      ${hasVC(j)?`${F("truck","Nhà xe / biển số",j.truck)}${SEL("deposit","Hoàn cược cont",DEPOSIT,j.deposit||"")}`:""}
+      ${F("cont",isTruck(j)?"Số xe / tải trọng (VD 1 xe 8 tấn)":"Số cont (VD 3x40')",j.cont)}${F("tkNo","Số tờ khai",j.tkNo)}${SEL("lane","Luồng",LANES,j.lane||"")}
+      ${hasVC(j)?`${SEL("vehicle","Loại xe",VEHICLES,j.vehicle||"Xe cont")}${F("truck","Nhà xe / biển số",j.truck)}${isTruck(j)?F("cbm","Số khối (m³)",j.cbm):F("yard","Bãi hạ cont",j.yard)+SEL("deposit","Hoàn cược cont",DEPOSIT,j.deposit||"")}`:""}
     </div>
   </div>
   <div class="sec"><h3>Thông tin lô</h3>
@@ -906,7 +918,7 @@ function renderDetail(force){
       ${SEL("debitCurrency","Tiền tệ",CURS,j.debitCurrency||"VND")}
       ${F("debitDate","Ngày gửi debit",j.debitDate,"","date")}${F("paidDate","Ngày khách trả",j.paidDate,"","date")}
     </div>
-    <span style="font-size:12px;color:var(--muted)">Điền ngày gửi debit → job sang “Chờ thu tiền”. Điền ngày khách trả → job sang “Hoàn thành”${hasVC(j)?" (khi đã hoàn cược cont)":""}.</span>
+    <span style="font-size:12px;color:var(--muted)">Điền ngày gửi debit → job sang “Chờ thu tiền”. Điền ngày khách trả → job sang “Hoàn thành”${needDeposit(j)?" (khi đã hoàn cược cont)":""}.</span>
   </div>
   <div class="sec"><h3>Lịch sử hoạt động <span class="mono">${(j.history||[]).length}</span></h3>
     ${(j.history||[]).length?`<ol class="hist">${[...j.history].reverse().slice(0,40).map(h=>`<li><span class="mono">${new Date(h.at).toLocaleString("vi-VN",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</span><span>${histText(h)}</span></li>`).join("")}</ol>`:`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có. Mỗi lần chuyển bước, trả về, ghi vướng mắc sẽ được ghi lại ở đây.</p>`}
@@ -939,7 +951,7 @@ function quoteText(j){
 }
 function briefText(j){
   const L=[`[${j.code}] ${j.title}`,`FWD/Cty: ${[j.fwd,j.company].filter(Boolean).join(" / ")||"—"}`,`Dịch vụ: ${svcOf(j)} · Giai đoạn: ${j.status}${j.blocker?" (vướng: "+j.blocker+")":""}`,`Loại: ${j.type}${j.mode?" · "+j.mode:""}${j.pol||j.pod?` · ${j.pol||"?"} → ${j.pod||"?"}`:""}`];
-  if(j.cargo)L.push("Hàng: "+j.cargo);const ids=[j.mst&&"MST "+j.mst,j.bl&&"B/L "+j.bl,j.cont&&"Cont "+j.cont,j.tkNo&&"TK "+j.tkNo,j.lane&&"Luồng "+j.lane,j.truck&&"Xe "+j.truck].filter(Boolean);if(ids.length)L.push(ids.join(" · "));if(j.refs)L.push("Số tham chiếu: "+j.refs);if(j.deadline)L.push("Hạn: "+j.deadline.split("-").reverse().join("/"));
+  if(j.cargo)L.push("Hàng: "+j.cargo);const ids=[j.mst&&"MST "+j.mst,j.bl&&"B/L "+j.bl,j.cont&&"Cont "+j.cont,j.tkNo&&"TK "+j.tkNo,j.lane&&"Luồng "+j.lane,j.truck&&"Xe "+j.truck,j.yard&&"Bãi hạ "+j.yard,j.cbm&&j.cbm+" m³"].filter(Boolean);if(ids.length)L.push(ids.join(" · "));if(j.refs)L.push("Số tham chiếu: "+j.refs);if(j.deadline)L.push("Hạn: "+j.deadline.split("-").reverse().join("/"));
   if(j.summary)L.push("Yêu cầu: "+j.summary);
   if((j.tasks||[]).length){L.push("Việc cần làm:");j.tasks.forEach(t=>L.push(`${t.done?"[x]":"[ ]"} ${t.text}`))}
   if(j.questions)L.push("Cần hỏi lại: "+j.questions);
@@ -983,6 +995,7 @@ async function manualJob(status){
     fields:[{id:"title",label:"Tiêu đề (VD: Khai nhập 2x40 máy móc cho Cty A)",required:true},
       {id:"who",label:"FWD / công ty",list:known,value:S.group!=="__all"&&S.group!==NOGROUP?S.group:""},
       {id:"service",label:"Loại dịch vụ",type:"select",options:SERVICES,value:S.svc||"HQ",required:true},
+      {id:"vehicle",label:"Loại xe (khi có vận chuyển)",type:"select",options:VEHICLES,value:"Xe cont"},
       {id:"type",label:"Loại việc (để trống: tự chọn theo dịch vụ)",type:"select",options:TYPES},
       {id:"deadline",label:"Hạn xử lý (không bắt buộc)",type:"date"},
       {id:"summary",label:"Ghi chú / yêu cầu của khách"}]});
@@ -990,7 +1003,7 @@ async function manualJob(status){
   const type=v.type||(v.service==="VC"?"Vận chuyển":"Khai HQ nhập");
   const asCompany=!!v.who&&!S.jobs.some(j=>j.fwd===v.who)&&S.jobs.some(j=>j.company===v.who);
   await createJob({title:v.title,fwd:asCompany?"":v.who,company:asCompany?v.who:"",
-    service:v.service,type,deadline:v.deadline,summary:v.summary,source:"Điện thoại",tasks:tplTasks(type),status:status||(type==="Báo giá"?"Báo giá":STAGES[0])});
+    service:v.service,vehicle:v.service==="HQ"?"":(v.vehicle||"Xe cont"),type,deadline:v.deadline,summary:v.summary,source:"Điện thoại",tasks:tplTasks(type),status:status||(type==="Báo giá"?"Báo giá":STAGES[0])});
   toast(`Đã tạo ${cur()?.code}. Điền thêm thông tin ở phiếu job.`);
 }
 $("#btnManual").addEventListener("click",()=>manualJob());
@@ -1022,7 +1035,7 @@ $("#content").addEventListener("drop",e=>{const c=e.target.closest("[data-col]")
 
 /* ---------- events: detail ---------- */
 const D=$("#detail");
-const LISTF=["title","fwd","company","deadline","priority","type","mode","pol","pod","debitAmount","debitCurrency","service","blocker","bl","cont","lane","deposit","tkNo","truck","cargo"];
+const LISTF=["vehicle","yard","cbm","title","fwd","company","deadline","priority","type","mode","pol","pod","debitAmount","debitCurrency","service","blocker","bl","cont","lane","deposit","tkNo","truck","cargo"];
 function syncStages(j){const b=D.querySelector("#stagebar");if(b)b.innerHTML=stagesHtml(j)}
 D.addEventListener("input",e=>{
   const j=cur();if(!j)return;const t=e.target,f=t.dataset.f;
@@ -1031,12 +1044,12 @@ D.addEventListener("input",e=>{
     if(f==="vat"||f==="debitAmount")v=num(v);
     j[f]=v;
     if(f==="debitDate"&&v&&isOpen(j.status)&&stIdx(j.status)<8){setStatus(j,"Chờ thu tiền","auto","Điền ngày gửi debit");syncStages(j)}
-    if(f==="paidDate"&&v&&isOpen(j.status)){if(depositPending(j)||(hasVC(j)&&!["Đã hoàn","Không có cược"].includes(j.deposit)))toast("Đã ghi ngày trả. Lô có vận chuyển chưa hoàn cược nên chưa chuyển Hoàn thành.");else{setStatus(j,DONE,"auto","Điền ngày khách trả");renderDetail(true)}}
+    if(f==="paidDate"&&v&&isOpen(j.status)){if(needDeposit(j)&&!["Đã hoàn","Không có cược"].includes(j.deposit))toast("Đã ghi ngày trả. Lô có vận chuyển chưa hoàn cược nên chưa chuyển Hoàn thành.");else{setStatus(j,DONE,"auto","Điền ngày khách trả");renderDetail(true)}}
     if(f==="blocker"&&!t.dataset.logged){t.dataset.logged="1";t.addEventListener("change",()=>{logH(j,{kind:"blocker",note:j.blocker||"(đã gỡ)"});queueSave(j)},{once:true})}
     queueSave(j);
     if(LISTF.includes(f)||f==="debitDate"||f==="paidDate"){renderSide();renderMain()}
     if(f==="vat")renderTotals(j);
-    if(f==="type"||f==="service"){renderDetail(true)}
+    if(f==="type"||f==="service"||f==="vehicle"){renderDetail(true)}
   }
   else if(t.dataset.t!==undefined){j.tasks[+t.dataset.t].text=t.value;queueSave(j)}
   else if(t.dataset.q){const[i,fl]=t.dataset.q.split(":");const q=j.quote[+i];
@@ -1054,6 +1067,25 @@ D.addEventListener("change",e=>{
 D.addEventListener("keydown",e=>{
   if(e.target.id==="t-new"&&e.key==="Enter"&&e.target.value.trim()){const j=cur();(j.tasks=j.tasks||[]).push({text:e.target.value.trim(),done:false});queueSave(j);renderAll(true);$("#t-new")?.focus()}
 });
+/* ---------- xem ảnh gốc ngay trong app (trình duyệt chặn mở ảnh data: ở tab mới) ---------- */
+function openLightbox(list,i){
+  let k=i;const d=document.createElement("div");d.className="lb";d.setAttribute("role","dialog");d.setAttribute("aria-modal","true");
+  d.innerHTML=`<div class="lb-bar"><span></span>${list.length>1?'<button data-lb="-1" aria-label="Ảnh trước">‹</button><button data-lb="1" aria-label="Ảnh sau">›</button>':""}<button data-lb="z">Phóng to</button><button data-lb="x" aria-label="Đóng">✕ Đóng</button></div><div class="lb-wrap"><img alt="Ảnh chụp gốc"></div>`;
+  const img=d.querySelector("img"),cap=d.querySelector(".lb-bar span"),zb=d.querySelector('[data-lb="z"]');
+  const show=()=>{img.src=list[k];cap.textContent=list.length>1?`Ảnh ${k+1}/${list.length}`:"Ảnh chụp gốc";d.classList.remove("zoom");zb.textContent="Phóng to"};
+  const zoom=()=>{d.classList.toggle("zoom");zb.textContent=d.classList.contains("zoom")?"Vừa màn hình":"Phóng to"};
+  const close=()=>{d.remove();document.removeEventListener("keydown",key,true)};
+  const key=e=>{if(e.key==="Escape"){e.stopPropagation();close()}else if(e.key==="ArrowRight"&&list.length>1){k=(k+1)%list.length;show()}else if(e.key==="ArrowLeft"&&list.length>1){k=(k-1+list.length)%list.length;show()}};
+  d.addEventListener("click",e=>{const b=e.target.closest("[data-lb]");
+    if(b){const v=b.dataset.lb;if(v==="x")close();else if(v==="z")zoom();else{k=(k+Number(v)+list.length)%list.length;show()}return}
+    if(e.target===img)zoom();else if(e.target.classList.contains("lb-wrap"))close()});
+  document.addEventListener("keydown",key,true);document.body.appendChild(d);show();
+}
+D.addEventListener("click",e=>{
+  const a=e.target.closest(".thumbs a");if(!a)return;
+  e.preventDefault();e.stopPropagation();
+  const all=[...a.parentElement.querySelectorAll("a")];openLightbox(all.map(x=>x.getAttribute("href")),all.indexOf(a));
+},true);
 D.addEventListener("click",e=>{
   const j=cur();
   const st=e.target.closest("[data-st]");
@@ -1132,7 +1164,7 @@ Checklist mẫu đã có sẵn theo loại việc (app tự thêm, KHÔNG lặp 
 ${tpl}
 
 Trả lời DUY NHẤT một JSON object, không thêm chữ nào khác:
-{"fwd":"","company":"","contact":"tên, SĐT/email nếu thấy","service":"HQ|VC|HQ+VC","mst":"mã số thuế chủ hàng nếu thấy","bl":"số B/L hoặc booking chính","cont":"số lượng và loại cont, VD 3x40HC, hoặc số cont","tkNo":"số tờ khai hải quan nếu có","source":"Email|Zalo|Khác","title":"tiêu đề ngắn ≤ 70 ký tự, nêu việc + hàng/tuyến","type":"${TYPES.join("|")}","mode":"${MODES.filter(Boolean).join("|")}| (rỗng nếu không rõ)","pol":"","pod":"","cargo":"mô tả hàng, số kiện, trọng lượng, số cont nếu có","incoterm":"","refs":"số booking, B/L, invoice, tờ khai nếu có","deadline":"YYYY-MM-DD hoặc \\"\\" (quy đổi 'mai', 'thứ 6', 'trước 15h' theo ngày hôm nay)","priority":"Gấp|Thường|Thấp","summary":"1-3 câu tóm tắt khách cần gì","tasks":["CHỈ những việc riêng của lô này mà checklist mẫu của loại việc chưa có, bắt đầu bằng động từ, 0-5 việc"],"quote":[{"name":"hạng mục phí","qty":1,"unit":"lô|cont|tờ khai|kg|cbm|bộ","price":0,"currency":"VND|USD"}],"questions":["thông tin còn thiếu cần hỏi lại khách"]}
+{"fwd":"","company":"","contact":"tên, SĐT/email nếu thấy","service":"HQ|VC|HQ+VC","vehicle":"Xe cont|Xe tải|\"\" (chỉ khi có vận chuyển: xe đầu kéo / cont là Xe cont; xe tải thùng, hàng lẻ, tính theo tấn là Xe tải)","mst":"mã số thuế chủ hàng nếu thấy","bl":"số B/L hoặc booking chính","cont":"số lượng và loại cont, VD 3x40HC, hoặc số cont; với xe tải ghi số xe / tải trọng","yard":"bãi / depot hạ cont nếu có","cbm":"số khối (m³) nếu có, chỉ ghi số","tkNo":"số tờ khai hải quan nếu có","source":"Email|Zalo|Khác","title":"tiêu đề ngắn ≤ 70 ký tự, nêu việc + hàng/tuyến","type":"${TYPES.join("|")}","mode":"${MODES.filter(Boolean).join("|")}| (rỗng nếu không rõ)","pol":"","pod":"","cargo":"mô tả hàng, số kiện, trọng lượng, số cont nếu có","incoterm":"","refs":"số booking, B/L, invoice, tờ khai nếu có","deadline":"YYYY-MM-DD hoặc \\"\\" (quy đổi 'mai', 'thứ 6', 'trước 15h' theo ngày hôm nay)","priority":"Gấp|Thường|Thấp","summary":"1-3 câu tóm tắt khách cần gì","tasks":["CHỈ những việc riêng của lô này mà checklist mẫu của loại việc chưa có, bắt đầu bằng động từ, 0-5 việc"],"quote":[{"name":"hạng mục phí","qty":1,"unit":"lô|cont|tờ khai|kg|cbm|bộ","price":0,"currency":"VND|USD"}],"questions":["thông tin còn thiếu cần hỏi lại khách"]}
 
 Quy tắc: không bịa số liệu; giá nào tin nhắn không ghi thì để price 0. Nếu là yêu cầu báo giá, liệt kê các hạng mục phí thường gặp cho đúng loại dịch vụ đó (VD khai HQ: phí khai báo hải quan, phí nâng hạ, phí vận chuyển nội địa, phí kiểm hoá nếu có…), đặt tên hạng mục ngắn gọn và nhất quán. Viết tiếng Việt có dấu.${text?`\n\nNội dung chữ người dùng dán thêm:\n"""\n${text.slice(0,12000)}\n"""`:""}`;
 }
@@ -1153,7 +1185,7 @@ function normalize(r){
     deadline:dl,priority:pick(r.priority,PRIOS,"Thường"),summary:s(r.summary),tasks,quote,
     status:type==="Báo giá"?"Báo giá":STAGES[0],
     service:SERVICES.includes(s(r.service).toUpperCase().replace(/\s/g,""))?s(r.service).toUpperCase().replace(/\s/g,""):(type==="Vận chuyển"?"VC":"HQ"),
-    mst:s(r.mst).replace(/[^\d-]/g,"").slice(0,14),bl:s(r.bl),cont:s(r.cont),tkNo:s(r.tkNo).replace(/[^\d]/g,"").slice(0,12),
+    mst:s(r.mst).replace(/[^\d-]/g,"").slice(0,14),vehicle:VEHICLES.includes(s(r.vehicle))?s(r.vehicle):"",yard:s(r.yard),cbm:s(r.cbm).replace(/[^\d.,]/g,""),bl:s(r.bl),cont:s(r.cont),tkNo:s(r.tkNo).replace(/[^\d]/g,"").slice(0,12),
     questions:list(r.questions).map(s).filter(Boolean).join("\n")};
 }
 const ERR={not_granted:"Bạn chưa cho phép trang dùng Claude. Dùng “Tạo job trống” để nhập tay.",sampling_disabled:"Tài khoản này không dùng được Claude ở đây.",
@@ -1192,14 +1224,17 @@ function guessFromText(t){
   const known=[...new Set(S.jobs.flatMap(j=>[j.fwd,j.company]).filter(Boolean))].sort((a,b)=>b.length-a.length);
   const hit=known.find(n=>normName(n).length>=3&&low.includes(normName(n)));
   const isFwd=hit&&S.jobs.some(j=>j.fwd===hit);
-  const vc=/van chuyen|trucking|keo cont|xe cont|xe tai|giao hang|dong hang|ha cont|nang ha/.test(low);
+  const vc=/van chuyen|trucking|keo cont|xe cont|xe tai|giao hang|dong hang|ha cont|nang ha|\btruck\b/.test(low);
   const hq=/khai|thong quan|hai quan|to khai|\bc\/o\b|kiem hoa|customs/.test(low);
   const service=vc&&hq?"HQ+VC":vc?"VC":"HQ";
+  const cbm=m(/(\d+(?:[.,]\d+)?)\s*(?:cbm|m3|m³|khối)(?![a-z0-9])/i).replace(",",".");
+  const yard=m(/(?:hạ cont|hạ rỗng|trả rỗng|depot|bãi hạ)\s*(?:tại|ở|về)?\s*[:：]?\s*([^\n,.;]{3,40})/i);
+  const vehicle=service==="HQ"?"":(/xe tai|\btan\b|\btruck\b|hang le|\blcl\b/.test(low)&&!/xe cont|keo cont|\b(20|40|45)\s*(dc|gp|hc|hq|'|ft)/.test(low)?"Xe tải":"Xe cont");
   const type=/bao gia|hoi gia|xin gia|quotation|\brate\b/.test(low)?"Báo giá":service==="VC"?"Vận chuyển":/xuat khau|khai xuat|\bexport\b/.test(low)?"Khai HQ xuất":"Khai HQ nhập";
   const lines=text.split(/\n+/).map(s=>s.trim()).filter(s=>s.length>=6&&!/^(from|to|cc|sent|date|gửi|đến|ngày|re:|fw:)\b/i.test(s));
   const subj=m(/(?:subject|tiêu đề|chủ đề)\s*[:：]\s*(.+)/i);
   const title=(subj||lines[0]||"Job đọc từ ảnh").replace(/^(re|fw|fwd)\s*:\s*/i,"").slice(0,90);
-  return{title,fwd:hit&&isFwd?hit:"",company:hit&&!isFwd?hit:"",service,type,bl,cont,mst,tkNo,
+  return{title,fwd:hit&&isFwd?hit:"",company:hit&&!isFwd?hit:"",service,vehicle,yard,cbm,type,bl,cont,mst,tkNo,
     summary:text.replace(/\s+/g," ").slice(0,400),source:"Khác",tasks:tplTasks(type),status:type==="Báo giá"?"Báo giá":STAGES[0]};
 }
 $("#btnOcr").hidden=!window.SOJOB_OCR;
