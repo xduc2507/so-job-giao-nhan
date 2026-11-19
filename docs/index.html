@@ -5,25 +5,25 @@
 <style>
 /* Layout: bàn điều phối 3 cột — nhóm FWD | danh sách / bảng quy trình / kế hoạch | phiếu job */
 :root{
-  --bg:#EEF1F4; --surface:#FFFFFF; --surface-2:#F6F8FA; --ink:#15212C; --muted:#5A6A79; --line:#D8DFE6;
-  --accent:#C2541D; --accent-ink:#FFFFFF; --accent-soft:#FAE8DC;
-  --ok:#1E7A4C; --ok-soft:#DFF2E8; --warn:#A86A12; --warn-soft:#FBF0D9; --bad:#B42318; --bad-soft:#FBE3E0; --info:#2558A6; --info-soft:#E1EAF8;
-  --violet:#6B46C1; --violet-soft:#ECE6FA;
+  --bg:#E8F2EC; --surface:#FBFDFB; --surface-2:#EEF6F1; --ink:#13261B; --muted:#4D6656; --line:#CBDFD2;
+  --accent:#1F7A4D; --accent-ink:#FFFFFF; --accent-soft:#D9EEE1;
+  --ok:#2F8A3E; --ok-soft:#DDF1E0; --warn:#9A6A10; --warn-soft:#F8EFD6; --bad:#B42318; --bad-soft:#FBE3E0; --info:#1C5FA8; --info-soft:#DCE8F6;
+  --violet:#0E6C76; --violet-soft:#D6EDEF;
   --f-body:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
   --r:8px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0E151B; --surface:#16202A; --surface-2:#1B2733; --ink:#E4ECF3; --muted:#91A2B2; --line:#283541;
-  --accent:#E57A43; --accent-ink:#1A0F08; --accent-soft:#3A2417;
-  --ok:#52C48C; --ok-soft:#173226; --warn:#E0AE4B; --warn-soft:#352915; --bad:#F2766B; --bad-soft:#3A1C1A; --info:#7EA8EA; --info-soft:#1B2A40;
-  --violet:#B39BF0; --violet-soft:#29213F;
+  --bg:#0B1610; --surface:#112019; --surface-2:#162A20; --ink:#E1EFE6; --muted:#8EA999; --line:#234035;
+  --accent:#4CC38A; --accent-ink:#05140C; --accent-soft:#163A28;
+  --ok:#6BCB77; --ok-soft:#173321; --warn:#E0AE4B; --warn-soft:#352915; --bad:#F2766B; --bad-soft:#3A1C1A; --info:#7FB2F0; --info-soft:#16293F;
+  --violet:#5CC6CF; --violet-soft:#12333A;
   color-scheme:dark }}
 :root[data-theme="dark"]{
-  --bg:#0E151B; --surface:#16202A; --surface-2:#1B2733; --ink:#E4ECF3; --muted:#91A2B2; --line:#283541;
-  --accent:#E57A43; --accent-ink:#1A0F08; --accent-soft:#3A2417;
-  --ok:#52C48C; --ok-soft:#173226; --warn:#E0AE4B; --warn-soft:#352915; --bad:#F2766B; --bad-soft:#3A1C1A; --info:#7EA8EA; --info-soft:#1B2A40;
-  --violet:#B39BF0; --violet-soft:#29213F;
+  --bg:#0B1610; --surface:#112019; --surface-2:#162A20; --ink:#E1EFE6; --muted:#8EA999; --line:#234035;
+  --accent:#4CC38A; --accent-ink:#05140C; --accent-soft:#163A28;
+  --ok:#6BCB77; --ok-soft:#173321; --warn:#E0AE4B; --warn-soft:#352915; --bad:#F2766B; --bad-soft:#3A1C1A; --info:#7FB2F0; --info-soft:#16293F;
+  --violet:#5CC6CF; --violet-soft:#12333A;
   color-scheme:dark }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
@@ -42,11 +42,11 @@ textarea{resize:vertical}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 h2,h3{text-wrap:balance}
 
-.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);box-shadow:inset 0 3px 0 var(--accent);
   display:flex;gap:12px;align-items:center;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
 .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;white-space:nowrap}
-.brand i{width:22px;height:14px;border-radius:2px;background:repeating-linear-gradient(90deg,var(--accent) 0 3px,transparent 3px 5px);display:inline-block}
+.brand i{width:18px;height:18px;border-radius:0 70% 0 70%;background:linear-gradient(135deg,var(--accent),var(--info));display:inline-block;transform:rotate(-8deg)}
 .top input{max-width:340px;margin-left:auto}
 .app{display:grid;grid-template-columns:220px minmax(0,1fr) minmax(0,460px);gap:16px;align-items:start;
   padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
