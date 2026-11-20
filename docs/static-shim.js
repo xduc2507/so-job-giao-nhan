@@ -48,7 +48,7 @@
   const rid = () => Array.from(crypto.getRandomValues(new Uint8Array(15)), b => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]).join("");
   const clone = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
   const loaded = allDocs().then(rows => {
-    for (const [k, v] of rows) { const i = k.indexOf("/"); colState(k.slice(0, i)).docs.set(k.slice(i + 1), v); }
+    for (const [k, v] of rows) { const i = k.lastIndexOf("/"); colState(k.slice(0, i)).docs.set(k.slice(i + 1), v); }
   });
   function colState(name) { return cols[name] || (cols[name] = { docs: new Map(), listeners: new Set() }); }
   const docSnap = (id, data) => ({ id, exists: data !== undefined, data: () => clone(data), metadata: { fromCache: false, hasPendingWrites: false } });
@@ -96,7 +96,7 @@
         loaded.then(() => st.listeners.has(l) && l.next(), e => error && error({ code: "unavailable", message: String(e) }));
         return () => st.listeners.delete(l);
       },
-      collection() { throw new TypeError("Bản tĩnh không hỗ trợ bộ sưu tập con."); },
+      collection: name => colRef(k + "/" + name),
     };
   }
   function colRef(name, filt) {
