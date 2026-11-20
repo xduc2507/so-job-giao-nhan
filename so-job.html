@@ -1357,29 +1357,47 @@ D.addEventListener("click",e=>{
 const LOTF={mst:"MST khách",bl:"Số B/L",cont:"Số cont / xe",tkNo:"Số tờ khai",lane:"Luồng",vehicle:"Loại xe",truck:"Nhà xe / biển số",yard:"Bãi hạ cont",cbm:"Số khối (m³)",
   pol:"Nơi đi (POL)",pod:"Nơi đến (POD)",incoterm:"Incoterm",refs:"Số booking / invoice",cargo:"Hàng hoá / số lượng"};
 function lotRegex(t){
-  t=String(t||"");const o={},m=(re,i=1)=>{const x=re.exec(t);return x?String(x[i]).trim():""};
-  o.mst=m(/(?:MST|M[ãa] s[ốo] thu[ếe]|Tax\s*code|VAT\s*code)\s*[:.#]?\s*(\d{10}(?:-\d{3})?)/i);
-  o.bl=m(/(?:\bB\/?L\b|\bHBL\b|\bMBL\b|Bill\s+of\s+Lading|v[ậa]n\s*đ[ơo]n)\s*(?:No\.?|Number|s[ốo])?\s*[:.#]?\s*([A-Z0-9][A-Z0-9-]{5,24})/i);
-  const conts=[...new Set((t.toUpperCase().match(/\b[A-Z]{3}U\s?\d{7}\b/g)||[]).map(x=>x.replace(/\s/g,"")))];
-  const size=m(/\b(\d)\s*[xX×]\s*(20|40|45)\s*('|’|DC|GP|HC|HQ|RF|OT)?/,0)||m(/\b(20|40|45)\s*(?:'|’|DC|GP|HC|HQ|feet|ft)\b/i,0);
-  o.cont=[size.replace(/\s+/g,""),conts.join(", ")].filter(Boolean).join(" · ");
-  o.tkNo=m(/(?:t[ờo]\s*khai|\bTK\b|declaration)\s*(?:s[ốo]|No\.?)?\s*[:.#]?\s*(\d{12})/i)||m(/\b((?:10|30)\d{10})\b/);
-  const ln=m(/lu[ồo]ng\s*(xanh|v[àa]ng|đ[ỏo]|do)/i).toLowerCase();o.lane=/xanh/.test(ln)?"Xanh":/v/.test(ln)?"Vàng":ln?"Đỏ":"";
-  o.truck=m(/\b(\d{2}[A-Z]{1,2}\d?[- ]?\d{3}\.?\d{2})\b/);
-  o.cbm=m(/(\d+(?:[.,]\d+)?)\s*(?:cbm|m3|m³|kh[ốo]i)\b/i);
-  o.pol=m(/(?:\bPOL\b|Port\s+of\s+Loading|C[ảa]ng\s+x[ếe]p)\s*[:.]?\s*([^\n;|]{2,40})/i);
-  o.pod=m(/(?:\bPOD\b|Port\s+of\s+Discharge|C[ảa]ng\s+d[ỡo])\s*[:.]?\s*([^\n;|]{2,40})/i);
-  o.incoterm=m(/\b(EXW|FCA|FAS|FOB|CFR|CIF|CPT|CIP|DAP|DPU|DDP)\b/);
-  o.refs=m(/(?:Invoice|Booking|BKG)\s*(?:No\.?|Number|s[ốo])?\s*[:.#]?\s*([A-Z0-9][A-Z0-9\/-]{3,24})/i);
+  t=String(t||"").normalize("NFC");
+  // bản không dấu, cùng độ dài, để dò nhãn tiếng Việt viết có / không dấu
+  const A=t.split("").map(c=>{const d=c.normalize("NFD").replace(/[̀-ͯ]/g,"");return d.length===1?d:c}).join("").replace(/đ/g,"d").replace(/Đ/g,"D");
+  const L=t.split("\n"),LA=A.split("\n"),U=A.toUpperCase();
+  const m=(re,i=1,src=A)=>{const x=re.exec(src);return x?String(x[i]||"").trim():""};
+  // lấy phần chữ sau nhãn trên cùng dòng (giữ dấu tiếng Việt)
+  const after=re=>{for(let i=0;i<LA.length;i++){const x=re.exec(LA[i]);if(x){const v=L[i].slice(x.index+x[0].length).replace(/^[\s:.\-–=>]+/,"").split(/\s*[;|]\s*|\s{3,}|\t/)[0].trim();if(v)return v.slice(0,60)}}return ""};
+  const hasDigit=v=>/\d/.test(v)?v:"";
+  const o={};
+  o.mst=m(/(?:\bmst\b|ma\s*so\s*thue|ma\s*so\s*dn|tax\s*(?:code|id|no)|vat\s*(?:code|no))\D{0,6}(\d{10}(?:\s*-?\s*\d{3})?)/i).replace(/\s/g,"");
+  o.bl=hasDigit(m(/(?:\bh?b\/?l\b|\bmbl\b|\bhbl\b|bill(?:\s+of\s+lading)?|\bbl\s*no|van\s*don)\s*(?:no\.?|number|so|#)?\s*[:.#\-]?\s*([A-Z0-9][A-Z0-9\-\/]{5,24})/i));
+  const conts=[...new Set([...U.matchAll(/\b([A-Z]{3}[UJZ])\s?-?(\d{6})\s?-?(\d)\b/g)].map(x=>x[1]+x[2]+x[3]))];
+  let size="";const r1=/\b(\d{1,2})\s*(?:x|×|\*|cont(?:ainer)?s?|cnt?r?s?)\s*(20|40|45)\s*('|’|"|ft|feet|dc|gp|hc|hq|rf|ot|rh)?/i.exec(A),r2=/\b(20|40|45)\s*('|’|ft|dc|gp|hc|hq|rf|ot)?\s*(?:x|×|\*)\s*(\d{1,2})\b/i.exec(A);
+  const ty=v=>{v=(v||"").toUpperCase();return /^['’"]|FT|FEET/.test(v)?"'":v};
+  if(r1)size=`${+r1[1]}x${r1[2]}${ty(r1[3])}`;else if(r2)size=`${+r2[3]}x${r2[1]}${ty(r2[2])}`;
+  o.cont=[size,conts.join(", ")].filter(Boolean).join(" · ");
+  o.tkNo=m(/(?:to\s*khai|\bso\s*tk\b|\btk\b|declaration|\bcd\s*no)\D{0,8}(\d{12})/i)||m(/\b([13]\d{11})\b/);
+  const ln=m(/(?:phan\s*)?luong\s*[:\-]?\s*(xanh|vang|do)\b/i).toLowerCase()||({green:"xanh",yellow:"vang",red:"do"})[m(/\b(green|yellow|red)\s*(?:channel|lane)/i).toLowerCase()]||"";
+  o.lane=ln==="xanh"?"Xanh":ln==="vang"?"Vàng":ln==="do"?"Đỏ":"";
+  const pl=/\b(\d{2}[A-Z]{1,2}\d?)\s?[-.]?\s?(\d{3})\.?(\d{2})\b/.exec(t.toUpperCase());
+  const nhaxe=after(/(?:nha\s*xe|nha\s*van\s*chuyen|trucking|nhà xe)\s*/i);
+  o.truck=[nhaxe.split(/\s*[,;]\s*/)[0],pl?`${pl[1]}-${pl[2]}.${pl[3]}`:""].filter(Boolean).join(" · ");
+  if(!conts.length&&/\bxe\s*tai\b|\b\d+(?:[.,]\d+)?\s*tan\b|tai\s*trong/i.test(A))o.vehicle="Xe tải";else if(conts.length||size)o.vehicle="Xe cont";
+  o.cbm=m(/(\d+(?:[.,]\d+)?)\s*(?:cbm|m3|m³|khoi)\b/i);
+  o.pol=after(/(?:\bpol\b|port\s+of\s+loading|loading\s+port|cang\s*(?:di|xep(?:\s*hang)?)|noi\s*di|\bfrom\s*:|ship\s*from)/i);
+  o.pod=after(/(?:\bpod\b|port\s+of\s+discharge|discharge\s+port|cang\s*(?:den|do(?:\s*hang)?|dich)|noi\s*den|\bto\s*:|destination)/i);
+  o.incoterm=m(/\b(EXW|FCA|FAS|FOB|CFR|CNF|CIF|CPT|CIP|DAP|DPU|DDP)\b/,1,U);if(o.incoterm==="CNF")o.incoterm="CFR";
+  o.refs=hasDigit(m(/(?:invoice|\binv\b|booking|\bbkg\b|hoa\s*don)\s*(?:no\.?|number|so|#)?\s*[:.#\-]?\s*([A-Z0-9][A-Z0-9\/\-]{3,24})/i));
+  o.cargo=after(/(?:hang\s*hoa|ten\s*hang|mat\s*hang|commodity|description(?:\s+of\s+goods)?|\bgoods)\s*(?=[:\-])/i);
+  o.yard=after(/(?:ha\s*(?:cont\s*)?rong|tra\s*(?:cont\s*)?rong|bai\s*ha|depot|empty\s*return)\s*(?:tai|o|ve)?/i).replace(/[,.].*$/,"");
+  Object.keys(o).forEach(x=>{if(!o[x])delete o[x]});
   return o;
 }
 async function lotFill(j){
   const useAI=!!sample&&(window.SOJOB_BLOB_BASE!==""||(()=>{try{return !!localStorage.getItem("sojob.anthropicKey")}catch(e){return false}})());
   const m=aiModal("Tự điền Lô hàng – "+j.code);
   const imgs=[];let drop;
-  const draw=()=>{
-    m.body.innerHTML=`<p class="note" style="margin-top:0">Dán email, tin nhắn Zalo, arrival notice, D/O… vào ô dưới, hoặc dán / chọn ảnh chụp chứng từ. App tự tách số B/L, cont, tờ khai, MST, luồng, biển số… rồi cho bạn xem trước khi điền.</p>
-      <div class="lf-drop" id="lfDrop"><textarea id="lfTxt" rows="6" placeholder="Dán chữ vào đây (Ctrl+V). Dán ảnh cũng được."></textarea>
+  let lastText="";
+  const draw=(pre,warn)=>{
+    m.body.innerHTML=`${warn?`<div class="alert bad" style="margin-bottom:8px">${esc(warn)}</div>`:""}<p class="note" style="margin-top:0">Dán email, tin nhắn Zalo, arrival notice, D/O… vào ô dưới, hoặc dán / chọn ảnh chụp chứng từ. App tự tách số B/L, cont, tờ khai, MST, luồng, biển số… rồi cho bạn xem trước khi điền.</p>
+      <div class="lf-drop" id="lfDrop"><textarea id="lfTxt" rows="6" placeholder="Dán chữ vào đây (Ctrl+V). Dán ảnh cũng được.">${esc(pre||"")}</textarea>
         <div class="lf-th" id="lfTh"></div>
         <div><button class="ghost sm" id="lfPick">+ Chọn ảnh</button> <span class="note">${useAI?"Có Claude: Claude đọc cả ảnh lẫn chữ. Không có key: app tự đọc chữ (ảnh đọc chậm hơn, kém chính xác hơn).":"Đọc bằng máy, không cần Claude."}</span></div></div>
       <label style="display:flex;gap:6px;align-items:center;margin-top:8px;font-size:13px"><input type="checkbox" id="lfKeep" checked> Lưu ảnh vào “Nguồn gốc & tài liệu” của job</label>`;
@@ -1414,12 +1432,15 @@ ${text.slice(0,12000)||"(không có, chỉ có ảnh)"}`,{images:files,maxImages
     if(!got){
       let all=text;
       if(files.length&&window.SOJOB_OCR){m.busy("Đang đọc chữ trong ảnh…");try{all+="\n"+await window.SOJOB_OCR(files,()=>{},m.signal)}catch(e){m.fail(e);return}}
-      got=lotRegex(all);how="đọc tự động";
+      lastText=all.trim();imgs.length=0;got=lotRegex(all);how="đọc tự động";
     }
     if(got.lane&&!LANES.includes(got.lane))got.lane="";if(got.vehicle&&!VEHICLES.includes(got.vehicle))got.vehicle="";
     if(got.tkNo)got.tkNo=got.tkNo.replace(/\D/g,"").slice(0,12);if(got.mst)got.mst=got.mst.replace(/[^\d-]/g,"").slice(0,14);
     const rows=Object.keys(LOTF).filter(k=>got[k]&&String(got[k]).trim()!==String(j[k]||"").trim());
-    if(!rows.length){m.body.innerHTML=`<p>Không tách được thông tin mới (${how}). Thử dán thêm nội dung${useAI?"":", hoặc nhập API key Claude trong Cài đặt để đọc chính xác hơn"}.</p>`;m.setActs([{label:"Dán lại",fn:draw}]);return}
+    if(!rows.length){
+      const same=Object.keys(LOTF).some(k=>got[k]);
+      if(same){m.body.innerHTML=`<p>Các thông tin tách được đều đã có sẵn trong job (${how}), không có gì mới để điền.</p>`;m.setActs([{label:"Dán lại",fn:()=>{imgs.length=0;draw()}}]);return}
+      draw(lastText||text,`Chưa nhận ra ô nào (${how}). ${files.length&&!useAI?"Chữ đọc từ ảnh đã hiện bên dưới, sửa lại chỗ đọc sai rồi bấm Phân tích. ":""}Mẹo: ghi theo dạng “Nhãn: giá trị” trên từng dòng, ví dụ “B/L: ABC123”, “Cont: 2x40HC TGHU1234567”, “Tờ khai: 106…”, “Luồng: vàng”.${useAI?"":" Nhập API key Claude trong Cài đặt thì đọc được cả ảnh và câu văn tự do."}`);return}
     m.body.innerHTML=`<p class="note" style="margin-top:0">Tách được ${rows.length} ô (${how}). Sửa lại nếu cần, bỏ chọn ô không muốn điền. Ô đang có dữ liệu mặc định không ghi đè.</p>
       <table class="lf-t">${rows.map(k=>`<tr><td><input type="checkbox" data-k="${k}" ${String(j[k]||"").trim()?"":"checked"}></td><td><b>${esc(LOTF[k])}</b>${String(j[k]||"").trim()?`<div class="cur">Đang có: ${esc(j[k])}</div>`:""}</td><td><input type="text" data-v="${k}" value="${esc(got[k])}"></td></tr>`).join("")}</table>`;
     const fill=async b=>{
