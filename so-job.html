@@ -224,6 +224,9 @@ body.view-board .back{display:inline-block}
 .lf-th{display:flex;gap:6px;flex-wrap:wrap}.lf-th img{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
 .lf-t{width:100%;border-collapse:collapse;font-size:13px}.lf-t td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
 .lf-t td:first-child{width:28px}.lf-t .cur{color:var(--muted);font-size:12px}.lf-t input[type=text]{width:100%}
+.jsize{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-top:8px}
+.jsize i{flex:1;max-width:220px;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;display:block}
+.jsize i b{display:block;height:100%;background:var(--info)}.jsize.hi{color:var(--warn)}.jsize.hi i b{background:var(--warn)}.jsize.full{color:var(--bad);font-weight:600}.jsize.full i b{background:var(--bad)}
 .alert{font-size:13px;border-radius:6px;padding:6px 10px}.alert.bad{background:var(--bad-soft);color:var(--bad)}
 .fld.blk input{border-color:var(--warn);background:var(--warn-soft)}.fld.blk input:placeholder-shown{background:var(--surface);border-color:var(--line)}
 button.primary.bad{background:var(--bad);border-color:var(--bad);color:#fff}
@@ -582,6 +585,8 @@ async function createJob(data){
   if(!SERVICES.includes(j.service))j.service=j.type==="Vận chuyển"?"VC":"HQ";
   if(team()){j.createdBy=me();j.createdByName=window.SOJOB_USER||me();j.shared=!boss()}
   logH(j,{kind:"create",to:j.status});
+  let cut=0;while((j.images||[]).length&&jobBytes(j)>JOB_MAX){j.images.pop();cut++}
+  if(cut)setTimeout(()=>toast(`Bỏ bớt ${cut} ảnh cuối vì job vượt giới hạn 1 MB. Ảnh nhiều nên để OneDrive rồi gắn link.`),600);
   j.id=newId();
   S.jobs.unshift(j);S.sel=j.id;
   if(db){try{await db.doc("jobs/"+j.id).set(body(j))}catch(e){toast("Chưa lưu được job: "+(e?.message||e?.code))}}
@@ -589,6 +594,11 @@ async function createJob(data){
   renderAll(true);
   return j;
 }
+/* Firebase giới hạn 1 MB / job; ảnh và tệp lưu ngay trong job nên phải canh trước */
+const JOB_MAX=950*1024;
+const jobBytes=j=>{try{return new Blob([JSON.stringify(body(j))]).size}catch(e){return 0}};
+const kb=n=>n>=1048576?(n/1048576).toFixed(2)+" MB":Math.round(n/1024)+" KB";
+function sizeBar(j){const n=jobBytes(j),p=Math.min(100,n/JOB_MAX*100);if(n<60*1024)return "";return `<div class="jsize ${p>=97?"full":p>=80?"hi":""}" title="Firebase cho mỗi job tối đa 1 MB, ảnh và tệp lưu ngay trong job"><span>Dung lượng job: ${kb(n)} / 1 MB</span><i><b style="width:${p}%"></b></i>${p>=80?"<span>Tài liệu nặng nên để OneDrive rồi gắn link</span>":""}</div>`}
 function totals(j){const t={};(j.quote||[]).forEach(q=>{const c=q.currency||"VND";t[c]=(t[c]||0)+num(q.qty)*num(q.price)});return t}
 function logH(j,o){(j.history=j.history||[]).push(Object.assign({at:Date.now(),by:window.SOJOB_USER||""},o));if(j.history.length>200)j.history=j.history.slice(-200)}
 function setStatus(j,st,kind="move",note=""){
@@ -1033,7 +1043,7 @@ function renderDetail(force){
     ${(j.files||[]).length||(j.links||[]).length?`<div class="docs">${(j.files||[]).map((f,i)=>`<div class="doc"><b>${esc(extOf(f.name))}</b><a href="${BLOB}${esc(f.id)}" download="${esc(f.name)}" target="_blank" rel="noopener" title="${esc(f.name)}">${esc(f.name)}</a><button class="x" data-act="srcDel" data-k="files" data-i="${i}" aria-label="Bỏ tệp">✕</button></div>`).join("")}${(j.links||[]).map((l,i)=>`<div class="doc"><b>${esc(linkKind(l.url))}</b><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.url)}">${esc(l.name||l.url)}</a><button class="x" data-act="srcDel" data-k="links" data-i="${i}" aria-label="Bỏ link">✕</button></div>`).join("")}</div>`:""}
     ${!(j.images||[]).length&&!(j.files||[]).length&&!(j.links||[]).length?`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có ảnh hay tài liệu. Bấm “+ Ảnh / tệp” (hoặc dán ảnh Ctrl+V khi đang mở job), hoặc “+ Link OneDrive” để gắn thư mục / tệp trên OneDrive, Google Drive.</p>`:""}
     ${j.docCheck?`<div class="dchk"><span class="vd ${/^khớp/i.test(j.docCheck.verdict)?"vd-ok":/lệch/i.test(j.docCheck.verdict)?"vd-bad":"vd-warn"}">✦ ${esc(j.docCheck.verdict)}</span><span style="color:var(--muted)">${(j.docCheck.issues||[]).length} điểm cần xem · ${new Date(j.docCheck.at).toLocaleDateString("vi-VN")}</span><button class="ghost sm" data-act="aiDocsView">Xem kết quả</button></div>`:""}
-    ${j.raw?`<textarea id="f-raw" data-f="raw" rows="3">${esc(j.raw)}</textarea>`:""}</div>
+    ${j.raw?`<textarea id="f-raw" data-f="raw" rows="3">${esc(j.raw)}</textarea>`:""}${sizeBar(j)}</div>
   <div class="sec"><div class="acts" style="justify-content:space-between"><span style="color:var(--muted);font-size:12px">Tạo ${new Date(j.createdAt||Date.now()).toLocaleString("vi-VN")}${j.createdByName?" · bởi "+esc(j.createdByName):""}</span>${boss()?'<button class="danger" data-act="del">Xoá job</button>':""}</div></div>
   </div>`;
   renderTotals(j);
@@ -1432,12 +1442,13 @@ srcInput.accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx,.txt";docume
 function srcPick(){if(!assets){toast("Bản này chưa lưu được ảnh / tệp.");return}srcInput.click()}
 srcInput.addEventListener("change",()=>{const j=cur();const fs=[...srcInput.files];srcInput.value="";if(j&&fs.length)srcAddFiles(j,fs)});
 async function srcAddFiles(j,fs){
-  let nImg=0,nFile=0;const big=[],bad=[];
+  let nImg=0,nFile=0;const big=[],bad=[],full=[];
   for(const f of fs){
     const isImg=/^image\//.test(f.type);
     if(isImg&&(j.images||[]).length>=12){bad.push(f.name+" (đã đủ 12 ảnh)");continue}
     if(!isImg&&f.size>FILE_MAX){big.push(f.name);continue}
     try{const r=await assets.upload(f);
+      if(jobBytes(j)+String(r.id).length+200>JOB_MAX){full.push(f.name||"ảnh");continue}
       if(isImg){(j.images=j.images||[]).push(r.id);nImg++}
       else{(j.files=j.files||[]).push({id:r.id,name:f.name||"tep",size:f.size,at:Date.now()});nFile++}
     }catch(e){bad.push(f.name)}
@@ -1445,7 +1456,8 @@ async function srcAddFiles(j,fs){
   if(nImg||nFile){logH(j,{kind:"note",note:`Thêm ${[nImg&&nImg+" ảnh",nFile&&nFile+" tệp"].filter(Boolean).join(", ")}`});queueSave(j);renderDetail(true)}
   const msg=[nImg||nFile?`Đã thêm ${[nImg&&nImg+" ảnh",nFile&&nFile+" tệp"].filter(Boolean).join(", ")}.`:"",
     big.length?`${big.join(", ")} lớn hơn 300 KB: tải lên OneDrive rồi bấm “+ Link OneDrive” để gắn link.`:"",
-    bad.length?`Không thêm được: ${bad.join(", ")}.`:""].filter(Boolean).join(" ");
+    bad.length?`Không thêm được: ${bad.join(", ")}.`:"",
+    full.length?`Job đã gần đầy 1 MB (${kb(jobBytes(j))}), không thêm được: ${full.join(", ")}. Tải lên OneDrive rồi bấm “+ Link OneDrive”, hoặc bỏ bớt ảnh cũ.`:""].filter(Boolean).join(" ");
   if(msg)toast(msg);
 }
 async function srcLink(j){
@@ -1749,7 +1761,7 @@ $("#btnOcr").addEventListener("click",async()=>{
 });
 
 /* ---------- toast ---------- */
-let tt;function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,3500)}
+let tt;function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,Math.min(12000,Math.max(3500,String(t).length*55)))}
 
 /* ---------- boot ---------- */
 const OLDST={"Mới":"Mới nhận","Huỷ":FAIL,"Đã thu":DONE};
