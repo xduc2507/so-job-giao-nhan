@@ -433,7 +433,7 @@ table.q .num{text-align:right}
   .grid3{grid-template-columns:1fr 1fr}
   .tpl-grid{grid-template-columns:minmax(0,1fr)}
 }
-.mvrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.mvrow .mvbtn{font-size:16px;padding:8px 14px;font-weight:600}.mvrow small{color:var(--muted,#667);font-size:13px;flex:1;min-width:200px}
+.mvrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.mvrow .mvbtn{font-size:16px;padding:8px 14px;font-weight:600}.tkinfo{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px}.tkinfo small{color:var(--muted);font-size:13px}.tkst{font-size:15px}.tkst.bad{color:#B4541A}.mvframe{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0 10px;background:#fff}.mvframe iframe{width:100%;height:520px;border:0;display:block}
 </style>
 
 <header class="top">
@@ -1559,7 +1559,7 @@ function lotSec(j){
       ${LF("tkNo","Số tờ khai",j.tkNo,"12 số")}${LF("tkDate","Ngày tờ khai",j.tkDate,"","","date")}
       ${LF("hqCode","Mã Hải quan",j.hqCode,"VD: 02CI")}${LF("mst","MST khách",j.mst,"10 hoặc 13 số")}
       ${LF("hqOfficer","Cán bộ HQ làm tờ khai",j.hqOfficer,"Tên người hải quan")}</div>
-    <div class="mvrow"><button type="button" class="ghost mvbtn" data-mavach="${esc(j.id)}">🔎 Lấy mã vạch</button><small>Mở bản kê mã vạch (KVGS) ở tab mới. Tờ khai đã sửa thì ghi số TK bản sửa mới nhất (số cuối 0, 1, 2…).</small></div>
+    ${tkCheckRow(j)}
     <div class="row1"><b>Luồng</b>${chips2("lane",["Xanh","Vàng","Đỏ"],j.lane||"",["🟢 Xanh","🟡 Vàng","🔴 Đỏ"],["ln-g","ln-y","ln-r"])}</div>
     ${j.coNeed==="Có"?`<div class="sub">Xin C/O</div><div class="row1"><b>Form</b>${chips2("coForm",CO_FORMS,j.coForm||"")}</div>
     <div class="g2">${LF("coNo","Số C/O",j.coNo,"Số trên C/O")}${LF("coDate","Ngày cấp C/O",j.coDate,"","","date")}</div>
@@ -2068,17 +2068,39 @@ $("#btnOcr").addEventListener("click",async()=>{
 });
 
 /* ---------- toast ---------- */
-function maVach(id){const j=S.all.find(x=>x.id===id)||{};const g=f=>{const el=document.getElementById("f-"+f);return String((el&&el.value)||j[f]||"").trim()};
+/* ---------- Kiểm tra trạng thái tờ khai (KVGS qua máy chủ Apps Script) ---------- */
+const TK_URL="https://script.google.com/macros/s/AKfycbwtQV7vcwRtQLjxpZde6wB59jGrjdrakSeUNznnYNtOKa6Wv5BaBJ2cBPcRl0DgIT_G/exec";const tkApi=()=>window.SOJOB_TKAPI||TK_URL;
+let MV_OPEN="",TK_BUSY="";
+function tkCheckRow(j){const c=j.tkCheck,busy=TK_BUSY===j.id;
+  const line=!c?"":c.ok?`<span class="tkst ok">${/thông quan/i.test(c.status)?"✅":"📦"} <b>${esc(c.status||"Đã có mã vạch")}</b>${c.lane?` · ${c.lane==="Xanh"?"🟢":c.lane==="Vàng"?"🟡":c.lane==="Đỏ"?"🔴":""} Luồng ${esc(c.lane)}`:""}${c.kind?` · ${esc(c.kind)}`:""}</span>`
+    :`<span class="tkst bad">${/chưa được cấp phép/i.test(c.msg||"")?"⏳":"❌"} ${esc(c.msg||"Chưa có kết quả")}</span>`;
+  const when=c?`<small>Kiểm tra lúc ${new Date(c.at).toLocaleString("vi-VN",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"})}${c.tkNo&&c.tkNo!==j.tkNo?` · TK ${esc(c.tkNo)}`:""}</small>`:`<small>Tờ khai đã sửa thì ghi số TK bản sửa mới nhất (số cuối 0, 1, 2…).</small>`;
+  return `<div class="mvrow"><button type="button" class="ghost mvbtn" data-tkcheck="${esc(j.id)}"${busy?" disabled":""}>${busy?"⏳ Đang kiểm tra…":"🔍 Kiểm tra trạng thái tờ khai"}</button>
+    ${c&&c.ok&&c.mv&&c.url?`<button type="button" class="primary mvbtn" data-mvopen="${esc(j.id)}">${MV_OPEN===j.id?"✕ Đóng MV":"📄 Lấy MV"}</button>`:""}
+    <div class="tkinfo">${line}${when}</div></div>
+    ${MV_OPEN===j.id&&c&&c.url?`<div class="mvframe"><iframe src="${esc(c.url)}" title="Bản kê mã vạch"></iframe></div>`:""}`}
+function tkInputs(j){const g=f=>{const el=document.getElementById("f-"+f);return String((el&&el.value)||j[f]||"").trim()};
   const mst=g("mst").replace(/[^\d-]/g,""),hq=g("hqCode").toUpperCase(),tk=g("tkNo").replace(/\D/g,"");let d=g("tkDate");
   const m=d.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(m)d=`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
   const miss=[!mst&&"MST khách",!hq&&"Mã Hải quan",!tk&&"Số tờ khai",!d&&"Ngày tờ khai"].filter(Boolean);
-  if(miss.length)return toast("Chưa lấy được mã vạch, còn thiếu: "+miss.join(", ")+".");
-  if(tk.length!==12)return toast("Số tờ khai phải đủ 12 số (đang có "+tk.length+" số).");
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return toast("Ngày tờ khai chưa đúng dạng ngày.");
-  const f=document.createElement("form");f.method="post";f.action="https://www.taichinhcong.com/Home/MaVachKVGS";f.target="_blank";f.style.display="none";
-  for(const[k,v]of[["maDoanhNghiep",mst],["maHaiQuan",hq],["soToKhai",tk],["ngayToKhai",d]]){const i=document.createElement("input");i.type="hidden";i.name=k;i.value=v;f.appendChild(i)}
-  document.body.appendChild(f);f.submit();f.remove()}
-document.addEventListener("click",e=>{const b=e.target.closest("[data-mavach]");if(b){e.preventDefault();e.stopPropagation();maVach(b.dataset.mavach)}},true);
+  if(miss.length)throw new Error("Chưa kiểm tra được, còn thiếu: "+miss.join(", ")+".");
+  if(tk.length!==12)throw new Error("Số tờ khai phải đủ 12 số (đang có "+tk.length+" số).");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d))throw new Error("Ngày tờ khai chưa đúng dạng ngày.");
+  return{mst,hq,tk,date:d}}
+async function tkCheck(id){const j=S.all.find(x=>x.id===id);if(!j)return;
+  let q;try{q=tkInputs(j)}catch(e){return toast(e.message)}
+  if(!tkApi())return toast("Chưa cài máy chủ kiểm tra tờ khai (Apps Script).");
+  TK_BUSY=id;renderAll(true);
+  try{const api=tkApi(),r=await fetch(api+(api.includes("?")?"&":"?")+new URLSearchParams(q),{redirect:"follow"});
+    if(!r.ok)throw new Error("HTTP "+r.status);const o=await r.json();
+    j.tkCheck=Object.assign({at:Date.now(),q:q.tk},o.ok?{ok:true,mv:!!o.mv,status:o.status,lane:o.lane,kind:o.kind,tkNo:o.tkNo,url:o.url}:{ok:false,msg:o.msg});
+    if(o.ok&&["Xanh","Vàng","Đỏ"].includes(o.lane)&&!j.lane)j.lane=o.lane;
+    logH(j,{kind:"note",note:"Kiểm tra tờ khai: "+(o.ok?`${o.status||"có mã vạch"}${o.lane?", luồng "+o.lane:""}`:o.msg)});
+    if(!o.ok)MV_OPEN="";queueSave(j);
+  }catch(e){toast("Không kiểm tra được: "+e.message+". Thử lại sau.")}
+  finally{TK_BUSY="";renderAll(true)}}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-tkcheck],[data-mvopen]");if(!b)return;e.preventDefault();e.stopPropagation();
+  if(b.dataset.tkcheck)tkCheck(b.dataset.tkcheck);else{MV_OPEN=MV_OPEN===b.dataset.mvopen?"":b.dataset.mvopen;renderAll(true)}},true);
 let tt;function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,Math.min(12000,Math.max(3500,String(t).length*55)))}
 
 /* ---------- boot ---------- */
