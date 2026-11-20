@@ -269,6 +269,16 @@ table.q .num{text-align:right}
 .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .thumbs{display:flex;gap:8px;flex-wrap:wrap}
 .thumbs a{cursor:zoom-in}
+.thumbs .ti{position:relative}
+.thumbs .ti .x,.docs .x{position:absolute;top:-6px;right:-6px;width:22px;height:22px;min-height:0;padding:0;border-radius:50%;background:var(--surface);border:1px solid var(--line);font-size:11px;line-height:1}
+.docs{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.docs .doc{position:relative;display:flex;gap:8px;align-items:center;padding:8px 30px 8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);font-size:13px;min-width:0}
+.docs .doc a{color:var(--info);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.docs .doc a:hover{text-decoration:underline}
+.docs .doc b{font-size:10.5px;letter-spacing:.04em;color:var(--muted);font-weight:600;flex:none}
+.docs .x{top:50%;right:6px;transform:translateY(-50%)}
+.srcadd{display:flex;gap:6px;margin-left:auto;letter-spacing:0;text-transform:none}
+.srcadd button{white-space:nowrap}
 .lb{position:fixed;inset:0;z-index:40;background:rgba(5,10,8,.92);display:flex;flex-direction:column}
 .lb-bar{display:flex;gap:8px;align-items:center;padding:10px 12px;color:#fff;font-size:13px;padding-top:max(10px,env(safe-area-inset-top,0px))}
 .lb-bar span{margin-right:auto;opacity:.8}
@@ -851,6 +861,7 @@ function histText(h){
   const who=h.by?` <b>${esc(h.by)}</b>`:"";
   if(h.kind==="create")return `${HK.create} ở “${esc(h.to||"")}”${who}`;
   if(h.kind==="blocker")return `${HK.blocker}: ${esc(h.note||"")}${who}`;
+  if(h.kind==="note")return `${esc(h.note||"")}${who}`;
   return `<span class="hk hk-${esc(h.kind)}">${HK[h.kind]||esc(h.kind)}</span> ${esc(h.from||"")} → ${esc(h.to||"")}${h.note?`: <i>${esc(h.note)}</i>`:""}${who}`;
 }
 function renderDetail(force){
@@ -923,9 +934,11 @@ function renderDetail(force){
   <div class="sec"><h3>Lịch sử hoạt động <span class="mono">${(j.history||[]).length}</span></h3>
     ${(j.history||[]).length?`<ol class="hist">${[...j.history].reverse().slice(0,40).map(h=>`<li><span class="mono">${new Date(h.at).toLocaleString("vi-VN",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</span><span>${histText(h)}</span></li>`).join("")}</ol>`:`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có. Mỗi lần chuyển bước, trả về, ghi vướng mắc sẽ được ghi lại ở đây.</p>`}
   </div>
-  ${(j.images||[]).length||j.raw?`<div class="sec"><h3>Nguồn gốc</h3>
-    <div class="thumbs">${(j.images||[]).map(id=>`<a href="${BLOB}${esc(id)}" target="_blank" rel="noopener"><img src="${BLOB}${esc(id)}" alt="Ảnh chụp gốc"></a>`).join("")}</div>
-    ${j.raw?`<textarea id="f-raw" data-f="raw" rows="3">${esc(j.raw)}</textarea>`:""}</div>`:""}
+  <div class="sec"><h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Nguồn gốc & tài liệu<span class="srcadd"><button class="ghost sm" data-act="srcFile">+ Ảnh / tệp</button><button class="ghost sm" data-act="srcLink">+ Link OneDrive</button></span></h3>
+    ${(j.images||[]).length?`<div class="thumbs">${j.images.map((id,i)=>`<div class="ti"><a href="${BLOB}${esc(id)}" target="_blank" rel="noopener"><img src="${BLOB}${esc(id)}" alt="Ảnh ${i+1}"></a><button class="x" data-act="srcDel" data-k="images" data-i="${i}" aria-label="Bỏ ảnh ${i+1}">✕</button></div>`).join("")}</div>`:""}
+    ${(j.files||[]).length||(j.links||[]).length?`<div class="docs">${(j.files||[]).map((f,i)=>`<div class="doc"><b>${esc(extOf(f.name))}</b><a href="${BLOB}${esc(f.id)}" download="${esc(f.name)}" target="_blank" rel="noopener" title="${esc(f.name)}">${esc(f.name)}</a><button class="x" data-act="srcDel" data-k="files" data-i="${i}" aria-label="Bỏ tệp">✕</button></div>`).join("")}${(j.links||[]).map((l,i)=>`<div class="doc"><b>${esc(linkKind(l.url))}</b><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.url)}">${esc(l.name||l.url)}</a><button class="x" data-act="srcDel" data-k="links" data-i="${i}" aria-label="Bỏ link">✕</button></div>`).join("")}</div>`:""}
+    ${!(j.images||[]).length&&!(j.files||[]).length&&!(j.links||[]).length?`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có ảnh hay tài liệu. Bấm “+ Ảnh / tệp” (hoặc dán ảnh Ctrl+V khi đang mở job), hoặc “+ Link OneDrive” để gắn thư mục / tệp trên OneDrive, Google Drive.</p>`:""}
+    ${j.raw?`<textarea id="f-raw" data-f="raw" rows="3">${esc(j.raw)}</textarea>`:""}</div>
   <div class="sec"><div class="acts" style="justify-content:space-between"><span style="color:var(--muted);font-size:12px">Tạo ${new Date(j.createdAt||Date.now()).toLocaleString("vi-VN")}</span><button class="danger" data-act="del">Xoá job</button></div></div>
   </div>`;
   renderTotals(j);
@@ -1084,7 +1097,7 @@ function openLightbox(list,i){
 D.addEventListener("click",e=>{
   const a=e.target.closest(".thumbs a");if(!a)return;
   e.preventDefault();e.stopPropagation();
-  const all=[...a.parentElement.querySelectorAll("a")];openLightbox(all.map(x=>x.getAttribute("href")),all.indexOf(a));
+  const all=[...a.closest(".thumbs").querySelectorAll("a")];openLightbox(all.map(x=>x.getAttribute("href")),all.indexOf(a));
 },true);
 D.addEventListener("click",e=>{
   const j=cur();
@@ -1106,6 +1119,9 @@ D.addEventListener("click",e=>{
   if(a==="debitFromQuote"){const t=totals(j),vat=num(j.vat),c=t.VND!==undefined?"VND":Object.keys(t)[0];
     if(!c){toast("Báo giá chưa có dòng nào.");return}
     if(Object.keys(t).length>1)toast("Báo giá có nhiều loại tiền: chỉ lấy tổng "+c+".");j.debitAmount=Math.round(t[c]*(1+vat/100)*100)/100;j.debitCurrency=c;queueSave(j);renderAll(true)}
+  if(a==="srcFile"){srcPick();return}
+  if(a==="srcLink"){srcLink(j);return}
+  if(a==="srcDel"){srcDel(j,b.dataset.k,+b.dataset.i);return}
   if(a==="del"){
     if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="Bấm lần nữa để xoá vĩnh viễn";setTimeout(()=>{if(b.isConnected){b.classList.remove("arm");b.textContent="Xoá job"}},4000);return}
     const id=j.id,path="jobs/"+id;S.jobs=S.jobs.filter(x=>x.id!==id);S.sel=null;clearTimeout(timers[path]);delete timers[path];dirty.delete(path);
@@ -1113,6 +1129,47 @@ D.addEventListener("click",e=>{
     renderAll(true);
   }
 });
+
+/* ---------- nguồn gốc: thêm ảnh, tệp, link OneDrive / Drive ---------- */
+const extOf=n=>((/\.([a-z0-9]{1,5})$/i.exec(n||"")||[])[1]||"tệp").toUpperCase();
+const linkKind=u=>/1drv\.ms|onedrive|sharepoint/i.test(u)?"ONEDRIVE":/drive\.google|docs\.google/i.test(u)?"DRIVE":/dropbox/i.test(u)?"DROPBOX":"LINK";
+const FILE_MAX=300*1024; // tệp không phải ảnh lưu thẳng trong job: giữ nhỏ (kho online giới hạn 1 MB / job)
+const srcInput=document.createElement("input");srcInput.type="file";srcInput.multiple=true;srcInput.hidden=true;
+srcInput.accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx,.txt";document.body.appendChild(srcInput);
+function srcPick(){if(!assets){toast("Bản này chưa lưu được ảnh / tệp.");return}srcInput.click()}
+srcInput.addEventListener("change",()=>{const j=cur();const fs=[...srcInput.files];srcInput.value="";if(j&&fs.length)srcAddFiles(j,fs)});
+async function srcAddFiles(j,fs){
+  let nImg=0,nFile=0;const big=[],bad=[];
+  for(const f of fs){
+    const isImg=/^image\//.test(f.type);
+    if(isImg&&(j.images||[]).length>=12){bad.push(f.name+" (đã đủ 12 ảnh)");continue}
+    if(!isImg&&f.size>FILE_MAX){big.push(f.name);continue}
+    try{const r=await assets.upload(f);
+      if(isImg){(j.images=j.images||[]).push(r.id);nImg++}
+      else{(j.files=j.files||[]).push({id:r.id,name:f.name||"tep",size:f.size,at:Date.now()});nFile++}
+    }catch(e){bad.push(f.name)}
+  }
+  if(nImg||nFile){logH(j,{kind:"note",note:`Thêm ${[nImg&&nImg+" ảnh",nFile&&nFile+" tệp"].filter(Boolean).join(", ")}`});queueSave(j);renderDetail(true)}
+  const msg=[nImg||nFile?`Đã thêm ${[nImg&&nImg+" ảnh",nFile&&nFile+" tệp"].filter(Boolean).join(", ")}.`:"",
+    big.length?`${big.join(", ")} lớn hơn 300 KB: tải lên OneDrive rồi bấm “+ Link OneDrive” để gắn link.`:"",
+    bad.length?`Không thêm được: ${bad.join(", ")}.`:""].filter(Boolean).join(" ");
+  if(msg)toast(msg);
+}
+async function srcLink(j){
+  const v=await ask({title:"Gắn link tài liệu",text:"Trên OneDrive: chọn tệp hoặc thư mục → Chia sẻ → Sao chép liên kết, rồi dán vào đây. Google Drive, Dropbox cũng được.",ok:"Gắn link",
+    fields:[{id:"url",label:"Link (https://…)",required:true},{id:"name",label:"Tên hiển thị (VD: Bộ chứng từ, Tờ khai, Invoice)"}]});
+  if(!v)return;
+  let u=(v.url||"").trim();if(!/^https?:\/\//i.test(u))u="https://"+u;
+  try{u=new URL(u).href}catch(e){toast("Link không hợp lệ.");return}
+  (j.links=j.links||[]).push({url:u,name:(v.name||"").trim(),at:Date.now()});
+  logH(j,{kind:"note",note:"Gắn link "+((v.name||"").trim()||linkKind(u).toLowerCase())});queueSave(j);renderDetail(true);
+}
+async function srcDel(j,k,i){
+  const it=(j[k]||[])[i];if(it===undefined)return;
+  const label=k==="images"?`ảnh ${i+1}`:k==="files"?`tệp “${it.name}”`:`link “${it.name||it.url}”`;
+  const v=await ask({title:"Bỏ khỏi job?",text:`Bỏ ${label} khỏi ${j.code}.${k==="links"?" Tệp gốc trên OneDrive / Drive không bị xoá.":""}`,ok:"Bỏ",danger:true});
+  if(!v)return;j[k].splice(i,1);queueSave(j);renderDetail(true);
+}
 
 /* ---------- modal: capture & analyze ---------- */
 let pending=[],ctl=null;
@@ -1139,7 +1196,7 @@ drop.addEventListener("drop",e=>addFiles(e.dataTransfer.files));
 document.addEventListener("paste",e=>{
   const files=[...(e.clipboardData?.items||[])].filter(i=>i.kind==="file").map(i=>i.getAsFile()).filter(Boolean);
   if(!files.length)return;
-  if(D.contains(document.activeElement))return;
+  if(D.contains(document.activeElement)){if(M.hidden&&cur()&&assets){e.preventDefault();srcAddFiles(cur(),files)}return}
   e.preventDefault();if(M.hidden)openModal();addFiles(files);
 });
 async function uploadPending(){
