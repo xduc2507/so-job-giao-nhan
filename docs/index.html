@@ -433,6 +433,7 @@ table.q .num{text-align:right}
   .grid3{grid-template-columns:1fr 1fr}
   .tpl-grid{grid-template-columns:minmax(0,1fr)}
 }
+.mvrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.mvrow .mvbtn{font-size:16px;padding:8px 14px;font-weight:600}.mvrow small{color:var(--muted,#667);font-size:13px;flex:1;min-width:200px}
 </style>
 
 <header class="top">
@@ -1560,6 +1561,7 @@ function lotSec(j){
       ${LF("tkNo","Số tờ khai",j.tkNo,"12 số")}${LF("tkDate","Ngày tờ khai",j.tkDate,"","","date")}
       ${LF("hqCode","Mã Hải quan",j.hqCode,"VD: 02CI")}${LF("mst","MST khách",j.mst,"10 hoặc 13 số")}
       ${LF("hqOfficer","Cán bộ HQ làm tờ khai",j.hqOfficer,"Tên người hải quan")}</div>
+    <div class="mvrow"><button type="button" class="ghost mvbtn" data-mavach="${esc(j.id)}">🔎 Lấy mã vạch</button><small>Mở bản kê mã vạch (KVGS) ở tab mới. Tờ khai đã sửa thì ghi số TK bản sửa mới nhất (số cuối 0, 1, 2…).</small></div>
     <div class="row1"><b>Luồng</b>${chips2("lane",["Xanh","Vàng","Đỏ"],j.lane||"",["🟢 Xanh","🟡 Vàng","🔴 Đỏ"],["ln-g","ln-y","ln-r"])}</div>
     ${j.coNeed==="Có"?`<div class="sub">Xin C/O</div><div class="row1"><b>Form</b>${chips2("coForm",CO_FORMS,j.coForm||"")}</div>
     <div class="g2">${LF("coNo","Số C/O",j.coNo,"Số trên C/O")}${LF("coDate","Ngày cấp C/O",j.coDate,"","","date")}</div>
@@ -2068,6 +2070,17 @@ $("#btnOcr").addEventListener("click",async()=>{
 });
 
 /* ---------- toast ---------- */
+function maVach(id){const j=S.all.find(x=>x.id===id)||{};const g=f=>{const el=document.getElementById("f-"+f);return String((el&&el.value)||j[f]||"").trim()};
+  const mst=g("mst").replace(/[^\d-]/g,""),hq=g("hqCode").toUpperCase(),tk=g("tkNo").replace(/\D/g,"");let d=g("tkDate");
+  const m=d.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(m)d=`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  const miss=[!mst&&"MST khách",!hq&&"Mã Hải quan",!tk&&"Số tờ khai",!d&&"Ngày tờ khai"].filter(Boolean);
+  if(miss.length)return toast("Chưa lấy được mã vạch, còn thiếu: "+miss.join(", ")+".");
+  if(tk.length!==12)return toast("Số tờ khai phải đủ 12 số (đang có "+tk.length+" số).");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return toast("Ngày tờ khai chưa đúng dạng ngày.");
+  const f=document.createElement("form");f.method="post";f.action="https://www.taichinhcong.com/Home/MaVachKVGS";f.target="_blank";f.style.display="none";
+  for(const[k,v]of[["maDoanhNghiep",mst],["maHaiQuan",hq],["soToKhai",tk],["ngayToKhai",d]]){const i=document.createElement("input");i.type="hidden";i.name=k;i.value=v;f.appendChild(i)}
+  document.body.appendChild(f);f.submit();f.remove()}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-mavach]");if(b){e.preventDefault();e.stopPropagation();maVach(b.dataset.mavach)}},true);
 let tt;function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,Math.min(12000,Math.max(3500,String(t).length*55)))}
 
 /* ---------- boot ---------- */
