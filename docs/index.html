@@ -598,12 +598,29 @@ let db=null,sample=null,assets=null;
 const team=()=>!!window.SOJOB_ROLE,boss=()=>(window.SOJOB_ROLE||"owner")==="owner",me=()=>(window.SOJOB_EMAIL||"").toLowerCase();
 /* Chủ sổ có 2 sổ: "Sổ chung" (làm cùng nhân viên) và "Việc riêng" (chỉ mình chủ sổ) */
 const SPACE_LS="sojob.space";
-let SPACE=(()=>{try{return localStorage.getItem(SPACE_LS)==="mine"?"mine":"team"}catch(e){return "team"}})();
+/* Việc riêng có khoá: hỏi mật khẩu khi vào, tự khoá sau 10 phút không dùng. Chỉ lưu mã băm, không lưu mật khẩu. */
+const LOCK_SALT="sojob-mine-v1",LOCK_HASH="d6c57a2ad5c3b29c4089878e7c8823ecc53cd4cb1dfcb9476d3086d50901c39e",LOCK_TTL=10*60*1000,LOCK_SS="sojob.mineUntil";
+let mineUntil=(()=>{try{return +(sessionStorage.getItem(LOCK_SS)||0)}catch(e){return 0}})();
+const mineOpen=()=>Date.now()<mineUntil;
+function touchMine(){mineUntil=Date.now()+LOCK_TTL;try{sessionStorage.setItem(LOCK_SS,String(mineUntil))}catch(e){}}
+function lockMine(){mineUntil=0;try{sessionStorage.removeItem(LOCK_SS)}catch(e){}}
+async function pinHash(p){const te=new TextEncoder(),k=await crypto.subtle.importKey("raw",te.encode(p),"PBKDF2",false,["deriveBits"]);
+  const b=await crypto.subtle.deriveBits({name:"PBKDF2",salt:te.encode(LOCK_SALT),iterations:200000,hash:"SHA-256"},k,256);return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+async function unlockMine(){
+  if(mineOpen()){touchMine();return true}
+  for(let tries=0;tries<3;tries++){
+    const v=await ask({title:"🔒 Việc riêng",text:tries?"Sai mật khẩu, nhập lại.":"Nhập mật khẩu để mở Việc riêng.",ok:"Mở",fields:[{id:"pw",label:"Mật khẩu",type:"password",required:true}]});
+    if(!v)return false;
+    if(await pinHash(v.pw)===LOCK_HASH){touchMine();return true}
+  }
+  toast("Sai mật khẩu 3 lần.");return false;
+}
+let SPACE=(()=>{try{return localStorage.getItem(SPACE_LS)==="mine"&&mineOpen()?"mine":"team"}catch(e){return "team"}})();
 const spaceOn=()=>team()&&boss(),mineOn=()=>spaceOn()&&SPACE==="mine";
 const isMine=j=>!j.shared&&(!j.createdBy||j.createdBy===me());
 const inSpace=j=>!spaceOn()||(SPACE==="mine"?isMine(j):!isMine(j));
 function applySpace(){S.jobs=S.all.filter(inSpace);if(S.sel&&!cur())S.sel=null;if(S.group!=="__all"&&!S.jobs.some(j=>groupKey(j)===S.group))S.group="__all";document.body.classList.toggle("space-mine",mineOn())}
-function setSpace(v){SPACE=v==="mine"?"mine":"team";try{localStorage.setItem(SPACE_LS,SPACE)}catch(e){}S.fLate=false;applySpace();renderAll(true)}
+async function setSpace(v){if(v==="mine"&&!(await unlockMine()))return;if(v!=="mine"&&SPACE==="mine")lockMine();SPACE=v==="mine"?"mine":"team";try{localStorage.setItem(SPACE_LS,SPACE)}catch(e){}S.fLate=false;applySpace();renderAll(true)}
 function renderSpace(){
   const el=$("#space");if(!el)return;el.hidden=!spaceOn();if(!spaceOn())return;
   const alert=v=>S.all.filter(j=>(v==="mine")===isMine(j)&&((lateState(j)&&lateState(j)!=="ok")||chatNew(j))).length;
@@ -1199,6 +1216,9 @@ document.addEventListener("click",e=>{
   if(t.closest("#detail,.kc,.modal,.kmenu,[data-kmenu],.top,#toast,.lb,input,select,textarea,button,a,label"))return;
   S.sel=null;renderAll(true);
 });
+["click","keydown","touchstart"].forEach(ev=>document.addEventListener(ev,()=>{if(mineOn()&&mineOpen())touchMine()},{passive:true,capture:true}));
+setInterval(()=>{if(mineOn()&&!mineOpen()){SPACE="team";try{localStorage.setItem(SPACE_LS,"team")}catch(e){}applySpace();renderAll(true);toast("Đã tự khoá Việc riêng sau 10 phút không dùng.")}},30000);
+document.addEventListener("visibilitychange",()=>{if(document.hidden||!mineOn()||mineOpen())return;SPACE="team";applySpace();renderAll(true)});
 $("#space").addEventListener("click",e=>{const b=e.target.closest("[data-space]");if(b&&b.dataset.space!==SPACE)setSpace(b.dataset.space)});
 $("#latebar").addEventListener("click",e=>{const b=e.target.closest("[data-late]");if(!b)return;S.fLate=b.dataset.late==="on";if(S.fLate&&S.view!=="board")S.view="list";renderAll(false)});
 $("#q").addEventListener("input",e=>{S.q=e.target.value;renderMain()});
