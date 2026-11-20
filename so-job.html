@@ -501,22 +501,27 @@ const LATE_REASONS={
   "Nhận & kiểm tra chứng từ":["Khách chưa gửi đủ chứng từ","Chứng từ sai / lệch, chờ sửa","Chờ C/O","Chờ khách chốt mã HS / giá"],
   "Đang khai báo":["Chờ khách duyệt tờ khai nháp","Chờ giấy phép / kiểm tra chuyên ngành","Lỗi hệ thống VNACCS / ECUS","Chờ nộp thuế"],
   "Chờ thông quan":["Luồng vàng, chờ duyệt hồ sơ","Luồng đỏ, chờ kiểm hoá","Chờ nộp thuế / bảo lãnh","Hải quan yêu cầu bổ sung","Chờ kết quả kiểm tra chuyên ngành"]};
-const ACK_TTL=864e5; // lý do đã duyệt có hiệu lực 1 ngày, sau đó hỏi lại
 function workMs(a,b){let t=0,x=a;while(x<b){const d=new Date(x),e=Math.min(b,new Date(d.getFullYear(),d.getMonth(),d.getDate()+1).getTime());if(d.getDay()!==0)t+=e-x;x=e}return t}
-const lateHrs=j=>j.stageAt?Math.floor(workMs(j.stageAt,Date.now())/36e5):0;
-const isStrictLate=j=>isOpen(j.status)&&STRICT.includes(j.status)&&num(S.stall[j.status])>0&&!!j.stageAt&&workMs(j.stageAt,Date.now())>=num(S.stall[j.status])*864e5;
+/* Cảnh báo bật lúc 00:00: nửa đêm đầu tiên sau khi đủ mốc (không tính Chủ nhật), lặp lại mỗi 00:00 cho tới khi chuyển bước */
+const midnight=t=>{const d=new Date(t);return new Date(d.getFullYear(),d.getMonth(),d.getDate()+1).getTime()};
+const skipSun=t=>new Date(t).getDay()===0?midnight(t):t;
+function addWork(t,ms){let x=t;while(ms>0){const e=midnight(x);if(new Date(x).getDay()===0){x=e;continue}const k=Math.min(ms,e-x);x+=k;ms-=k}return x}
+function warnStart(j){const n=num(S.stall[j.status]);if(!(n>0&&j.stageAt))return null;const x=addWork(j.stageAt,n*864e5),d=new Date(x);return skipSun(d.getHours()||d.getMinutes()||d.getSeconds()||d.getMilliseconds()?midnight(x):x)}
+function lateDays(j){const w=warnStart(j);let c=0;for(let x=w;x<=Date.now();x=midnight(x))if(new Date(x).getDay()!==0)c++;return c}
+const nextAsk=t=>skipSun(midnight(t)); // lý do đã duyệt có hiệu lực tới 00:00 hôm sau
+const isStrictLate=j=>{if(!isOpen(j.status)||!STRICT.includes(j.status))return false;const w=warnStart(j);return w!==null&&Date.now()>=w};
 // "none": chưa có lý do (hoặc lý do đã hết hạn / bị trả về) · "pend": chờ chủ sổ duyệt · "ok": đã duyệt
 function lateState(j){
   if(!isStrictLate(j))return null;
   const a=j.lateAck;
   if(!a||a.stage!==j.status||a.stageAt!==j.stageAt||a.rejected)return "none";
   if(!a.approved)return "pend";
-  return Date.now()-(a.approvedAt||0)<ACK_TTL?"ok":"none";
+  return Date.now()<nextAsk(a.approvedAt||0)?"ok":"none";
 }
 const hm=t=>{if(!t)return "";const d=new Date(t),p2=n=>String(n).padStart(2,"0");return `${p2(d.getHours())}:${p2(d.getMinutes())} ${p2(d.getDate())}/${p2(d.getMonth()+1)}`};
 function lateLine(j){
   const st=lateState(j);if(!st)return null;const a=j.lateAck||{};
-  const head=`⚠ Quá ${lateHrs(j)} giờ ở ${j.status}`;
+  const head=`⚠ Trễ ${lateDays(j)} ngày ở ${j.status}`;
   const stale=a.stage===j.status&&a.stageAt===j.stageAt;
   if(st==="ok")return {cls:"ok",text:`${head} · Đã duyệt: ${a.reason}`};
   if(st==="pend")return {cls:"pend",text:`${head} · Chờ duyệt: ${a.reason} (${a.byName||""} ${hm(a.at)})`};
@@ -743,7 +748,7 @@ function timeTag(j){
   if(j.status===FAIL)return `<span class="tm">${esc(j.failReason||"Thất bại")}</span>`;
   if(open&&k!==null&&k<0)return `<span class="tm">Quá hạn ${-k} ngày</span>`;
   const d=stageDays(j);
-  if(lateState(j))return `<span class="tm">Quá ${lateHrs(j)} giờ</span>`;
+  if(lateState(j))return `<span class="tm">Trễ ${lateDays(j)} ngày</span>`;
   if(isStalled(j))return `<span class="tm" title="Ngưỡng của bước này: ${num(S.stall[j.status])} ngày">Đứng yên ${d} ngày</span>`;
   if(open&&k===0)return `<span class="tm td">Hạn hôm nay</span>`;
   if(open&&k!==null)return `<span class="tm ok">Còn ${k} ngày</span>`;
@@ -1026,8 +1031,8 @@ function renderTotals(j){
 }
 function lateBox(j){
   let st=lateState(j);if(!st)return "";const a=j.lateAck||{},nx=nextStage(j)||"bước sau";const editing=S.lateEdit===j.id&&st==="pend";if(editing)st="none";
-  const head=`Quá ${lateHrs(j)} giờ ở “${esc(j.status)}” (mốc ${num(S.stall[j.status])} ngày, không tính Chủ nhật)`;
-  if(st==="ok")return `<div class="lbox ok"><h4>${head}</h4><div>Đã duyệt lý do: <b>${esc(a.reason)}</b> · ${esc(a.byName||"")} ghi ${hm(a.at)}, ${esc(a.approvedByName||"chủ sổ")} duyệt ${hm(a.approvedAt)}. Hỏi lại lúc ${hm((a.approvedAt||0)+ACK_TTL)} nếu chưa chuyển bước.</div></div>`;
+  const head=`Trễ ${lateDays(j)} ngày ở “${esc(j.status)}” (vào bước ${hm(j.stageAt)}, mốc ${num(S.stall[j.status])} ngày, báo lúc 00:00 mỗi ngày, không tính Chủ nhật)`;
+  if(st==="ok")return `<div class="lbox ok"><h4>${head}</h4><div>Đã duyệt lý do: <b>${esc(a.reason)}</b> · ${esc(a.byName||"")} ghi ${hm(a.at)}, ${esc(a.approvedByName||"chủ sổ")} duyệt ${hm(a.approvedAt)}. Hỏi lại lúc ${hm(nextAsk(a.approvedAt||0))} nếu chưa chuyển bước.</div></div>`;
   if(st==="pend")return `<div class="lbox pend"><h4>${head} · lý do chờ duyệt</h4><div>Lý do: <b>${esc(a.reason)}</b> · ${esc(a.byName||"")} ghi ${hm(a.at)}</div>
     <div class="lrow">${boss()?`<button class="sm primary" data-act="lateOk">Duyệt</button><button class="sm ghost danger" data-act="lateNo">Không duyệt</button>`:`<span style="color:var(--muted)">Cảnh báo hết khi chủ sổ duyệt.</span>`}<button class="sm ghost" data-act="lateEdit">Sửa lý do</button></div></div>`;
   const stale=a.stage===j.status&&a.stageAt===j.stageAt;
@@ -1249,7 +1254,7 @@ D.addEventListener("click",e=>{
   if(a==="lateSend"){lateSend(j,($("#lateTxt")||{}).value);return}
   if(a==="lateEdit"){S.lateEdit=j.id;renderDetail(true);setTimeout(()=>$("#lateTxt")&&$("#lateTxt").select(),0);return}
   if(a==="lateOk"){if(!boss()||!j.lateAck)return;Object.assign(j.lateAck,{approved:true,approvedAt:Date.now(),approvedByName:window.SOJOB_USER||me()||"chủ sổ"});
-    logH(j,{kind:"note",note:"Duyệt lý do: "+j.lateAck.reason});queueSave(j);renderAll(true);toast("Đã duyệt, hết cảnh báo trong 1 ngày.");return}
+    logH(j,{kind:"note",note:"Duyệt lý do: "+j.lateAck.reason});queueSave(j);renderAll(true);toast("Đã duyệt, hết cảnh báo tới 00:00 hôm sau.");return}
   if(a==="lateNo"){if(!boss()||!j.lateAck)return;ask({title:"Không duyệt lý do",text:"Lý do: "+j.lateAck.reason,ok:"Trả về",fields:[{id:"n",label:"Ghi chú cho nhân viên (không bắt buộc)"}]}).then(v=>{if(!v||!j.lateAck)return;
     Object.assign(j.lateAck,{rejected:true,rejectNote:(v.n||"").trim()});logH(j,{kind:"note",note:"Không duyệt lý do: "+j.lateAck.reason+(v.n?" · "+v.n:"")});queueSave(j);renderAll(true)});return}
   if(a==="share"){if(!boss())return;j.shared=!j.shared;logH(j,{kind:"note",note:j.shared?"Chia sẻ cho nhân viên":"Thu về chỉ chủ sổ thấy"});queueSave(j);renderAll(true);
