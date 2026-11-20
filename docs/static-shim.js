@@ -372,7 +372,7 @@
 
   /* ---------- kho online (Firebase): bật khi có firebase-config.js ---------- */
   const FB = window.SOJOB_FIREBASE && window.SOJOB_FIREBASE.apiKey ? window.SOJOB_FIREBASE : null;
-  const COLS = ["jobs", "meta", "partners", "todos", "members"];
+  const COLS = ["jobs", "meta", "partners", "todos", "members", "mypartners"];
   const FBV = "10.12.2";
   function addScript(src) {
     return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Không tải được " + src.split("/").pop() + ". Kiểm tra mạng.")); document.head.appendChild(s); });
