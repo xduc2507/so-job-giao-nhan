@@ -90,6 +90,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .dl-over{background:var(--bad-soft);color:var(--bad);border-color:transparent;font-weight:600}
 .dl-today{background:var(--warn-soft);color:var(--warn);border-color:transparent;font-weight:600}
 .urgent{color:var(--bad);font-weight:700;font-size:12px}
+.shr.on{background:var(--info-soft);color:var(--info);border-color:var(--info)}
+.shb{font-size:11px;color:var(--info);white-space:nowrap}
 .ex{background:var(--surface-2);color:var(--muted);border:1px dashed var(--muted);font-size:11px;padding:0 6px;border-radius:4px;letter-spacing:.04em}
 .grp-h{padding:8px 14px;font-size:12px;font-weight:600;color:var(--muted);background:var(--surface-2);border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
 .grp-h:first-child{border-radius:var(--r) var(--r) 0 0}
@@ -413,8 +415,8 @@ table.q .num{text-align:right}
 <button class="kb-fab" id="kbFab" aria-label="Tạo job nhập tay" title="Tạo job nhập tay">+</button>
 <div id="toast" hidden></div>
 
-<script src="firebase-config.js?v=45d05b0fe0"></script>
-<script src="static-shim.js?v=251c5b3710"></script>
+<script src="firebase-config.js?v=483007a3c3"></script>
+<script src="static-shim.js?v=188e67e8e3"></script>
 <script>
 const TYPES=["Báo giá","Khai HQ nhập","Khai HQ xuất","Vận chuyển","Chứng từ / C/O","Kiểm tra chuyên ngành","Khác"];
 const MODES=["","Sea FCL","Sea LCL","Air","Road","Express"];
@@ -480,6 +482,7 @@ const isOverdue=j=>isOpen(j.status)&&(dayDiff(j.deadline)??0)<0;
 const isStalled=j=>{if(!isOpen(j.status))return false;const n=num(S.stall[j.status]),d=stageDays(j);return n>0&&d!==null&&d>=n};
 const isLate=j=>isOverdue(j)||isStalled(j);
 let db=null,sample=null,assets=null;
+const team=()=>!!window.SOJOB_ROLE,boss=()=>(window.SOJOB_ROLE||"owner")==="owner",me=()=>(window.SOJOB_EMAIL||"").toLowerCase();
 const dirty=new Set(),timers={},chains={};
 
 /* ---------- persistence ---------- */
@@ -502,7 +505,8 @@ function savePartner(name){const k=slug(name);saveDoc("partners/"+k,()=>S.partne
 
 function nextCode(){
   const d=new Date();const p=`J${String(d.getFullYear()).slice(2)}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
-  const n=S.jobs.filter(j=>(j.code||"").startsWith(p)).length+1;return `${p}-${pad(n)}`;
+  const tag=boss()?"":me().replace(/[^a-z]/g,"").slice(0,2).toUpperCase();
+  const n=S.jobs.filter(j=>(j.code||"").startsWith(p+"-"+tag)).length+1;return `${p}-${tag}${pad(n)}`;
 }
 function newId(){try{if(db)return db.collection("jobs").doc().id}catch(e){}return "j"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function tplTasks(type){return (S.tpl[type]||[]).map(t=>({text:t,done:false}))}
@@ -515,6 +519,7 @@ async function createJob(data){
     raw:"",images:[],createdAt:Date.now(),updatedAt:Date.now(),stageAt:Date.now(),history:[]
   },data);
   if(!SERVICES.includes(j.service))j.service=j.type==="Vận chuyển"?"VC":"HQ";
+  if(team()){j.createdBy=me();j.createdByName=window.SOJOB_USER||me();j.shared=!boss()}
   logH(j,{kind:"create",to:j.status});
   j.id=newId();
   S.jobs.unshift(j);S.sel=j.id;
@@ -680,7 +685,7 @@ function jobRow(j){
   return `<div class="row ${S.sel===j.id?"on":""}" data-open="${j.id}" tabindex="0">
     <span class="code">${esc(j.code)}</span>
     <span class="t">${j.priority==="Gấp"?'<span class="urgent">GẤP · </span>':""}${esc(j.title||"(chưa có tiêu đề)")}</span>
-    <span class="right">${j.example?'<span class="ex">VÍ DỤ</span>':""}${j.blocker?`<span class="pill wait" title="${esc(j.blocker)}">Vướng: ${esc(j.blocker.slice(0,28))}</span>`:""}${isStalled(j)&&!isOverdue(j)?`<span class="pill dl-over">Đứng yên ${stageDays(j)} ngày</span>`:""}<span class="pill svc">${svcOf(j)}</span>${dlPill(j.deadline,isOpen(j.status))}${stPill(j.status)}</span>
+    <span class="right">${team()&&boss()&&j.shared?'<span class="shb" title="Nhân viên thấy job này">👥 Chung</span>':""}${j.example?'<span class="ex">VÍ DỤ</span>':""}${j.blocker?`<span class="pill wait" title="${esc(j.blocker)}">Vướng: ${esc(j.blocker.slice(0,28))}</span>`:""}${isStalled(j)&&!isOverdue(j)?`<span class="pill dl-over">Đứng yên ${stageDays(j)} ngày</span>`:""}<span class="pill svc">${svcOf(j)}</span>${dlPill(j.deadline,isOpen(j.status))}${stPill(j.status)}</span>
     <span class="meta">${who.map((w,i)=>`<span class="pill ${i===0?"fwd":""}">${esc(w)}</span>`).join("")}<span>${esc(j.type)}</span>${j.mode?`<span>· ${esc(j.mode)}</span>`:""}${j.pol||j.pod?`<span>· ${esc(j.pol||"?")} → ${esc(j.pod||"?")}</span>`:""}${all?`<span>· việc ${done}/${all}</span>`:""}<span class="cd" title="${esc(cDateFull(j))}">· tạo ${cDate(j)}</span></span>
   </div>`;
 }
@@ -705,7 +710,7 @@ function kanbanCard(j){
     j.bl?`<span title="Số B/L">${esc(j.bl)}</span>`:"",hasVC(j)&&isTruck(j)?'<span>Xe tải</span>':"",hasVC(j)&&isTruck(j)&&j.cbm?`<span title="Số khối">${esc(j.cbm)} m³</span>`:"",hasVC(j)&&!isTruck(j)&&j.yard?`<span title="Bãi hạ cont">Hạ: ${esc(j.yard)}</span>`:"",j.cont?`<span title="${isTruck(j)?"Xe / tải trọng":"Số cont"}">${esc(j.cont)}</span>`:"",
     j.lane?`<span class="ln ln-${j.lane==="Xanh"?"g":j.lane==="Vàng"?"y":"r"}">Luồng ${esc(j.lane)}</span>`:"",
     depositPending(j)?'<span class="w">Chưa hoàn cược</span>':"",
-    num(j.debitAmount)&&stIdx(j.status)>=8?`<span class="mono">${fmt(j.debitAmount,j.debitCurrency)} ${esc(j.debitCurrency||"VND")}</span>`:"",j.example?'<span>VÍ DỤ</span>':"",`<span class="cd" title="${esc(cDateFull(j))}">${cDate(j)}</span>`].join("");
+    num(j.debitAmount)&&stIdx(j.status)>=8?`<span class="mono">${fmt(j.debitAmount,j.debitCurrency)} ${esc(j.debitCurrency||"VND")}</span>`:"",j.example?'<span>VÍ DỤ</span>':"",team()&&boss()&&j.shared?'<span class="shb" title="Nhân viên thấy job này">👥 Chung</span>':"",`<span class="cd" title="${esc(cDateFull(j))}">${cDate(j)}</span>`].join("");
   return `<div class="kc${S.sel===j.id?" on":""}${isLate(j)?" over":""}${j.priority==="Gấp"?" urg":""}" draggable="true" data-drag="${j.id}" data-open="${j.id}">
     <button class="mn" data-kmenu="${j.id}" aria-label="Thao tác với job ${esc(j.code)}">⋯</button>
     <span class="t" title="${esc(j.title||"")}">${esc(j.title||"(chưa có tiêu đề)")}</span>
@@ -863,7 +868,7 @@ function addPlanItem(){
   const jid=$("#pa-job").value,due=$("#pa-due").value;
   if(jid){const j=S.jobs.find(x=>x.id===jid);if(!j)return;(j.tasks=j.tasks||[]).push(due?{text,done:false,due}:{text,done:false});queueSave(j);if(S.sel===jid)renderDetail(true);toast("Đã thêm vào "+j.code+".")}
   else{let id;try{id=db?db.collection("todos").doc().id:null}catch(e){}id=id||"t"+Date.now().toString(36);
-    const t={id,text,due,done:false,createdAt:Date.now()};S.todos.push(t);saveDoc("todos/"+id,()=>{const b={...t};delete b.id;return b},0);toast("Đã thêm việc riêng.")}
+    const t={id,text,due,done:false,createdAt:Date.now()};if(team())t.createdBy=me();S.todos.push(t);saveDoc("todos/"+id,()=>{const b={...t};delete b.id;return b},0);toast("Đã thêm việc riêng.")}
   ti.value="";renderPlan($("#content"));ti.focus();
 }
 
@@ -898,7 +903,7 @@ function renderDetail(force){
   const tpl=S.tpl[j.type]||[],have=new Set(tasks.map(t=>normName(t.text))),missing=tpl.filter(t=>!have.has(normName(t))).length;
   el.innerHTML=`<div class="d">
   <div class="d-head">
-    <div class="l1"><button class="ghost back" data-act="close">← Danh sách</button><span class="mono" style="color:var(--muted)">${esc(j.code)}${j.example?' <span class="ex">VÍ DỤ</span>':""}</span>
+    <div class="l1"><button class="ghost back" data-act="close">← Danh sách</button><span class="mono" style="color:var(--muted)">${esc(j.code)}${j.example?' <span class="ex">VÍ DỤ</span>':""}</span>${team()&&boss()?`<button class="ghost sm shr${j.shared?" on":""}" data-act="share" title="${j.shared?"Nhân viên đang thấy job này. Bấm để thu về chỉ mình bạn thấy.":"Chỉ mình bạn thấy. Bấm để chia sẻ cho nhân viên."}">${j.shared?"👥 Đã chia sẻ":"🔒 Chỉ mình tôi"}</button>`:""}
       <span class="acts">${isOpen(j.status)?`${nextStage(j)?`<button class="sm primary" data-st="${esc(nextStage(j))}">Chuyển tiếp →</button>`:""}<button class="ghost sm danger" data-st="${FAIL}">Thất bại</button>`:`<button class="sm" data-st="${esc(STAGES[0])}">Mở lại</button>`}</span></div>
     <div id="stagebar">${stagesHtml(j)}</div>
     ${j.status===FAIL?`<div class="alert bad">Thất bại: ${esc(j.failReason||"chưa ghi lý do")}${j.failNote?" · "+esc(j.failNote):""}</div>`:""}
@@ -962,7 +967,7 @@ function renderDetail(force){
     ${!(j.images||[]).length&&!(j.files||[]).length&&!(j.links||[]).length?`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có ảnh hay tài liệu. Bấm “+ Ảnh / tệp” (hoặc dán ảnh Ctrl+V khi đang mở job), hoặc “+ Link OneDrive” để gắn thư mục / tệp trên OneDrive, Google Drive.</p>`:""}
     ${j.docCheck?`<div class="dchk"><span class="vd ${/^khớp/i.test(j.docCheck.verdict)?"vd-ok":/lệch/i.test(j.docCheck.verdict)?"vd-bad":"vd-warn"}">✦ ${esc(j.docCheck.verdict)}</span><span style="color:var(--muted)">${(j.docCheck.issues||[]).length} điểm cần xem · ${new Date(j.docCheck.at).toLocaleDateString("vi-VN")}</span><button class="ghost sm" data-act="aiDocsView">Xem kết quả</button></div>`:""}
     ${j.raw?`<textarea id="f-raw" data-f="raw" rows="3">${esc(j.raw)}</textarea>`:""}</div>
-  <div class="sec"><div class="acts" style="justify-content:space-between"><span style="color:var(--muted);font-size:12px">Tạo ${new Date(j.createdAt||Date.now()).toLocaleString("vi-VN")}</span><button class="danger" data-act="del">Xoá job</button></div></div>
+  <div class="sec"><div class="acts" style="justify-content:space-between"><span style="color:var(--muted);font-size:12px">Tạo ${new Date(j.createdAt||Date.now()).toLocaleString("vi-VN")}${j.createdByName?" · bởi "+esc(j.createdByName):""}</span>${boss()?'<button class="danger" data-act="del">Xoá job</button>':""}</div></div>
   </div>`;
   renderTotals(j);
 }
@@ -1149,7 +1154,9 @@ D.addEventListener("click",e=>{
   if(a==="aiRemind"){aiRemind(j);return}
   if(a==="srcLink"){srcLink(j);return}
   if(a==="srcDel"){srcDel(j,b.dataset.k,+b.dataset.i);return}
-  if(a==="del"){
+  if(a==="share"){if(!boss())return;j.shared=!j.shared;logH(j,{kind:"note",note:j.shared?"Chia sẻ cho nhân viên":"Thu về chỉ chủ sổ thấy"});queueSave(j);renderAll(true);
+    toast(j.shared?"Đã chia sẻ "+j.code+": nhân viên thấy và sửa được job này.":"Đã thu về "+j.code+": chỉ mình bạn thấy.");return}
+  if(a==="del"){if(!boss())return;
     if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="Bấm lần nữa để xoá vĩnh viễn";setTimeout(()=>{if(b.isConnected){b.classList.remove("arm");b.textContent="Xoá job"}},4000);return}
     const id=j.id,path="jobs/"+id;S.jobs=S.jobs.filter(x=>x.id!==id);S.sel=null;clearTimeout(timers[path]);delete timers[path];dirty.delete(path);
     (chains[path]||Promise.resolve()).then(()=>db&&db.doc(path).delete()).then(()=>toast("Đã xoá job "+j.code+".")).catch(()=>toast("Chưa xoá được, thử lại."));
@@ -1507,13 +1514,17 @@ renderAll(true);
   if(!db){S.loaded=true;$("#banner").innerHTML=`<div class="banner">Không kết nối được kho lưu job. Bạn vẫn tạo job được, nhưng sẽ mất khi tải lại trang.</div>`;renderAll(true);return}
   const timer=setTimeout(()=>{if(!S.loaded){S.loaded=true;$("#banner").innerHTML=`<div class="banner">Chưa tải được dữ liệu, đang thử lại…</div>`;renderAll()}},10000);
   const fail=err=>{clearTimeout(timer);S.loaded=true;$("#banner").innerHTML=`<div class="banner">Mất kết nối kho dữ liệu (${esc(err?.code)}). Tải lại trang để thử lại.</div>`;renderAll()};
-  db.collection("jobs").onSnapshot(snap=>{
+  const onJobs=(docs,fromCache)=>{
     const local=new Map(S.jobs.map(j=>[j.id,j]));
-    S.jobs=snap.docs.map(d=>dirty.has("jobs/"+d.id)&&local.has(d.id)?local.get(d.id):fixJob(Object.assign({id:d.id},JSON.parse(JSON.stringify(d.data())))));
+    S.jobs=docs.map(d=>dirty.has("jobs/"+d.id)&&local.has(d.id)?local.get(d.id):fixJob(Object.assign({id:d.id},JSON.parse(JSON.stringify(d.data())))));
     local.forEach((j,id)=>{if(dirty.has("jobs/"+id)&&!S.jobs.some(x=>x.id===id))S.jobs.push(j)});
-    if(!snap.metadata.fromCache){clearTimeout(timer);$("#banner").innerHTML=""}
+    if(!fromCache){clearTimeout(timer);$("#banner").innerHTML=""}
     S.loaded=true;if(S.sel&&!cur())S.sel=null;renderAll(false);
-  },fail);
+  };
+  if(boss())db.collection("jobs").onSnapshot(snap=>onJobs(snap.docs,snap.metadata.fromCache),fail);
+  else{const part={};const go=()=>{if(!part.a||!part.b)return;const m=new Map();[...part.a.docs,...part.b.docs].forEach(d=>m.set(d.id,d));onJobs([...m.values()],part.a.metadata.fromCache||part.b.metadata.fromCache)};
+    db.collection("jobs").where("shared","==",true).onSnapshot(s=>{part.a=s;go()},fail);
+    db.collection("jobs").where("createdBy","==",me()).onSnapshot(s=>{part.b=s;go()},fail)}
   db.doc("meta/templates").onSnapshot(d=>{
     if(dirty.has("meta/templates"))return;
     const by=d.exists?d.data().byType:null;
@@ -1522,9 +1533,9 @@ renderAll(true);
     if(S.view==="board"||S.view==="plan")renderMain();
     if(S.view==="tpl")renderMain();renderDetail();
   },()=>{});
-  db.collection("todos").onSnapshot(snap=>{
+  (boss()?db.collection("todos"):db.collection("todos").where("createdBy","==",me())).onSnapshot(snap=>{
     const local=new Map(S.todos.map(t=>[t.id,t]));
-    S.todos=snap.docs.map(d=>dirty.has("todos/"+d.id)&&local.has(d.id)?local.get(d.id):Object.assign({id:d.id},JSON.parse(JSON.stringify(d.data()))));
+    S.todos=snap.docs.filter(d=>!team()||!d.data().createdBy||d.data().createdBy===me()).map(d=>dirty.has("todos/"+d.id)&&local.has(d.id)?local.get(d.id):Object.assign({id:d.id},JSON.parse(JSON.stringify(d.data()))));
     local.forEach((t,id)=>{if(dirty.has("todos/"+id)&&!S.todos.some(x=>x.id===id))S.todos.push(t)});
     if(S.view==="plan"&&S.loaded)renderPlan($("#content"));
   },()=>{});

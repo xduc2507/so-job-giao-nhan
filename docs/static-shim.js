@@ -99,14 +99,17 @@
       collection() { throw new TypeError("Bản tĩnh không hỗ trợ bộ sưu tập con."); },
     };
   }
-  function colRef(name) {
+  function colRef(name, filt) {
     const st = colState(name);
+    const pick = s => { if (!filt) return s; const docs = s.docs.filter(d => { const v = d.data(); return v && v[filt[0]] === filt[1]; }); return Object.assign({}, s, { docs, size: docs.length, empty: !docs.length }); };
     return {
       path: name,
+      where: (f, op, v) => colRef(name, [f, v]),
       doc: id => docRef(name, id || rid()),
       async add(data) { const r = docRef(name, rid()); await r.set(data); return r; },
-      async get() { await loaded; return buildSnap(st); },
-      onSnapshot(next, error) {
+      async get() { await loaded; return pick(buildSnap(st)); },
+      onSnapshot(next0, error) {
+        const next = s => next0(pick(s));
         const l = { next, error };
         st.listeners.add(l);
         loaded.then(() => st.listeners.has(l) && next(buildSnap(st)), e => error && error({ code: "unavailable", message: String(e) }));
@@ -251,7 +254,7 @@
     const k = getKey();
     const d = overlay(`<h2>Cài đặt</h2>
       ${reason === "nokey" ? `<div class="banner">Muốn Claude đọc ảnh thì cần API key Claude của bạn (tính phí theo lượt dùng ở console.anthropic.com). Chưa có key: bấm <b>Đóng</b>, rồi bấm <b>Tạo job trống</b> hoặc <b>+ Tạo job</b> để gõ tay.</div>` : ""}
-      ${FB ? `<p>Dữ liệu lưu <b>online</b> (Firebase)${fuser ? ", đang đăng nhập <b>" + esc(fuser.email || "") + "</b>" : ""}. Điện thoại và máy tính đăng nhập cùng tài khoản sẽ thấy chung một sổ.</p>`
+      ${FB ? `<p>Dữ liệu lưu <b>online</b> (Firebase)${fuser ? ", đang đăng nhập <b>" + esc(fuser.email || "") + "</b>" + (ROLE === "owner" ? " (chủ sổ)" : " (nhân viên)") : ""}. Điện thoại và máy tính đăng nhập cùng tài khoản sẽ thấy chung một sổ.</p>`
         : `<p>Bản dùng thử trên GitHub Pages. Dữ liệu chỉ nằm <b>trong trình duyệt này</b>: máy khác, trình duyệt khác sẽ thấy sổ trống. Nhớ sao lưu thường xuyên.</p>`}
       <label class="fld"><span>API key Claude (lấy ở console.anthropic.com → API keys)</span>
         <input id="sj-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="${esc(k)}"></label>
@@ -259,13 +262,20 @@
       <div class="mrow"><span id="sj-msg" class="note"></span>
         ${k ? '<button class="ghost danger" id="sj-clear">Xoá key</button>' : ""}
         <button class="primary" id="sj-save">Lưu key</button></div>
-      <h2 style="margin-top:14px">Dữ liệu</h2>
+      ${FB && ROLE === "owner" ? `<h2 style="margin-top:14px">Thành viên</h2>
+      <p class="note">Nhân viên đăng nhập bằng Google của họ tại link này. Họ thấy job họ tạo và job bạn bấm “🔒 Chỉ mình tôi” → “👥 Đã chia sẻ”. Họ được xem tiền, sửa job, nhưng không xoá job và không vào được mục này.</p>
+      <div id="sj-mem" class="note">Đang tải…</div>
+      <div class="mrow" style="justify-content:flex-start;flex-wrap:wrap;align-items:flex-end">
+        <label class="fld" style="flex:2;min-width:180px;margin:0"><span>Email Google của nhân viên</span><input id="sj-me" type="email" autocomplete="off" spellcheck="false" placeholder="ten@gmail.com"></label>
+        <label class="fld" style="flex:1;min-width:120px;margin:0"><span>Tên gọi</span><input id="sj-mn" autocomplete="off" placeholder="VD: Hạnh"></label>
+        <button class="primary" id="sj-madd">Thêm</button></div>` : ""}
+      ${FB && ROLE !== "owner" ? "" : `<h2 style="margin-top:14px">Dữ liệu</h2>
       <div class="mrow" style="justify-content:flex-start;flex-wrap:wrap">
         <button id="sj-exp">Tải file sao lưu (.json)</button>
         <button id="sj-imp">Khôi phục từ file…</button>
         <input id="sj-file" type="file" accept="application/json,.json" hidden>
         ${FB ? '<button id="sj-mig">Đưa job đang lưu trên máy này lên kho online</button>' : ""}
-      </div>
+      </div>`}
       <div class="mrow"><button id="sj-close">Đóng</button></div>`);
     const msg = (t, err) => { const n = $("#sj-msg", d); n.textContent = t; n.className = "note" + (err ? " err" : ""); };
     const close = () => { d.remove(); settingsOpen = false; };
@@ -287,13 +297,35 @@
     };
     const clr = $("#sj-clear", d);
     if (clr) clr.onclick = () => { try { localStorage.removeItem(KEY_LS); } catch (e) {} $("#sj-key", d).value = ""; msg("Đã xoá key."); };
-    $("#sj-exp", d).onclick = async () => {
+    const memBox = $("#sj-mem", d);
+    if (memBox) {
+      const draw = async () => {
+        try {
+          const s = await fdb.collection("members").get();
+          memBox.innerHTML = s.empty ? "Chưa có nhân viên nào." : s.docs.map(x => `<div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--line)"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis"><b>${esc(x.data().name || "")}</b> ${esc(x.id)}</span><button class="ghost sm danger" data-rm="${esc(x.id)}">Bỏ</button></div>`).join("");
+          memBox.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
+            if (!confirm("Bỏ quyền của " + b.dataset.rm + "? Người này sẽ không mở được sổ nữa.")) return;
+            try { await fdb.doc("members/" + b.dataset.rm).delete(); draw(); } catch (e) { msg("Chưa bỏ được: " + (e.message || e.code), true); }
+          });
+        } catch (e) { memBox.textContent = "Chưa đọc được danh sách: " + (e.message || e.code); }
+      };
+      draw();
+      $("#sj-madd", d).onclick = async () => {
+        const em = $("#sj-me", d).value.trim().toLowerCase(), nm = $("#sj-mn", d).value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { msg("Email chưa đúng.", true); return; }
+        if (fuser && em === (fuser.email || "").toLowerCase()) { msg("Đây là email của chủ sổ.", true); return; }
+        try { await fdb.doc("members/" + em).set({ name: nm, role: "staff", addedAt: Date.now() }); $("#sj-me", d).value = ""; $("#sj-mn", d).value = ""; msg("Đã thêm " + em + "."); draw(); }
+        catch (e) { msg("Chưa thêm được: " + (e.message || e.code), true); }
+      };
+    }
+    const exp = $("#sj-exp", d); if (exp) exp.onclick = async () => {
       const rows = FB ? await cloudAll() : await allDocs();
       const blob = new Blob([JSON.stringify({ app: "so-job", version: 1, exportedAt: new Date().toISOString(), docs: rows.map(([k, v]) => ({ path: k, data: v })) })], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob); a.download = "so-job-" + new Date().toISOString().slice(0, 10) + ".json";
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     };
+    if (!exp) return;
     $("#sj-imp", d).onclick = () => $("#sj-file", d).click();
     $("#sj-file", d).onchange = async e => {
       const f = e.target.files[0]; if (!f) return;
@@ -340,12 +372,13 @@
 
   /* ---------- kho online (Firebase): bật khi có firebase-config.js ---------- */
   const FB = window.SOJOB_FIREBASE && window.SOJOB_FIREBASE.apiKey ? window.SOJOB_FIREBASE : null;
-  const COLS = ["jobs", "meta", "partners", "todos"];
+  const COLS = ["jobs", "meta", "partners", "todos", "members"];
   const FBV = "10.12.2";
   function addScript(src) {
     return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Không tải được " + src.split("/").pop() + ". Kiểm tra mạng.")); document.head.appendChild(s); });
   }
-  let fdb = null, fauth = null, fuser = null;
+  let fdb = null, fauth = null, fuser = null, ROLE = "owner";
+  const ROLE_LS = "sojob.role";
   async function cloudAll() {
     const rows = [];
     for (const c of COLS) { const s = await fdb.collection(c).get(); s.docs.forEach(d => rows.push([c + "/" + d.id, d.data()])); }
@@ -412,10 +445,18 @@
       fauth.onAuthStateChanged(async u => {
         if (!u) { if (!first) { location.reload(); return; } first = false; fuser = null; loginScreen(); return; }
         first = false; fuser = u;
-        try { await fdb.doc("meta/templates").get(); }
+        const mail = (u.email || "").toLowerCase();
+        const denied = () => loginScreen(`Tài khoản ${u.email} chưa được cấp quyền dùng sổ này. Gửi email này cho chủ sổ để được thêm vào (Cài đặt → Thành viên), hoặc đăng xuất để chọn tài khoản khác.`);
+        // Chủ sổ: đọc được cả danh sách thành viên. Nhân viên: chỉ có hồ sơ của mình trong members/.
+        try { await fdb.collection("members").limit(1).get({ source: "server" }); ROLE = "owner"; }
         catch (e) {
-          if (e && e.code === "permission-denied") { loginScreen(`Tài khoản ${u.email} chưa được cấp quyền dùng sổ này. Nhờ chủ sổ thêm email vào quy tắc Firestore, hoặc đăng xuất để chọn tài khoản khác.`); return; }
+          if (e && e.code === "permission-denied") {
+            try { const m = await fdb.doc("members/" + mail).get({ source: "server" }); if (!m.exists) { denied(); return; } ROLE = "staff"; }
+            catch (e2) { if (e2 && e2.code === "permission-denied") { denied(); return; } ROLE = (localStorage.getItem(ROLE_LS + "." + mail) || "staff"); }
+          } else ROLE = (localStorage.getItem(ROLE_LS + "." + mail) || "staff"); // mất mạng: dùng vai trò lần trước
         }
+        try { localStorage.setItem(ROLE_LS + "." + mail, ROLE); } catch (e) {}
+        window.SOJOB_ROLE = ROLE; window.SOJOB_EMAIL = mail;
         window.SOJOB_USER = u.displayName || u.email || "";
         const l = document.getElementById("sj-login"); if (l) l.remove();
         userBar();

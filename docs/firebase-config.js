@@ -1,7 +1,7 @@
 /* Cấu hình web của Firebase cho bản GitHub Pages.
  * Các giá trị này là thông tin nhận diện công khai (không phải mật khẩu); dữ liệu được bảo vệ
  * bằng quy tắc Firestore: chỉ email trong danh sách cho phép mới đọc / ghi được.
- * Muốn thêm người dùng: Firebase console → Firestore → Rules → thêm email vào danh sách. */
+ * Thêm nhân viên: mở sổ bằng tài khoản chủ sổ → Cài đặt → Thành viên. */
 window.SOJOB_FIREBASE = {
   apiKey: "AIzaSyCU35XKhtdlNKOMOauoe6q19tiFis87qqI",
   authDomain: "so-job-giao-nhan.firebaseapp.com",
