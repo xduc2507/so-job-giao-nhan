@@ -515,6 +515,10 @@ const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const TODAY=()=>ymd(new Date());
 const dmy=s=>s?s.slice(8,10)+"/"+s.slice(5,7)+"/"+s.slice(2,4):"";
 const num=v=>{if(typeof v==="number")return isFinite(v)?v:0;let t=String(v??"").replace(/[^\d.\-]/g,"");if((t.match(/\./g)||[]).length>1||/^\-?\d{1,3}\.\d{3}$/.test(t))t=t.replace(/\./g,"");const n=Number(t);return isFinite(n)?n:0};
+/* Tiền: VND làm tròn đồng chẵn, ngoại tệ 2 số lẻ; VAT làm tròn riêng rồi mới cộng (khớp hoá đơn) */
+const roundMoney=(v,c)=>(c||"VND")==="VND"?Math.round(Number(v)||0):Math.round((Number(v)||0)*100)/100;
+const vatOf=(sub,vat,c)=>roundMoney(roundMoney(sub,c)*(Number(vat)||0)/100,c);
+const grandOf=(sub,vat,c)=>roundMoney(roundMoney(sub,c)+vatOf(sub,vat,c),c);
 const fmt=(n,c)=>(Number(n)||0).toLocaleString("vi-VN",{maximumFractionDigits:c==="USD"?2:0});
 const normName=s=>String(s||"").replace(/[đĐ]/g,"d").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
 const slug=s=>normName(s).replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,80)||"u"+[...String(s)].reduce((h,c)=>(h*31+c.codePointAt(0))>>>0,7).toString(36);
@@ -1095,7 +1099,7 @@ function renderDetail(force){
 function renderTotals(j){
   const t=totals(j),vat=num(j.vat),el=$("#qtot");if(!el)return;
   const ks=Object.keys(t);if(!ks.length){el.innerHTML="";return}
-  el.innerHTML=ks.map(c=>`<span>Cộng ${c}: <span class="mono">${fmt(t[c],c)}</span></span>${vat?`<span>VAT ${vat}%: <span class="mono">${fmt(t[c]*vat/100,c)}</span></span>`:""}<span>Tổng ${c}: <b>${fmt(t[c]*(1+vat/100),c)}</b></span>`).join("");
+  el.innerHTML=ks.map(c=>`<span>Cộng ${c}: <span class="mono">${fmt(t[c],c)}</span></span>${vat?`<span>VAT ${vat}%: <span class="mono">${fmt(vatOf(t[c],vat,c),c)}</span></span>`:""}<span>Tổng ${c}: <b>${fmt(grandOf(t[c],vat,c),c)}</b></span>`).join("");
 }
 function lateBox(j){
   let st=lateState(j);if(!st)return "";const a=j.lateAck||{},nx=nextStage(j)||"bước sau";const editing=S.lateEdit===j.id&&st==="pend";if(editing)st="none";
@@ -1159,7 +1163,7 @@ function quoteText(j){
   if(j.cargo)L.push(`Hàng: ${j.cargo}`);L.push("");
   (j.quote||[]).forEach((q,i)=>L.push(`${i+1}. ${q.name}: ${fmt(q.qty)} ${q.unit||""} × ${fmt(q.price,q.currency)} = ${fmt(num(q.qty)*num(q.price),q.currency)} ${q.currency||"VND"}`));
   const t=totals(j),vat=num(j.vat);L.push("");
-  Object.keys(t).forEach(c=>{L.push(`Cộng: ${fmt(t[c],c)} ${c}`);if(vat){L.push(`VAT ${vat}%: ${fmt(t[c]*vat/100,c)} ${c}`);L.push(`Tổng cộng: ${fmt(t[c]*(1+vat/100),c)} ${c}`)}});
+  Object.keys(t).forEach(c=>{L.push(`Cộng: ${fmt(t[c],c)} ${c}`);if(vat){L.push(`VAT ${vat}%: ${fmt(vatOf(t[c],vat,c),c)} ${c}`);L.push(`Tổng cộng: ${fmt(grandOf(t[c],vat,c),c)} ${c}`)}});
   if(j.quoteNote)L.push("","Ghi chú: "+j.quoteNote);
   return L.join("\n").replace(/\n{3,}/g,"\n\n").trim();
 }
@@ -1258,7 +1262,8 @@ D.addEventListener("input",e=>{
   const j=cur();if(!j)return;const t=e.target,f=t.dataset.f;
   if(f){
     let v=t.type==="checkbox"?t.checked:t.value;
-    if(f==="vat"||f==="debitAmount")v=num(v);
+    if(f==="vat")v=num(v);
+    if(f==="debitAmount")v=roundMoney(num(v),j.debitCurrency);
     j[f]=v;
     if(f==="debitDate"&&v&&isOpen(j.status)&&stIdx(j.status)<9){setStatus(j,"Chờ thu tiền","auto","Điền ngày gửi debit");syncStages(j)}
     if(f==="paidDate"&&v&&isOpen(j.status)){if(needDeposit(j)&&!["Đã hoàn","Không có cược"].includes(j.deposit))toast("Đã ghi ngày trả. Lô có vận chuyển chưa hoàn cược nên chưa chuyển Hoàn thành.");else{setStatus(j,DONE,"auto","Điền ngày khách trả");renderDetail(true)}}
@@ -1323,7 +1328,7 @@ D.addEventListener("click",e=>{
   if(a==="copyBrief")copy(briefText(j));
   if(a==="debitFromQuote"){const t=totals(j),vat=num(j.vat),c=t.VND!==undefined?"VND":Object.keys(t)[0];
     if(!c){toast("Báo giá chưa có dòng nào.");return}
-    if(Object.keys(t).length>1)toast("Báo giá có nhiều loại tiền: chỉ lấy tổng "+c+".");j.debitAmount=Math.round(t[c]*(1+vat/100)*100)/100;j.debitCurrency=c;queueSave(j);renderAll(true)}
+    if(Object.keys(t).length>1)toast("Báo giá có nhiều loại tiền: chỉ lấy tổng "+c+".");j.debitAmount=grandOf(t[c],vat,c);j.debitCurrency=c;queueSave(j);renderAll(true)}
   if(a==="srcFile"){srcPick();return}
   if(a==="aiDocs"){aiDocs(j);return}
   if(a==="aiDocsView"){showDocCheck(j);return}
@@ -1832,6 +1837,7 @@ function fixJob(j){
   if(j.waiting){if(!j.blocker)j.blocker="Chờ khách phản hồi";j.waiting=false}
   if(!j.stageAt)j.stageAt=j.updatedAt||j.createdAt||Date.now();
   if(!Array.isArray(j.history))j.history=[];
+  if(num(j.debitAmount))j.debitAmount=roundMoney(num(j.debitAmount),j.debitCurrency);
   return j}
 renderAll(true);
 (async()=>{
