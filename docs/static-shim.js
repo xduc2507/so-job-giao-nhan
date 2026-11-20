@@ -152,7 +152,11 @@
     if (!key) throw { code: "sampling_disabled", message: "Chưa có API key Claude. Bấm “Đọc chữ (miễn phí)” để đọc chữ trong ảnh không cần key, hoặc nhập key trong “Cài đặt” để Claude tự tách thông tin." };
     const prompt = typeof input === "string" ? input : (input || []).map(m => m.content).join("\n\n");
     const content = [];
-    for (const img of asList(opts.images).slice(0, 5)) {
+    for (const doc of asList(opts.documents).slice(0, 5)) { // PDF: gửi nguyên văn cho Claude đọc
+      const url = await toDataURL(doc);
+      content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: url.slice(url.indexOf(",") + 1) } });
+    }
+    for (const img of asList(opts.images).slice(0, Math.min(opts.maxImages || 5, 12))) {
       const b = await shrink(img, 2000, 0.88);
       const url = await toDataURL(b);
       content.push({ type: "image", source: { type: "base64", media_type: b.type || "image/jpeg", data: url.slice(url.indexOf(",") + 1) } });

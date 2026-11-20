@@ -242,8 +242,9 @@ body.view-board .kb-fab{display:block}
 .chk{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer}
 .sec{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
 .sec:last-child{border-bottom:0}
-.sec h3{margin:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px}
-.sec h3 .acts{letter-spacing:0;text-transform:none}
+.sec h3{margin:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:6px 8px;flex-wrap:wrap}
+.sec h3 .acts{letter-spacing:0;text-transform:none;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.sec h3 button{white-space:nowrap}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 10px}
 .fld{display:flex;flex-direction:column;gap:3px;min-width:0}
@@ -279,6 +280,20 @@ table.q .num{text-align:right}
 .docs .doc a:hover{text-decoration:underline}
 .docs .doc b{font-size:10.5px;letter-spacing:.04em;color:var(--muted);font-weight:600;flex:none}
 .docs .x{top:50%;right:6px;transform:translateY(-50%)}
+.ai{color:var(--violet)!important;border-color:var(--violet-soft)!important}
+.aibox .sheet{max-width:720px;margin-top:6vh;max-height:86vh;display:flex;flex-direction:column}
+.aibox .ai-body{overflow:auto;min-height:60px;display:flex;flex-direction:column;gap:10px;font-size:13.5px}
+.aibox .ai-body textarea{width:100%;min-height:260px;font:inherit;line-height:1.5}
+.aibox .ai-body table{border-collapse:collapse;width:100%;font-size:12.5px}
+.aibox .ai-body th,.aibox .ai-body td{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top}
+.aibox .ai-body td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.aibox .ai-body ul{margin:0;padding-left:18px}
+.aibox .vd{display:inline-block;font-weight:700;padding:3px 10px;border-radius:4px}
+.vd-ok{background:var(--ok-soft);color:var(--ok)}.vd-bad{background:var(--bad-soft);color:var(--bad)}.vd-warn{background:var(--warn-soft);color:var(--warn)}
+.aibox .lv-bad{color:var(--bad);font-weight:600;white-space:nowrap}.aibox .lv-warn{color:var(--warn);font-weight:600;white-space:nowrap}
+.aibox .ai-acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}
+.aibox .muted{color:var(--muted);font-size:12px}
+.dchk{font-size:12.5px;margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .srcadd{display:flex;gap:6px;margin-left:auto;letter-spacing:0;text-transform:none}
 .srcadd button{white-space:nowrap}
 .lb{position:fixed;inset:0;z-index:40;background:rgba(5,10,8,.92);display:flex;flex-direction:column}
@@ -914,7 +929,7 @@ function renderDetail(force){
     <label class="fld"><span>Tóm tắt yêu cầu</span><textarea id="f-summary" data-f="summary" rows="3">${esc(j.summary)}</textarea></label>
     <label class="fld"><span>Cần hỏi lại khách</span><textarea id="f-questions" data-f="questions" rows="2">${esc(j.questions)}</textarea></label>
   </div>
-  <div class="sec"><h3>Báo giá <span class="acts"><button class="ghost sm" data-act="fillPrices">Điền giá lần trước</button><button class="ghost sm" data-act="qadd">+ Thêm dòng</button></span></h3>
+  <div class="sec"><h3>Báo giá <span class="acts"><button class="ghost sm ai" data-act="aiQuote" title="Claude lập báo giá từ yêu cầu và giá đã báo trước đây">✦ Claude soạn</button><button class="ghost sm" data-act="fillPrices">Điền giá lần trước</button><button class="ghost sm" data-act="qadd">+ Thêm dòng</button></span></h3>
     ${(j.quote||[]).length?`<div class="qwrap"><table class="q"><thead><tr><th style="width:32%">Hạng mục</th><th class="num" style="width:8%">SL</th><th style="width:10%">ĐVT</th><th class="num" style="width:15%">Đơn giá</th><th style="width:9%">Tiền tệ</th><th class="num">Thành tiền</th><th>Giá lần trước</th><th></th></tr></thead><tbody>
     ${j.quote.map((q,i)=>`<tr><td><input id="q-${i}-name" data-q="${i}:name" list="items" value="${esc(q.name)}"></td><td><input class="num mono" id="q-${i}-qty" data-q="${i}:qty" value="${esc(q.qty)}" inputmode="decimal"></td><td><input id="q-${i}-unit" data-q="${i}:unit" value="${esc(q.unit)}"></td><td><input class="num mono" id="q-${i}-price" data-q="${i}:price" value="${esc(q.price)}" inputmode="decimal"></td><td><select id="q-${i}-currency" data-q="${i}:currency">${opt(CURS,q.currency||"VND")}</select></td><td class="num mono" data-amt="${i}">${fmt(num(q.qty)*num(q.price),q.currency)}</td><td data-hint="${i}">${hintHtml(q,j,i)}</td><td><button class="x" data-act="qdel" data-i="${i}" aria-label="Xoá dòng">✕</button></td></tr>`).join("")}
     </tbody></table></div><span style="font-size:11.5px;color:var(--muted)">Giá lần trước lấy từ cùng FWD; dấu * là giá báo cho FWD khác.</span>`:`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có hạng mục. Bấm “+ Thêm dòng”.</p>`}
@@ -923,7 +938,7 @@ function renderDetail(force){
     <div class="acts"><button data-act="copyQuote" class="primary">Copy báo giá</button><button data-act="copyBrief">Copy tóm tắt job</button>${j.quoteSentAt?`<span style="font-size:12px;color:var(--muted)">Đã gửi báo giá ${dmy(j.quoteSentAt)}</span>`:""}</div>
     <div id="copyFallback"></div>
   </div>
-  <div class="sec"><h3>Debit & thanh toán <button class="ghost sm" data-act="debitFromQuote" style="letter-spacing:0;text-transform:none">Lấy tổng từ báo giá</button></h3>
+  <div class="sec"><h3>Debit & thanh toán <button class="ghost sm" data-act="debitFromQuote" style="letter-spacing:0;text-transform:none">Lấy tổng từ báo giá</button><button class="ghost sm ai" data-act="aiRemind" style="letter-spacing:0;text-transform:none" title="Claude soạn tin nhắc thanh toán / hoàn cược, gộp các lô của cùng FWD">✦ Soạn tin nhắc</button></h3>
     <div class="grid2">
       <label class="fld"><span>Số tiền debit</span><input class="mono" id="f-debitAmount" data-f="debitAmount" inputmode="decimal" value="${esc(num(j.debitAmount)?j.debitAmount:"")}" placeholder="0"></label>
       ${SEL("debitCurrency","Tiền tệ",CURS,j.debitCurrency||"VND")}
@@ -934,10 +949,11 @@ function renderDetail(force){
   <div class="sec"><h3>Lịch sử hoạt động <span class="mono">${(j.history||[]).length}</span></h3>
     ${(j.history||[]).length?`<ol class="hist">${[...j.history].reverse().slice(0,40).map(h=>`<li><span class="mono">${new Date(h.at).toLocaleString("vi-VN",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</span><span>${histText(h)}</span></li>`).join("")}</ol>`:`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có. Mỗi lần chuyển bước, trả về, ghi vướng mắc sẽ được ghi lại ở đây.</p>`}
   </div>
-  <div class="sec"><h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Nguồn gốc & tài liệu<span class="srcadd"><button class="ghost sm" data-act="srcFile">+ Ảnh / tệp</button><button class="ghost sm" data-act="srcLink">+ Link OneDrive</button></span></h3>
+  <div class="sec"><h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Nguồn gốc & tài liệu<span class="srcadd">${(j.images||[]).length||(j.files||[]).length?`<button class="ghost sm ai" data-act="aiDocs" title="Claude đọc ảnh / PDF chứng từ và tìm chỗ lệch">✦ Claude đối chiếu</button>`:""}<button class="ghost sm" data-act="srcFile">+ Ảnh / tệp</button><button class="ghost sm" data-act="srcLink">+ Link OneDrive</button></span></h3>
     ${(j.images||[]).length?`<div class="thumbs">${j.images.map((id,i)=>`<div class="ti"><a href="${BLOB}${esc(id)}" target="_blank" rel="noopener"><img src="${BLOB}${esc(id)}" alt="Ảnh ${i+1}"></a><button class="x" data-act="srcDel" data-k="images" data-i="${i}" aria-label="Bỏ ảnh ${i+1}">✕</button></div>`).join("")}</div>`:""}
     ${(j.files||[]).length||(j.links||[]).length?`<div class="docs">${(j.files||[]).map((f,i)=>`<div class="doc"><b>${esc(extOf(f.name))}</b><a href="${BLOB}${esc(f.id)}" download="${esc(f.name)}" target="_blank" rel="noopener" title="${esc(f.name)}">${esc(f.name)}</a><button class="x" data-act="srcDel" data-k="files" data-i="${i}" aria-label="Bỏ tệp">✕</button></div>`).join("")}${(j.links||[]).map((l,i)=>`<div class="doc"><b>${esc(linkKind(l.url))}</b><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.url)}">${esc(l.name||l.url)}</a><button class="x" data-act="srcDel" data-k="links" data-i="${i}" aria-label="Bỏ link">✕</button></div>`).join("")}</div>`:""}
     ${!(j.images||[]).length&&!(j.files||[]).length&&!(j.links||[]).length?`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có ảnh hay tài liệu. Bấm “+ Ảnh / tệp” (hoặc dán ảnh Ctrl+V khi đang mở job), hoặc “+ Link OneDrive” để gắn thư mục / tệp trên OneDrive, Google Drive.</p>`:""}
+    ${j.docCheck?`<div class="dchk"><span class="vd ${/^khớp/i.test(j.docCheck.verdict)?"vd-ok":/lệch/i.test(j.docCheck.verdict)?"vd-bad":"vd-warn"}">✦ ${esc(j.docCheck.verdict)}</span><span style="color:var(--muted)">${(j.docCheck.issues||[]).length} điểm cần xem · ${new Date(j.docCheck.at).toLocaleDateString("vi-VN")}</span><button class="ghost sm" data-act="aiDocsView">Xem kết quả</button></div>`:""}
     ${j.raw?`<textarea id="f-raw" data-f="raw" rows="3">${esc(j.raw)}</textarea>`:""}</div>
   <div class="sec"><div class="acts" style="justify-content:space-between"><span style="color:var(--muted);font-size:12px">Tạo ${new Date(j.createdAt||Date.now()).toLocaleString("vi-VN")}</span><button class="danger" data-act="del">Xoá job</button></div></div>
   </div>`;
@@ -1120,6 +1136,10 @@ D.addEventListener("click",e=>{
     if(!c){toast("Báo giá chưa có dòng nào.");return}
     if(Object.keys(t).length>1)toast("Báo giá có nhiều loại tiền: chỉ lấy tổng "+c+".");j.debitAmount=Math.round(t[c]*(1+vat/100)*100)/100;j.debitCurrency=c;queueSave(j);renderAll(true)}
   if(a==="srcFile"){srcPick();return}
+  if(a==="aiDocs"){aiDocs(j);return}
+  if(a==="aiDocsView"){showDocCheck(j);return}
+  if(a==="aiQuote"){aiQuote(j);return}
+  if(a==="aiRemind"){aiRemind(j);return}
   if(a==="srcLink"){srcLink(j);return}
   if(a==="srcDel"){srcDel(j,b.dataset.k,+b.dataset.i);return}
   if(a==="del"){
@@ -1267,6 +1287,144 @@ $("#btnAnalyze").addEventListener("click",async()=>{
   }catch(e){if(e?.code==="cancelled")note("Đã dừng.");else note((window.SOJOB_BLOB_BASE!=null&&e?.message)?esc(e.message):ERR[e?.code]||"Có lỗi khi gọi Claude ("+esc(e?.code||"không rõ")+"). Thử lại.",true)}
   finally{btn.disabled=false;$("#btnStop").hidden=true;ctl=null}
 });
+
+/* ---------- Claude trợ lý: đối chiếu chứng từ, soạn báo giá, soạn tin nhắc ---------- */
+function aiErr(e){
+  if(e?.code==="cancelled")return "Đã dừng.";
+  if(e?.code==="sampling_disabled")return "Cần API key Claude: bấm “Cài đặt” → dán key. (Mỗi lần dùng tính phí vào tài khoản Anthropic của bạn.)";
+  return (window.SOJOB_BLOB_BASE!=null&&e?.message)?e.message:ERR[e?.code]||"Có lỗi khi gọi Claude ("+(e?.code||"không rõ")+"). Thử lại.";
+}
+function aiModal(title){
+  const d=document.createElement("div");d.className="modal ask aibox";
+  d.innerHTML=`<div class="sheet" role="dialog" aria-modal="true"><h2>✦ ${esc(title)}</h2><div class="ai-body"></div><div class="ai-acts"></div></div>`;
+  const ctl=new AbortController(),body=d.querySelector(".ai-body"),acts=d.querySelector(".ai-acts");
+  const esck=e=>{if(e.key==="Escape"){e.stopPropagation();close()}};
+  const close=()=>{ctl.abort();d.remove();document.removeEventListener("keydown",esck,true)};
+  document.addEventListener("keydown",esck,true);d.addEventListener("click",e=>{if(e.target===d)close()});
+  const setActs=list=>{acts.innerHTML="";list.concat([{label:"Đóng",fn:close}]).forEach(a=>{const b=document.createElement("button");b.textContent=a.label;if(a.primary)b.className="primary";b.onclick=()=>a.fn(b);acts.appendChild(b)})};
+  const busy=t=>{body.innerHTML=`<p class="note"><span class="spin"></span>${esc(t)}</p>`;setActs([{label:"Dừng",fn:()=>ctl.abort()}])};
+  document.body.appendChild(d);
+  return {body,busy,setActs,close,signal:ctl.signal,fail:e=>{body.innerHTML=`<p class="note err">${esc(aiErr(e))}</p>`;setActs([])}};
+}
+const toBlobOf=async id=>(await fetch(BLOB+id)).blob();
+const jobFacts=j=>briefText(j)+(j.raw?"\nNội dung gốc (email / tin nhắn):\n"+String(j.raw).slice(0,2500):"");
+const vnd=(v,c)=>fmt(v,c)+" "+(c||"VND");
+
+/* 1. Đối chiếu bộ chứng từ */
+async function aiDocs(j){
+  if(!sample){toast("Chế độ xem này không gọi được Claude.");return}
+  const imgs=j.images||[],pdfs=(j.files||[]).filter(f=>/\.pdf$/i.test(f.name)||/^data:application\/pdf/.test(f.id));
+  if(!imgs.length&&!pdfs.length){toast("Chưa có ảnh / PDF chứng từ. Bấm “+ Ảnh / tệp” để thêm trước.");return}
+  const m=aiModal("Claude đối chiếu chứng từ – "+j.code);
+  m.busy(`Claude đang đọc ${imgs.length?imgs.length+" ảnh":""}${imgs.length&&pdfs.length?" và ":""}${pdfs.length?pdfs.length+" PDF":""}… (thường 20–60 giây)`);
+  try{
+    const images=await Promise.all(imgs.slice(0,12).map(toBlobOf)),documents=await Promise.all(pdfs.slice(0,5).map(f=>toBlobOf(f.id)));
+    const p=`Bạn là nhân viên chứng từ giao nhận / khai hải quan ở Việt Nam, rất cẩn thận. Kèm theo là bộ chứng từ của một lô hàng (ảnh chụp và/hoặc PDF): có thể gồm Invoice, Packing list, B/L, Arrival notice, C/O, D/O, hợp đồng, tờ khai, ảnh tin nhắn…
+Thông tin job đã có trong sổ:
+${jobFacts(j)}
+
+Việc cần làm:
+1. Nhận diện từng chứng từ (loại, số, ngày).
+2. Đối chiếu chéo: shipper / consignee / notify, tên hàng, số lượng và đơn vị, số kiện, trọng lượng (GW/NW), thể tích, đơn giá, trị giá, tiền tệ, incoterm, số B/L, số cont / seal, cảng đi / đến, tàu / chuyến, ngày tháng, số và ngày invoice ghi trên C/O, tiêu chí xuất xứ, mô tả hàng trên C/O so với invoice.
+3. Nêu mọi chỗ lệch, kể cả nhỏ (sai chính tả tên công ty, số làm tròn khác nhau). Chỉ dựa vào những gì đọc được; chỗ nào mờ / không đọc được thì nói rõ, không đoán.
+4. Liệt kê chứng từ thường cần cho loại job này mà chưa thấy trong bộ.
+Viết tiếng Việt, ngắn gọn.
+Trả về DUY NHẤT một JSON:
+{"verdict":"Khớp|Có chỗ lệch|Chưa đủ để kết luận",
+"docs":[{"type":"loại chứng từ","no":"số","date":"ngày"}],
+"issues":[{"level":"Lệch|Cần xem lại","field":"trường","detail":"chứng từ A ghi …, chứng từ B ghi …"}],
+"missing":["chứng từ còn thiếu"],
+"notes":"lưu ý khác (nếu có)",
+"fields":{"bl":"","cont":"số lượng và loại cont hoặc số cont","cargo":"tên hàng ngắn gọn","pol":"","pod":"","incoterm":"","mst":"MST người nhập khẩu VN nếu thấy"}}`;
+    const own=window.SOJOB_BLOB_BASE==="";// bản github.io: gửi được PDF và tới 12 ảnh; bản khác: 5 ảnh
+    const r=await sample.json(p,own?{signal:m.signal,cache:false,images,documents,maxImages:12}:{signal:m.signal,cache:false,images:images.slice(0,5)});
+    const res={at:Date.now(),verdict:String(r.verdict||"Chưa đủ để kết luận"),docs:Array.isArray(r.docs)?r.docs.slice(0,20):[],issues:Array.isArray(r.issues)?r.issues.slice(0,40):[],missing:Array.isArray(r.missing)?r.missing.slice(0,20).map(String):[],notes:String(r.notes||""),fields:r.fields&&typeof r.fields==="object"?r.fields:{}};
+    j.docCheck=res;logH(j,{kind:"note",note:`Claude đối chiếu chứng từ: ${res.verdict}${res.issues.length?" ("+res.issues.length+" điểm)":""}`});queueSave(j);
+    showDocCheck(j,m);renderDetail(true);
+  }catch(e){m.fail(e)}
+}
+function docCheckHtml(c){
+  const cls=/^khớp/i.test(c.verdict)?"vd-ok":/lệch/i.test(c.verdict)?"vd-bad":"vd-warn";
+  return `<div><span class="vd ${cls}">${esc(c.verdict)}</span> <span class="muted">Claude đối chiếu lúc ${new Date(c.at).toLocaleString("vi-VN",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}. Kết quả do máy đọc: kiểm tra lại trước khi khai.</span></div>
+  ${c.docs.length?`<div><b>Chứng từ đã đọc</b><ul>${c.docs.map(x=>`<li>${esc(x.type||"?")}${x.no?" – số "+esc(x.no):""}${x.date?" – "+esc(x.date):""}</li>`).join("")}</ul></div>`:""}
+  ${c.issues.length?`<div><b>Điểm cần xem</b><table><thead><tr><th>Mức</th><th>Trường</th><th>Chi tiết</th></tr></thead><tbody>${c.issues.map(x=>`<tr><td class="${/lệch/i.test(x.level)?"lv-bad":"lv-warn"}">${esc(x.level||"")}</td><td>${esc(x.field||"")}</td><td>${esc(x.detail||"")}</td></tr>`).join("")}</tbody></table></div>`:`<div>Không thấy chỗ lệch.</div>`}
+  ${c.missing.length?`<div><b>Có thể còn thiếu</b><ul>${c.missing.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
+  ${c.notes?`<div><b>Lưu ý</b><br>${esc(c.notes)}</div>`:""}`;
+}
+const DOCF={bl:"Số B/L",cont:"Cont",cargo:"Tên hàng",pol:"Cảng đi",pod:"Cảng đến",incoterm:"Incoterm",mst:"MST"};
+function showDocCheck(j,m){
+  m=m||aiModal("Kết quả đối chiếu – "+j.code);const c=j.docCheck;if(!c){m.close();return}
+  m.body.innerHTML=docCheckHtml(c);
+  const fill=Object.entries(c.fields||{}).filter(([k,v])=>DOCF[k]&&v&&String(v).trim()&&!String(j[k]||"").trim());
+  const text=()=>[`Đối chiếu chứng từ ${j.code}: ${c.verdict}`,...c.issues.map((x,i)=>`${i+1}. [${x.level}] ${x.field}: ${x.detail}`),...(c.missing.length?["Còn thiếu: "+c.missing.join(", ")]:[]),...(c.notes?["Lưu ý: "+c.notes]:[])].join("\n");
+  m.setActs([...(fill.length?[{label:`Điền ${fill.length} ô còn trống vào job`,primary:true,fn:b=>{fill.forEach(([k,v])=>j[k]=String(v).trim());queueSave(j);renderAll(true);b.disabled=true;b.textContent="Đã điền: "+fill.map(([k])=>DOCF[k]).join(", ")}}]:[]),
+    {label:"Copy kết quả",fn:()=>copy(text())},{label:"Đối chiếu lại",fn:()=>{m.close();aiDocs(j)}}]);
+}
+
+/* 2. Soạn báo giá */
+async function aiQuote(j){
+  if(!sample){toast("Chế độ xem này không gọi được Claude.");return}
+  const key=groupKey(j),seen=new Set(),hist=[];
+  for(const x of [...priceLines(key),...priceLines()]){if(x.id===j.id)continue;const k=x.n+"|"+x.key;if(seen.has(k))continue;seen.add(k);hist.push(x);if(hist.length>=80)break}
+  const m=aiModal("Claude soạn báo giá – "+j.code);m.busy("Claude đang lập báo giá từ yêu cầu và giá đã báo trước đây… (thường 15–40 giây)");
+  const p=`Bạn giúp một nhân viên giao nhận / khai hải quan ở Việt Nam lập báo giá dịch vụ.
+Job cần báo giá:
+${jobFacts(j)}
+
+Giá đã báo trước đây (mới nhất trước; "cùng FWD" là giá đã báo cho chính khách này):
+${hist.length?hist.map(x=>`- ${x.name} | ${x.unit||"?"} | ${x.price} ${x.currency} | ${x.key===key?"cùng FWD":"FWD khác: "+x.key} | ${x.date} | ${x.code}${x.route?" | "+x.route:""}`).join("\n"):"(chưa có)"}
+${(j.quote||[]).length?"\nBáo giá đang có trong job:\n"+j.quote.map(q=>`- ${q.name} | ${q.qty} ${q.unit} | ${q.price} ${q.currency}`).join("\n"):""}
+
+Yêu cầu:
+- Lập các hạng mục phù hợp với dịch vụ (HQ = thủ tục hải quan; VC = vận chuyển; HQ+VC = cả hai) và đúng yêu cầu khách. Dùng ĐÚNG tên hạng mục đã dùng trước đây nếu cùng ý nghĩa.
+- Đơn giá: ưu tiên giá cũ "cùng FWD"; nếu chỉ có giá FWD khác thì dùng và ghi rõ trong "basis"; nếu không có giá cũ thì để 0 và basis = "cần hỏi giá". KHÔNG tự bịa giá.
+- qty theo số cont / số tờ khai / số chuyến nếu biết, không rõ thì 1.
+- Soạn "message": lời nhắn gửi khách để dán Zalo / email, ngắn gọn, lịch sự, liệt kê từng khoản và giá; dùng tiếng Anh nếu yêu cầu gốc viết bằng tiếng Anh, còn lại tiếng Việt. Không đưa khoản giá 0 vào message mà ghi "sẽ báo sau".
+Trả về DUY NHẤT JSON:
+{"items":[{"name":"","qty":1,"unit":"","price":0,"currency":"VND|USD","basis":"giá cũ cùng FWD (mã job) | giá FWD khác | cần hỏi giá"}],"note":"ghi chú báo giá: chưa gồm gì, hiệu lực…","message":"","questions":["thông tin cần hỏi lại khách để báo chính xác"]}`;
+  try{
+    const r=await sample.json(p,{signal:m.signal,cache:false});
+    const items=(Array.isArray(r.items)?r.items:[]).slice(0,30).map(x=>({name:String(x.name||"").trim(),qty:num(x.qty)||1,unit:String(x.unit||"").trim(),price:num(x.price),currency:CURS.includes(String(x.currency).toUpperCase())?String(x.currency).toUpperCase():"VND",basis:String(x.basis||"")})).filter(x=>x.name);
+    const qs=(Array.isArray(r.questions)?r.questions:[]).map(String).filter(Boolean);
+    m.body.innerHTML=`<table><thead><tr><th>Hạng mục</th><th class="num">SL</th><th>ĐVT</th><th class="num">Đơn giá</th><th>Căn cứ</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.name)}</td><td class="num">${esc(x.qty)}</td><td>${esc(x.unit)}</td><td class="num">${x.price?vnd(x.price,x.currency):"—"}</td><td class="muted">${esc(x.basis)}</td></tr>`).join("")}</tbody></table>
+      ${r.note?`<div><b>Ghi chú</b><br>${esc(r.note)}</div>`:""}
+      ${qs.length?`<div><b>Nên hỏi lại khách</b><ul>${qs.map(q=>`<li>${esc(q)}</li>`).join("")}</ul></div>`:""}
+      <label class="fld"><span>Lời nhắn gửi khách (sửa được)</span><textarea id="aiMsg">${esc(r.message||"")}</textarea></label>`;
+    const apply=(b,mode)=>{const q=items.map(({basis,...x})=>x);j.quote=mode==="add"?(j.quote||[]).concat(q):q;if(r.note&&!j.quoteNote)j.quoteNote=String(r.note);
+      logH(j,{kind:"note",note:`Claude soạn báo giá (${q.length} dòng)`});queueSave(j);renderDetail(true);b.disabled=true;b.textContent="Đã đưa vào báo giá"};
+    m.setActs([...(items.length?(j.quote||[]).length?[{label:"Thay báo giá hiện tại",primary:true,fn:b=>apply(b,"set")},{label:"Thêm vào cuối",fn:b=>apply(b,"add")}]:[{label:"Đưa vào báo giá",primary:true,fn:b=>apply(b,"set")}]:[]),
+      {label:"Copy lời nhắn",fn:()=>copy(m.body.querySelector("#aiMsg").value)}]);
+  }catch(e){m.fail(e)}
+}
+
+/* 3. Soạn tin nhắc thanh toán / trả rỗng – hoàn cược (gộp các lô của cùng FWD) */
+const owing=j=>isOpen(j.status)&&!j.paidDate&&(j.status==="Chờ thu tiền"||(num(j.debitAmount)>0&&stIdx(j.status)>=stIdx("Bảng kê / debit")));
+async function aiRemind(j){
+  if(!sample){toast("Chế độ xem này không gọi được Claude.");return}
+  const KINDS=["Nhắc thanh toán","Nhắc trả rỗng / hoàn cược cont"];
+  const v=await ask({title:"Soạn tin nhắc – "+groupKey(j),text:"Claude gộp các lô đang chờ của cùng FWD / công ty này vào một tin.",ok:"Soạn tin",
+    fields:[{id:"k",label:"Loại tin",type:"select",options:KINDS,value:depositPending(j)&&!owing(j)?KINDS[1]:KINDS[0],required:true},
+      {id:"l",label:"Ngôn ngữ",type:"select",options:["Tiếng Việt","English"],value:"Tiếng Việt",required:true},
+      {id:"t",label:"Giọng",type:"select",options:["Lịch sự, nhẹ nhàng","Thân mật","Dứt khoát (đã nhắc nhiều lần)"],value:"Lịch sự, nhẹ nhàng",required:true}]});
+  if(!v)return;
+  const pay=v.k===KINDS[0],key=groupKey(j),test=pay?owing:depositPending;
+  const list=S.jobs.filter(x=>groupKey(x)===key&&(x.id===j.id||test(x)));
+  const days=d=>d?Math.max(0,Math.round((Date.now()-new Date(d).getTime())/864e5)):"";
+  const rows=list.map(x=>pay?`- ${x.code} | ${x.title} | ${[x.bl&&"B/L "+x.bl,x.cont&&"Cont "+x.cont,x.tkNo&&"TK "+x.tkNo].filter(Boolean).join(", ")} | debit ${num(x.debitAmount)?vnd(x.debitAmount,x.debitCurrency):"chưa ghi số tiền"} | gửi debit ${x.debitDate||"?"}${x.debitDate?" ("+days(x.debitDate)+" ngày trước)":""}`
+    :`- ${x.code} | ${x.title} | ${[x.cont&&"Cont "+x.cont,x.bl&&"B/L "+x.bl,x.yard&&"bãi hạ "+x.yard].filter(Boolean).join(", ")} | trạng thái cược: ${x.deposit||"chưa hoàn"} | đang ở bước "${x.status}" ${stageDays(x)} ngày`).join("\n");
+  const m=aiModal(v.k+" – "+key);m.busy(`Claude đang soạn tin cho ${list.length} lô…`);
+  const p=`Soạn MỘT tin nhắn (dán Zalo hoặc email) của nhân viên giao nhận gửi ${key}${pay?" để nhắc thanh toán các khoản debit dưới đây":" để nhắc trả rỗng container và làm thủ tục hoàn cược cont cho các lô dưới đây"}.
+Ngôn ngữ: ${v.l}. Giọng: ${v.t}.
+Các lô:
+${rows}
+${pay?"Nêu từng lô với số tiền; nếu nhiều lô cùng loại tiền thì có dòng tổng cộng. ":"Nêu từng lô với số cont. "}Ngắn gọn, rõ ràng, có lời chào và cảm ơn, không bịa thêm số tài khoản, hạn hay khoản phí không có ở trên. Chỉ trả về nội dung tin nhắn, không giải thích gì thêm.`;
+  try{
+    const r=await sample(p,{signal:m.signal,cache:false});
+    m.body.innerHTML=`<p class="muted">${list.length} lô của ${esc(key)}: ${list.map(x=>esc(x.code)).join(", ")}. Sửa lại nếu cần rồi copy.</p><textarea id="aiMsg">${esc(String(r.text||"").trim())}</textarea>`;
+    logH(j,{kind:"note",note:`Claude soạn tin ${v.k.toLowerCase()} (${list.length} lô)`});queueSave(j);
+    m.setActs([{label:"Copy tin nhắn",primary:true,fn:()=>copy(m.body.querySelector("#aiMsg").value)}]);
+  }catch(e){m.fail(e)}
+}
 
 /* ---------- đọc chữ miễn phí (không cần Claude): chép chữ trong ảnh + đoán vài trường ---------- */
 function guessFromText(t){
