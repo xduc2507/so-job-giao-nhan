@@ -194,6 +194,22 @@ body.view-board .back{display:inline-block}
 .kc .note-b{background:var(--warn-soft);color:var(--warn)}.kc .note-r{background:var(--bad-soft);color:var(--bad)}
 .kc.over .note-b,.kc.over .note-r{background:rgba(255,255,255,.18);color:#fff}
 .kc.over .tg .sv{background:rgba(0,0,0,.25)}
+.row.late{background:var(--bad-soft);box-shadow:inset 4px 0 0 var(--bad)}
+.row.late:hover{background:var(--bad-soft)}
+.row .lr{grid-column:2/4;font-size:12.5px;color:var(--bad);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .lr.pend{color:var(--warn)}.row .lr.ok{color:var(--muted)}
+.kc .note-l{font-size:12px;border-radius:4px;padding:2px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--bad-soft);color:var(--bad);font-weight:600}
+.kc.over .note-l{background:#fff;color:#B3382A}
+.kc .note-l.ok{background:var(--surface-2);color:var(--muted);font-weight:400}
+.latebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bad);color:#fff;border-radius:8px;padding:8px 12px;margin:0 0 10px;font-size:13.5px}
+.latebar b{font-weight:700}.latebar button{background:#fff;color:var(--bad);border-color:#fff;min-height:0;padding:4px 10px}
+.latebar.f{background:var(--surface-2);color:var(--text);border:1px solid var(--line)}.latebar.f button{color:var(--text);border-color:var(--line)}
+.lbox{border:1px solid var(--bad);background:var(--bad-soft);border-radius:8px;padding:10px 12px;margin:8px 0;font-size:13px;display:flex;flex-direction:column;gap:8px}
+.lbox.pend{border-color:var(--warn);background:var(--warn-soft)}.lbox.ok{border-color:var(--line);background:var(--surface-2)}
+.lbox h4{margin:0;font-size:13.5px;color:var(--bad)}.lbox.pend h4{color:var(--warn)}.lbox.ok h4{color:var(--muted);font-weight:500}
+.lbox .chips{display:flex;gap:6px;flex-wrap:wrap}.lbox .chips button{min-height:0;padding:4px 9px;font-size:12.5px;border-radius:999px}
+.lbox .chips button.on{background:var(--bad);color:#fff;border-color:var(--bad)}
+.lbox .lrow{display:flex;gap:6px;flex-wrap:wrap}.lbox .lrow input{flex:1;min-width:160px}
 .alert{font-size:13px;border-radius:6px;padding:6px 10px}.alert.bad{background:var(--bad-soft);color:var(--bad)}
 .fld.blk input{border-color:var(--warn);background:var(--warn-soft)}.fld.blk input:placeholder-shown{background:var(--surface);border-color:var(--line)}
 button.primary.bad{background:var(--bad);border-color:var(--bad);color:#fff}
@@ -372,6 +388,7 @@ table.q .num{text-align:right}
   <aside id="side" aria-label="Nhóm theo FWD / công ty"></aside>
   <main id="main">
     <div id="banner"></div>
+    <div id="latebar"></div>
     <div class="bar">
       <div class="tabs" role="tablist">
         <button data-view="list" class="on">Danh sách</button>
@@ -427,7 +444,7 @@ const ROUTES={"HQ":[0,1,2,3,4,8,9,10],"VC":[0,1,5,6,7,8,9,10],"HQ+VC":[0,1,2,3,4
 const LANES=["","Xanh","Vàng","Đỏ"];
 const DEPOSIT=["","Chưa hoàn","Đã hoàn","Không có cược"];
 const FAIL_REASONS=["Khách không chốt giá","Khách huỷ lô","Hàng không về / đổi lịch","Khách dùng đơn vị khác","Khác"];
-const DEFAULT_STALL={"Mới nhận":1,"Báo giá":2,"Nhận & kiểm tra chứng từ":2,"Đang khai báo":2,"Chờ thông quan":2,"Chờ điều xe":1,"Đang vận chuyển":2,"Chờ trả rỗng":3,"Bảng kê / debit":2,"Chờ thu tiền":7};
+const DEFAULT_STALL={"Mới nhận":1,"Báo giá":2,"Nhận & kiểm tra chứng từ":1,"Đang khai báo":1,"Chờ thông quan":2,"Chờ điều xe":1,"Đang vận chuyển":2,"Chờ trả rỗng":3,"Bảng kê / debit":2,"Chờ thu tiền":7};
 /* trường bắt buộc khi đi vào bước */
 const REQ={"Chờ thông quan":[["tkNo","Số tờ khai"]],"Đang vận chuyển":[["truck","Nhà xe / biển số"]],"Chờ thu tiền":[["debitAmount","Số tiền debit"]],"Hoàn thành":[["paidDate","Ngày khách trả","date"]]};
 const LEGACY={"Đang làm":"Làm hàng","Chờ phản hồi":"Báo giá","Đã báo giá":"Báo giá","Hoàn tất":"Đã thu"};
@@ -477,8 +494,35 @@ const stPill=s=>`<span class="pill st${stIdx(s)}">${esc(s)}</span>`;
 const S={jobs:[],sel:null,group:"__all",svc:"",view:"list",q:"",fStatus:"open",loaded:false,tpl:JSON.parse(JSON.stringify(DEFAULT_TPL)),stall:{...DEFAULT_STALL},partners:{},todos:[]};
 const stageDays=j=>j.stageAt?Math.floor((Date.now()-j.stageAt)/864e5):null;
 const isOverdue=j=>isOpen(j.status)&&(dayDiff(j.deadline)??0)<0;
-const isStalled=j=>{if(!isOpen(j.status))return false;const n=num(S.stall[j.status]),d=stageDays(j);return n>0&&d!==null&&d>=n};
-const isLate=j=>isOverdue(j)||isStalled(j);
+const isStalled=j=>{if(!isOpen(j.status))return false;if(STRICT.includes(j.status))return isStrictLate(j);const n=num(S.stall[j.status]),d=stageDays(j);return n>0&&d!==null&&d>=n};
+/* 3 bước hải quan: tính quá hạn theo giờ, không tính Chủ nhật; phải ghi lý do, chủ sổ duyệt mới hết cảnh báo */
+const STRICT=["Nhận & kiểm tra chứng từ","Đang khai báo","Chờ thông quan"];
+const LATE_REASONS={
+  "Nhận & kiểm tra chứng từ":["Khách chưa gửi đủ chứng từ","Chứng từ sai / lệch, chờ sửa","Chờ C/O","Chờ khách chốt mã HS / giá"],
+  "Đang khai báo":["Chờ khách duyệt tờ khai nháp","Chờ giấy phép / kiểm tra chuyên ngành","Lỗi hệ thống VNACCS / ECUS","Chờ nộp thuế"],
+  "Chờ thông quan":["Luồng vàng, chờ duyệt hồ sơ","Luồng đỏ, chờ kiểm hoá","Chờ nộp thuế / bảo lãnh","Hải quan yêu cầu bổ sung","Chờ kết quả kiểm tra chuyên ngành"]};
+const ACK_TTL=864e5; // lý do đã duyệt có hiệu lực 1 ngày, sau đó hỏi lại
+function workMs(a,b){let t=0,x=a;while(x<b){const d=new Date(x),e=Math.min(b,new Date(d.getFullYear(),d.getMonth(),d.getDate()+1).getTime());if(d.getDay()!==0)t+=e-x;x=e}return t}
+const lateHrs=j=>j.stageAt?Math.floor(workMs(j.stageAt,Date.now())/36e5):0;
+const isStrictLate=j=>isOpen(j.status)&&STRICT.includes(j.status)&&num(S.stall[j.status])>0&&!!j.stageAt&&workMs(j.stageAt,Date.now())>=num(S.stall[j.status])*864e5;
+// "none": chưa có lý do (hoặc lý do đã hết hạn / bị trả về) · "pend": chờ chủ sổ duyệt · "ok": đã duyệt
+function lateState(j){
+  if(!isStrictLate(j))return null;
+  const a=j.lateAck;
+  if(!a||a.stage!==j.status||a.stageAt!==j.stageAt||a.rejected)return "none";
+  if(!a.approved)return "pend";
+  return Date.now()-(a.approvedAt||0)<ACK_TTL?"ok":"none";
+}
+const hm=t=>{if(!t)return "";const d=new Date(t),p2=n=>String(n).padStart(2,"0");return `${p2(d.getHours())}:${p2(d.getMinutes())} ${p2(d.getDate())}/${p2(d.getMonth()+1)}`};
+function lateLine(j){
+  const st=lateState(j);if(!st)return null;const a=j.lateAck||{};
+  const head=`⚠ Quá ${lateHrs(j)} giờ ở ${j.status}`;
+  const stale=a.stage===j.status&&a.stageAt===j.stageAt;
+  if(st==="ok")return {cls:"ok",text:`${head} · Đã duyệt: ${a.reason}`};
+  if(st==="pend")return {cls:"pend",text:`${head} · Chờ duyệt: ${a.reason} (${a.byName||""} ${hm(a.at)})`};
+  return {cls:"",text:`${head} · ${stale&&a.rejected?"Lý do bị trả về: "+(a.rejectNote||a.reason):stale&&a.approved?"Lý do cũ đã hết hạn, ghi lại":"Chưa ghi lý do"}`};
+}
+const isLate=j=>{const st=lateState(j);if(st)return st!=="ok"||isOverdue(j);return isOverdue(j)||(isStalled(j)&&!STRICT.includes(j.status))};
 let db=null,sample=null,assets=null;
 const team=()=>!!window.SOJOB_ROLE,boss=()=>(window.SOJOB_ROLE||"owner")==="owner",me=()=>(window.SOJOB_EMAIL||"").toLowerCase();
 const dirty=new Set(),timers={},chains={};
@@ -497,7 +541,7 @@ function saveDoc(path,getBody,delay=500){
   },delay);
 }
 function queueSave(j){j.updatedAt=Date.now();saveDoc("jobs/"+j.id,()=>body(j))}
-function saveTpl(){saveDoc("meta/templates",()=>({byType:S.tpl,stall:S.stall}),700)}
+function saveTpl(){saveDoc("meta/templates",()=>({byType:S.tpl,stall:S.stall,stallV2:true}),700)}
 function partnerOf(name){const k=slug(name);return S.partners[k]||(S.partners[k]={name,phone:"",email:"",note:""})}
 function savePartner(name){const k=slug(name);saveDoc("partners/"+k,()=>S.partners[k],700)}
 
@@ -530,7 +574,7 @@ function totals(j){const t={};(j.quote||[]).forEach(q=>{const c=q.currency||"VND
 function logH(j,o){(j.history=j.history||[]).push(Object.assign({at:Date.now(),by:window.SOJOB_USER||""},o));if(j.history.length>200)j.history=j.history.slice(-200)}
 function setStatus(j,st,kind="move",note=""){
   const from=j.status;
-  if(from!==st){j.stageAt=Date.now();logH(j,{kind,from,to:st,note})}
+  if(from!==st){j.stageAt=Date.now();logH(j,{kind,from,to:st,note});if(j.lateAck){if(j.blocker===j.lateAck.reason)j.blocker="";delete j.lateAck}}
   j.status=st;
   if(kind!=="return")j.returnNote="";
   if(st==="Báo giá"&&!j.quoteSentAt&&(j.quote||[]).length)j.quoteSentAt=TODAY();
@@ -610,7 +654,8 @@ function hintHtml(q,j,i){
 function visibleJobs(ignoreStatus){
   const q=S.q.toLowerCase();
   return S.jobs.filter(j=>{
-    if(!ignoreStatus){if(S.fStatus==="open"&&!isOpen(j.status))return false;if(S.fStatus==="done"&&isOpen(j.status))return false}
+    if(!ignoreStatus&&!S.fLate){if(S.fStatus==="open"&&!isOpen(j.status))return false;if(S.fStatus==="done"&&isOpen(j.status))return false}
+    if(S.fLate){const st=lateState(j);if(!st||st==="ok")return false}
     if(S.group!=="__all"&&groupKey(j)!==S.group)return false;
     if(S.svc&&svcOf(j)!==S.svc)return false;
     if(q){const h=[j.code,j.title,j.fwd,j.company,j.contact,j.refs,j.cargo,j.pol,j.pod,j.summary,j.mst,j.bl,j.cont,j.tkNo,j.truck,j.yard,j.blocker].join(" ").toLowerCase();if(!h.includes(q))return false}
@@ -680,11 +725,13 @@ const cDateFull=j=>"Tạo "+new Date(j.createdAt||Date.now()).toLocaleString("vi
 function jobRow(j){
   const done=(j.tasks||[]).filter(t=>t.done).length,all=(j.tasks||[]).length;
   const who=[j.fwd,j.company].filter(Boolean);
-  return `<div class="row ${S.sel===j.id?"on":""}" data-open="${j.id}" tabindex="0">
+  const ll=lateLine(j);
+  return `<div class="row ${S.sel===j.id?"on":""}${ll&&ll.cls!=="ok"?" late":""}" data-open="${j.id}" tabindex="0">
     <span class="code">${esc(j.code)}</span>
     <span class="t">${j.priority==="Gấp"?'<span class="urgent">GẤP · </span>':""}${esc(j.title||"(chưa có tiêu đề)")}</span>
-    <span class="right">${team()&&boss()&&j.shared?'<span class="shb" title="Nhân viên thấy job này">👥 Chung</span>':""}${j.example?'<span class="ex">VÍ DỤ</span>':""}${j.blocker?`<span class="pill wait" title="${esc(j.blocker)}">Vướng: ${esc(j.blocker.slice(0,28))}</span>`:""}${isStalled(j)&&!isOverdue(j)?`<span class="pill dl-over">Đứng yên ${stageDays(j)} ngày</span>`:""}<span class="pill svc">${svcOf(j)}</span>${dlPill(j.deadline,isOpen(j.status))}${stPill(j.status)}</span>
+    <span class="right">${team()&&boss()&&j.shared?'<span class="shb" title="Nhân viên thấy job này">👥 Chung</span>':""}${j.example?'<span class="ex">VÍ DỤ</span>':""}${j.blocker?`<span class="pill wait" title="${esc(j.blocker)}">Vướng: ${esc(j.blocker.slice(0,28))}</span>`:""}${isStalled(j)&&!isOverdue(j)&&!STRICT.includes(j.status)?`<span class="pill dl-over">Đứng yên ${stageDays(j)} ngày</span>`:""}<span class="pill svc">${svcOf(j)}</span>${dlPill(j.deadline,isOpen(j.status))}${stPill(j.status)}</span>
     <span class="meta">${who.map((w,i)=>`<span class="pill ${i===0?"fwd":""}">${esc(w)}</span>`).join("")}<span>${esc(j.type)}</span>${j.mode?`<span>· ${esc(j.mode)}</span>`:""}${j.pol||j.pod?`<span>· ${esc(j.pol||"?")} → ${esc(j.pod||"?")}</span>`:""}${all?`<span>· việc ${done}/${all}</span>`:""}<span class="cd" title="${esc(cDateFull(j))}">· tạo ${cDate(j)}</span></span>
+    ${ll?`<span class="lr ${ll.cls}" title="${esc(ll.text)}">${ll.cls?"":"<b>"}${esc(ll.text)}${ll.cls?"":"</b>"}</span>`:""}
   </div>`;
 }
 /* ---------- board (kiểu Base Workflow) ---------- */
@@ -696,6 +743,7 @@ function timeTag(j){
   if(j.status===FAIL)return `<span class="tm">${esc(j.failReason||"Thất bại")}</span>`;
   if(open&&k!==null&&k<0)return `<span class="tm">Quá hạn ${-k} ngày</span>`;
   const d=stageDays(j);
+  if(lateState(j))return `<span class="tm">Quá ${lateHrs(j)} giờ</span>`;
   if(isStalled(j))return `<span class="tm" title="Ngưỡng của bước này: ${num(S.stall[j.status])} ngày">Đứng yên ${d} ngày</span>`;
   if(open&&k===0)return `<span class="tm td">Hạn hôm nay</span>`;
   if(open&&k!==null)return `<span class="tm ok">Còn ${k} ngày</span>`;
@@ -715,7 +763,8 @@ function kanbanCard(j){
     ${desc?`<span class="ds">${esc(desc)}</span>`:""}
     <span class="tg">${tags}</span>
     ${j.returnNote&&isOpen(j.status)?`<span class="note-r" title="${esc(j.returnNote)}">↩ Trả về: ${esc(j.returnNote)}</span>`:""}
-    ${j.blocker&&isOpen(j.status)?`<span class="note-b" title="${esc(j.blocker)}">⚠ ${esc(j.blocker)}</span>`:""}
+    ${(ll=>ll?`<span class="note-l ${ll.cls}" title="${esc(ll.text)}">${esc(ll.text)}</span>`:"")(lateLine(j))}
+    ${j.blocker&&isOpen(j.status)&&!(lateState(j)&&j.lateAck&&j.blocker===j.lateAck.reason)?`<span class="note-b" title="${esc(j.blocker)}">⚠ ${esc(j.blocker)}</span>`:""}
     ${all?`<span class="pg" title="Việc xong ${done}/${all}"><i style="width:${Math.round(done/all*100)}%"></i></span>`:""}
     <span class="ft"><span class="av" style="background:${avColor(who)}" aria-hidden="true">${esc(initials(who))}</span><span class="who" title="${esc([j.fwd,j.company].filter(Boolean).join(" · ")||who)}">${esc(who)}${j.company&&j.company!==who?`<i class="co"> · ${esc(j.company)}</i>`:""}</span>${timeTag(j)}</span>
   </div>`;
@@ -904,6 +953,7 @@ function renderDetail(force){
     <div class="l1"><button class="ghost back" data-act="close">← Danh sách</button><span class="mono" style="color:var(--muted)">${esc(j.code)}${j.example?' <span class="ex">VÍ DỤ</span>':""}</span>${team()&&boss()?`<button class="ghost sm shr${j.shared?" on":""}" data-act="share" title="${j.shared?"Nhân viên đang thấy job này. Bấm để thu về chỉ mình bạn thấy.":"Chỉ mình bạn thấy. Bấm để chia sẻ cho nhân viên."}">${j.shared?"👥 Đã chia sẻ":"🔒 Chỉ mình tôi"}</button>`:""}
       <span class="acts">${isOpen(j.status)?`${nextStage(j)?`<button class="sm primary" data-st="${esc(nextStage(j))}">Chuyển tiếp →</button>`:""}<button class="ghost sm danger" data-st="${FAIL}">Thất bại</button>`:`<button class="sm" data-st="${esc(STAGES[0])}">Mở lại</button>`}</span></div>
     <div id="stagebar">${stagesHtml(j)}</div>
+    ${lateBox(j)}
     ${j.status===FAIL?`<div class="alert bad">Thất bại: ${esc(j.failReason||"chưa ghi lý do")}${j.failNote?" · "+esc(j.failNote):""}</div>`:""}
     ${j.returnNote&&isOpen(j.status)?`<div class="alert bad">↩ Bị trả về: ${esc(j.returnNote)}</div>`:""}
     <input class="title" id="f-title" data-f="title" value="${esc(j.title)}" placeholder="Tiêu đề job" aria-label="Tiêu đề job">
@@ -974,7 +1024,49 @@ function renderTotals(j){
   const ks=Object.keys(t);if(!ks.length){el.innerHTML="";return}
   el.innerHTML=ks.map(c=>`<span>Cộng ${c}: <span class="mono">${fmt(t[c],c)}</span></span>${vat?`<span>VAT ${vat}%: <span class="mono">${fmt(t[c]*vat/100,c)}</span></span>`:""}<span>Tổng ${c}: <b>${fmt(t[c]*(1+vat/100),c)}</b></span>`).join("");
 }
-function renderAll(forceDetail){renderSide();renderMain();renderDetail(forceDetail)}
+function lateBox(j){
+  let st=lateState(j);if(!st)return "";const a=j.lateAck||{},nx=nextStage(j)||"bước sau";const editing=S.lateEdit===j.id&&st==="pend";if(editing)st="none";
+  const head=`Quá ${lateHrs(j)} giờ ở “${esc(j.status)}” (mốc ${num(S.stall[j.status])} ngày, không tính Chủ nhật)`;
+  if(st==="ok")return `<div class="lbox ok"><h4>${head}</h4><div>Đã duyệt lý do: <b>${esc(a.reason)}</b> · ${esc(a.byName||"")} ghi ${hm(a.at)}, ${esc(a.approvedByName||"chủ sổ")} duyệt ${hm(a.approvedAt)}. Hỏi lại lúc ${hm((a.approvedAt||0)+ACK_TTL)} nếu chưa chuyển bước.</div></div>`;
+  if(st==="pend")return `<div class="lbox pend"><h4>${head} · lý do chờ duyệt</h4><div>Lý do: <b>${esc(a.reason)}</b> · ${esc(a.byName||"")} ghi ${hm(a.at)}</div>
+    <div class="lrow">${boss()?`<button class="sm primary" data-act="lateOk">Duyệt</button><button class="sm ghost danger" data-act="lateNo">Không duyệt</button>`:`<span style="color:var(--muted)">Cảnh báo hết khi chủ sổ duyệt.</span>`}<button class="sm ghost" data-act="lateEdit">Sửa lý do</button></div></div>`;
+  const stale=a.stage===j.status&&a.stageAt===j.stageAt;
+  return `<div class="lbox"><h4>${head}</h4>
+    ${stale&&a.rejected&&!editing?`<div>Lý do “${esc(a.reason)}” bị trả về${a.rejectNote?": <b>"+esc(a.rejectNote)+"</b>":""}. Ghi lại lý do.</div>`:""}
+    <div>Vì sao chưa chuyển sang <b>${esc(nx)}</b>?</div>
+    <div class="chips">${(LATE_REASONS[j.status]||[]).map(r=>`<button class="ghost" data-act="lateChip" data-r="${esc(r)}">${esc(r)}</button>`).join("")}</div>
+    <div class="lrow"><input id="lateTxt" placeholder="Chọn ở trên hoặc gõ lý do, thêm chi tiết nếu cần" value="${esc(stale&&(a.rejected||editing)?a.reason:"")}"><button class="sm primary" data-act="lateSend">${boss()?"Lưu lý do":"Gửi lý do"}</button></div></div>`;
+}
+function lateSend(j,reason){
+  reason=(reason||"").trim();if(!reason){toast("Chọn hoặc gõ lý do trước.");$("#lateTxt")&&$("#lateTxt").focus();return}
+  const who=window.SOJOB_USER||me()||"";const now=Date.now();
+  S.lateEdit=null;j.lateAck={stage:j.status,stageAt:j.stageAt,reason,at:now,by:me(),byName:who,approved:boss(),approvedAt:boss()?now:0,approvedByName:boss()?who:""};
+  j.blocker=reason;
+  logH(j,{kind:"note",note:`Lý do chưa chuyển bước (${SHORT[j.status]||j.status}): ${reason}${boss()?"":" · chờ duyệt"}`});
+  queueSave(j);renderAll(true);toast(boss()?"Đã lưu lý do.":"Đã gửi lý do, chờ chủ sổ duyệt.");
+}
+function renderLateBar(){
+  const el=$("#latebar");if(!el)return;
+  if(!S.loaded){el.innerHTML="";return}
+  const open=S.jobs.filter(j=>lateState(j));
+  const none=open.filter(j=>lateState(j)==="none").length,pend=open.filter(j=>lateState(j)==="pend").length;
+  if(S.fLate){el.innerHTML=`<div class="latebar f">Đang lọc job quá hạn ở 3 bước hải quan (${none+pend} job)<button class="ghost sm" data-late="off">Bỏ lọc</button></div>`;return}
+  if(!none&&!pend){el.innerHTML="";return}
+  const parts=[none?`<b>${none} job quá hạn chưa ghi lý do</b>`:"",pend?(boss()?`<b>${pend} lý do chờ bạn duyệt</b>`:`${pend} lý do chờ chủ sổ duyệt`):""].filter(Boolean).join(" · ");
+  el.innerHTML=`<div class="latebar">⚠ ${parts}<button class="sm" data-late="on">Xem</button></div>`;
+}
+const lateSeen=new Set();let lateFirst=true;
+function lateNotify(){
+  if(!S.loaded)return;
+  const now=S.jobs.filter(j=>{const st=lateState(j);return st==="none"||(st==="pend"&&boss())});
+  const fresh=now.filter(j=>!lateSeen.has(j.id+"|"+lateState(j)));
+  now.forEach(j=>lateSeen.add(j.id+"|"+lateState(j)));
+  if(!fresh.length)return;
+  if(lateFirst){lateFirst=false;toast(`⚠ ${now.length} job quá hạn ở bước hải quan cần xử lý.`);return}
+  toast(fresh.length===1?`⚠ ${fresh[0].code} vừa ${lateState(fresh[0])==="pend"?"có lý do chờ duyệt":"quá hạn ở “"+fresh[0].status+"”"}.`:`⚠ ${fresh.length} job vừa quá hạn / chờ duyệt.`);
+}
+setInterval(()=>{if(S.loaded){renderAll(false)}},5*60*1000); // cập nhật đồng hồ quá hạn
+function renderAll(forceDetail){renderLateBar();lateNotify();renderSide();renderMain();renderDetail(forceDetail)}
 
 /* ---------- text exports ---------- */
 function quoteText(j){
@@ -1002,6 +1094,7 @@ async function copy(text){
 }
 
 /* ---------- events: main ---------- */
+$("#latebar").addEventListener("click",e=>{const b=e.target.closest("[data-late]");if(!b)return;S.fLate=b.dataset.late==="on";if(S.fLate&&S.view!=="board")S.view="list";renderAll(false)});
 $("#q").addEventListener("input",e=>{S.q=e.target.value;renderMain()});
 $("#fStatus").addEventListener("change",e=>{S.fStatus=e.target.value;renderMain()});
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{S.view=b.dataset.view;renderMain()}));
@@ -1152,6 +1245,13 @@ D.addEventListener("click",e=>{
   if(a==="aiRemind"){aiRemind(j);return}
   if(a==="srcLink"){srcLink(j);return}
   if(a==="srcDel"){srcDel(j,b.dataset.k,+b.dataset.i);return}
+  if(a==="lateChip"){const t=$("#lateTxt");if(t){t.value=b.dataset.r;t.focus()}b.parentElement.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));return}
+  if(a==="lateSend"){lateSend(j,($("#lateTxt")||{}).value);return}
+  if(a==="lateEdit"){S.lateEdit=j.id;renderDetail(true);setTimeout(()=>$("#lateTxt")&&$("#lateTxt").select(),0);return}
+  if(a==="lateOk"){if(!boss()||!j.lateAck)return;Object.assign(j.lateAck,{approved:true,approvedAt:Date.now(),approvedByName:window.SOJOB_USER||me()||"chủ sổ"});
+    logH(j,{kind:"note",note:"Duyệt lý do: "+j.lateAck.reason});queueSave(j);renderAll(true);toast("Đã duyệt, hết cảnh báo trong 1 ngày.");return}
+  if(a==="lateNo"){if(!boss()||!j.lateAck)return;ask({title:"Không duyệt lý do",text:"Lý do: "+j.lateAck.reason,ok:"Trả về",fields:[{id:"n",label:"Ghi chú cho nhân viên (không bắt buộc)"}]}).then(v=>{if(!v||!j.lateAck)return;
+    Object.assign(j.lateAck,{rejected:true,rejectNote:(v.n||"").trim()});logH(j,{kind:"note",note:"Không duyệt lý do: "+j.lateAck.reason+(v.n?" · "+v.n:"")});queueSave(j);renderAll(true)});return}
   if(a==="share"){if(!boss())return;j.shared=!j.shared;logH(j,{kind:"note",note:j.shared?"Chia sẻ cho nhân viên":"Thu về chỉ chủ sổ thấy"});queueSave(j);renderAll(true);
     toast(j.shared?"Đã chia sẻ "+j.code+": nhân viên thấy và sửa được job này.":"Đã thu về "+j.code+": chỉ mình bạn thấy.");return}
   if(a==="del"){if(!boss())return;
@@ -1528,6 +1628,7 @@ renderAll(true);
     const by=d.exists?d.data().byType:null;
     S.tpl=Object.assign(JSON.parse(JSON.stringify(DEFAULT_TPL)),by?JSON.parse(JSON.stringify(by)):{});
     S.stall=Object.assign({...DEFAULT_STALL},d.exists&&d.data().stall?JSON.parse(JSON.stringify(d.data().stall)):{});
+    if(!(d.exists&&d.data().stallV2)){STRICT.forEach(k=>S.stall[k]=DEFAULT_STALL[k]);if(boss()&&d.exists)saveTpl()}
     if(S.view==="board"||S.view==="plan")renderMain();
     if(S.view==="tpl")renderMain();renderDetail();
   },()=>{});
