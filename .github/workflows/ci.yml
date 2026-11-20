@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1" # bản thấp nhất trong composer.json
+          tools: none
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: PHP syntax (php -l)
+        run: |
+          fail=0
+          for f in $(git ls-files '*.php' | grep -v '^vendor/'); do
+            php -l "$f" >/dev/null || fail=1
+          done
+          exit $fail
+
+      - name: JS syntax (node --check)
+        run: |
+          fail=0
+          for f in $(git ls-files '*.js' '*.mjs' | grep -v '^vendor/'); do
+            node --check "$f" || fail=1
+          done
+          exit $fail
+
+      - name: Unit tests (cú pháp so-job.html, tính tiền báo giá / debit)
+        run: node --test 'tests/*.test.mjs'
+
+      - name: docs/ khớp với so-job.html (php build-pages.php)
+        run: |
+          php build-pages.php
+          if [ -n "$(git status --porcelain -- docs/)" ]; then
+            git status --short -- docs/
+            git --no-pager diff --stat -- docs/
+            echo "::error::docs/ chưa được dựng lại. Chạy 'php build-pages.php' rồi commit thư mục docs/."
+            exit 1
+          fi

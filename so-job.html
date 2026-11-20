@@ -600,6 +600,10 @@ const jobBytes=j=>{try{return new Blob([JSON.stringify(body(j))]).size}catch(e){
 const kb=n=>n>=1048576?(n/1048576).toFixed(2)+" MB":Math.round(n/1024)+" KB";
 function sizeBar(j){const n=jobBytes(j),p=Math.min(100,n/JOB_MAX*100);if(n<60*1024)return "";return `<div class="jsize ${p>=97?"full":p>=80?"hi":""}" title="Firebase cho mỗi job tối đa 1 MB, ảnh và tệp lưu ngay trong job"><span>Dung lượng job: ${kb(n)} / 1 MB</span><i><b style="width:${p}%"></b></i>${p>=80?"<span>Tài liệu nặng nên để OneDrive rồi gắn link</span>":""}</div>`}
 function totals(j){const t={};(j.quote||[]).forEach(q=>{const c=q.currency||"VND";t[c]=(t[c]||0)+num(q.qty)*num(q.price)});return t}
+/* Cộng / VAT / Tổng theo từng loại tiền (VAT tính riêng trên mỗi loại tiền) */
+function quoteSums(j){const t=totals(j),vat=num(j.vat);return Object.keys(t).map(c=>({cur:c,sub:t[c],vat:t[c]*vat/100,total:t[c]*(1+vat/100)}))}
+/* Số tiền debit lấy từ báo giá: ưu tiên VND, làm tròn 2 số lẻ; null nếu báo giá trống */
+function debitFromQuote(j){const s=quoteSums(j),r=s.find(x=>x.cur==="VND")||s[0];return r?{amount:Math.round(r.total*100)/100,currency:r.cur,multi:s.length>1}:null}
 function logH(j,o){(j.history=j.history||[]).push(Object.assign({at:Date.now(),by:window.SOJOB_USER||""},o));if(j.history.length>200)j.history=j.history.slice(-200)}
 function setStatus(j,st,kind="move",note=""){
   const from=j.status;
@@ -1049,9 +1053,8 @@ function renderDetail(force){
   renderTotals(j);
 }
 function renderTotals(j){
-  const t=totals(j),vat=num(j.vat),el=$("#qtot");if(!el)return;
-  const ks=Object.keys(t);if(!ks.length){el.innerHTML="";return}
-  el.innerHTML=ks.map(c=>`<span>Cộng ${c}: <span class="mono">${fmt(t[c],c)}</span></span>${vat?`<span>VAT ${vat}%: <span class="mono">${fmt(t[c]*vat/100,c)}</span></span>`:""}<span>Tổng ${c}: <b>${fmt(t[c]*(1+vat/100),c)}</b></span>`).join("");
+  const vat=num(j.vat),el=$("#qtot");if(!el)return;
+  el.innerHTML=quoteSums(j).map(r=>`<span>Cộng ${r.cur}: <span class="mono">${fmt(r.sub,r.cur)}</span></span>${vat?`<span>VAT ${vat}%: <span class="mono">${fmt(r.vat,r.cur)}</span></span>`:""}<span>Tổng ${r.cur}: <b>${fmt(r.total,r.cur)}</b></span>`).join("");
 }
 function lateBox(j){
   let st=lateState(j);if(!st)return "";const a=j.lateAck||{},nx=nextStage(j)||"bước sau";const editing=S.lateEdit===j.id&&st==="pend";if(editing)st="none";
@@ -1104,8 +1107,8 @@ function quoteText(j){
   const route=[j.pol||j.pod?`${j.pol||"?"} → ${j.pod||"?"}`:"",j.mode,j.incoterm].filter(Boolean).join(" | ");if(route)L.push(`Tuyến: ${route}`);
   if(j.cargo)L.push(`Hàng: ${j.cargo}`);L.push("");
   (j.quote||[]).forEach((q,i)=>L.push(`${i+1}. ${q.name}: ${fmt(q.qty)} ${q.unit||""} × ${fmt(q.price,q.currency)} = ${fmt(num(q.qty)*num(q.price),q.currency)} ${q.currency||"VND"}`));
-  const t=totals(j),vat=num(j.vat);L.push("");
-  Object.keys(t).forEach(c=>{L.push(`Cộng: ${fmt(t[c],c)} ${c}`);if(vat){L.push(`VAT ${vat}%: ${fmt(t[c]*vat/100,c)} ${c}`);L.push(`Tổng cộng: ${fmt(t[c]*(1+vat/100),c)} ${c}`)}});
+  const vat=num(j.vat);L.push("");
+  quoteSums(j).forEach(r=>{L.push(`Cộng: ${fmt(r.sub,r.cur)} ${r.cur}`);if(vat){L.push(`VAT ${vat}%: ${fmt(r.vat,r.cur)} ${r.cur}`);L.push(`Tổng cộng: ${fmt(r.total,r.cur)} ${r.cur}`)}});
   if(j.quoteNote)L.push("","Ghi chú: "+j.quoteNote);
   return L.join("\n").replace(/\n{3,}/g,"\n\n").trim();
 }
@@ -1266,9 +1269,9 @@ D.addEventListener("click",e=>{
     if(n){queueSave(j);renderDetail(true)}toast(n?`Đã điền giá cũ cho ${n} dòng. Kiểm tra lại trước khi gửi.`:"Không có dòng nào (đơn giá = 0) tìm được giá cũ cùng tên.")}
   if(a==="copyQuote"){copy(quoteText(j));if(!j.quoteSentAt){j.quoteSentAt=TODAY();if(j.status===STAGES[0])setStatus(j,"Báo giá","auto","Copy báo giá");queueSave(j);renderSide();renderMain();syncStages(j)}}
   if(a==="copyBrief")copy(briefText(j));
-  if(a==="debitFromQuote"){const t=totals(j),vat=num(j.vat),c=t.VND!==undefined?"VND":Object.keys(t)[0];
-    if(!c){toast("Báo giá chưa có dòng nào.");return}
-    if(Object.keys(t).length>1)toast("Báo giá có nhiều loại tiền: chỉ lấy tổng "+c+".");j.debitAmount=Math.round(t[c]*(1+vat/100)*100)/100;j.debitCurrency=c;queueSave(j);renderAll(true)}
+  if(a==="debitFromQuote"){const d=debitFromQuote(j);
+    if(!d){toast("Báo giá chưa có dòng nào.");return}
+    if(d.multi)toast("Báo giá có nhiều loại tiền: chỉ lấy tổng "+d.currency+".");j.debitAmount=d.amount;j.debitCurrency=d.currency;queueSave(j);renderAll(true)}
   if(a==="srcFile"){srcPick();return}
   if(a==="aiDocs"){aiDocs(j);return}
   if(a==="aiDocsView"){showDocCheck(j);return}

@@ -68,6 +68,19 @@ php -S 127.0.0.1:8099
 ```
 Mở `http://127.0.0.1:8099/install.php` (cần MySQL), hoặc tự tạo `config.php` theo `config.sample.php` với `db_dsn` dạng `sqlite:/đường/dẫn/test.sqlite` rồi gọi `ensure_schema(pdo())` trong `lib.php` để tạo bảng.
 
+## Kiểm tra tự động
+
+GitHub Actions (`.github/workflows/ci.yml`) chạy mỗi lần push lên `main` và mỗi pull request. Chạy y hệt trên máy (cần PHP 8.1+ và Node 22+):
+
+```bash
+for f in $(git ls-files '*.php' | grep -v '^vendor/'); do php -l "$f"; done   # cú pháp PHP
+for f in $(git ls-files '*.js' '*.mjs'); do node --check "$f"; done            # cú pháp JS
+node --test 'tests/*.test.mjs'   # cú pháp JS trong so-job.html + tính VAT, tổng VND / USD, debit
+php build-pages.php && git status --short docs/   # docs/ phải khớp so-job.html (không có thay đổi)
+```
+
+Hàm tính tiền (`num`, `fmt`, `totals`, `quoteSums`, `debitFromQuote`) nằm trong `so-job.html`, mỗi hàm viết trên một dòng để `tests/app-source.mjs` tách ra kiểm thử mà không cần mở trang.
+
 ## Bảo mật
 - `config.php` (mật khẩu MySQL, API key) không nằm trong Git, `.htaccess` chặn tải trực tiếp.
 - API key chỉ ở máy chủ, trình duyệt không bao giờ thấy.
