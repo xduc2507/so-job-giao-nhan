@@ -159,6 +159,9 @@ body.view-board .back{display:inline-block}
 .kc .ds{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kc .tg{display:flex;gap:4px;flex-wrap:wrap}
 .kc .tg span{font-size:11px;padding:0 6px;border-radius:3px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.kc .tg .cd{margin-left:auto;background:transparent;border-color:transparent;padding:0;font-variant-numeric:tabular-nums}
+.kc.over .tg .cd,.col.c10 .kc .tg .cd{background:transparent;color:inherit;opacity:.85}
+.row .cd{font-variant-numeric:tabular-nums}
 .kc .tg .w{background:var(--warn-soft);color:var(--warn);border-color:transparent;font-weight:600}
 .kc .tg .u{background:var(--bad-soft);color:var(--bad);border-color:transparent;font-weight:700}
 .kc .ft{display:flex;align-items:center;gap:6px;font-size:12px}
@@ -667,6 +670,8 @@ function renderProfile(force){
 }
 
 /* ---------- render: main views ---------- */
+const cDate=j=>{const d=new Date(j.createdAt||Date.now()),y=d.getFullYear()!==new Date().getFullYear();return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+(y?"/"+String(d.getFullYear()).slice(2):"")};
+const cDateFull=j=>"Tạo "+new Date(j.createdAt||Date.now()).toLocaleString("vi-VN",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
 function jobRow(j){
   const done=(j.tasks||[]).filter(t=>t.done).length,all=(j.tasks||[]).length;
   const who=[j.fwd,j.company].filter(Boolean);
@@ -674,7 +679,7 @@ function jobRow(j){
     <span class="code">${esc(j.code)}</span>
     <span class="t">${j.priority==="Gấp"?'<span class="urgent">GẤP · </span>':""}${esc(j.title||"(chưa có tiêu đề)")}</span>
     <span class="right">${j.example?'<span class="ex">VÍ DỤ</span>':""}${j.blocker?`<span class="pill wait" title="${esc(j.blocker)}">Vướng: ${esc(j.blocker.slice(0,28))}</span>`:""}${isStalled(j)&&!isOverdue(j)?`<span class="pill dl-over">Đứng yên ${stageDays(j)} ngày</span>`:""}<span class="pill svc">${svcOf(j)}</span>${dlPill(j.deadline,isOpen(j.status))}${stPill(j.status)}</span>
-    <span class="meta">${who.map((w,i)=>`<span class="pill ${i===0?"fwd":""}">${esc(w)}</span>`).join("")}<span>${esc(j.type)}</span>${j.mode?`<span>· ${esc(j.mode)}</span>`:""}${j.pol||j.pod?`<span>· ${esc(j.pol||"?")} → ${esc(j.pod||"?")}</span>`:""}${all?`<span>· việc ${done}/${all}</span>`:""}</span>
+    <span class="meta">${who.map((w,i)=>`<span class="pill ${i===0?"fwd":""}">${esc(w)}</span>`).join("")}<span>${esc(j.type)}</span>${j.mode?`<span>· ${esc(j.mode)}</span>`:""}${j.pol||j.pod?`<span>· ${esc(j.pol||"?")} → ${esc(j.pod||"?")}</span>`:""}${all?`<span>· việc ${done}/${all}</span>`:""}<span class="cd" title="${esc(cDateFull(j))}">· tạo ${cDate(j)}</span></span>
   </div>`;
 }
 /* ---------- board (kiểu Base Workflow) ---------- */
@@ -698,7 +703,7 @@ function kanbanCard(j){
     j.bl?`<span title="Số B/L">${esc(j.bl)}</span>`:"",hasVC(j)&&isTruck(j)?'<span>Xe tải</span>':"",hasVC(j)&&isTruck(j)&&j.cbm?`<span title="Số khối">${esc(j.cbm)} m³</span>`:"",hasVC(j)&&!isTruck(j)&&j.yard?`<span title="Bãi hạ cont">Hạ: ${esc(j.yard)}</span>`:"",j.cont?`<span title="${isTruck(j)?"Xe / tải trọng":"Số cont"}">${esc(j.cont)}</span>`:"",
     j.lane?`<span class="ln ln-${j.lane==="Xanh"?"g":j.lane==="Vàng"?"y":"r"}">Luồng ${esc(j.lane)}</span>`:"",
     depositPending(j)?'<span class="w">Chưa hoàn cược</span>':"",
-    num(j.debitAmount)&&stIdx(j.status)>=8?`<span class="mono">${fmt(j.debitAmount,j.debitCurrency)} ${esc(j.debitCurrency||"VND")}</span>`:"",j.example?'<span>VÍ DỤ</span>':""].join("");
+    num(j.debitAmount)&&stIdx(j.status)>=8?`<span class="mono">${fmt(j.debitAmount,j.debitCurrency)} ${esc(j.debitCurrency||"VND")}</span>`:"",j.example?'<span>VÍ DỤ</span>':"",`<span class="cd" title="${esc(cDateFull(j))}">${cDate(j)}</span>`].join("");
   return `<div class="kc${S.sel===j.id?" on":""}${isLate(j)?" over":""}${j.priority==="Gấp"?" urg":""}" draggable="true" data-drag="${j.id}" data-open="${j.id}">
     <button class="mn" data-kmenu="${j.id}" aria-label="Thao tác với job ${esc(j.code)}">⋯</button>
     <span class="t" title="${esc(j.title||"")}">${esc(j.title||"(chưa có tiêu đề)")}</span>
