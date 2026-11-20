@@ -1229,16 +1229,47 @@ $("#content").addEventListener("keydown",e=>{
 /* Tạo job nhập tay: khi không có ảnh / email (khách gọi điện, dặn miệng…) */
 async function manualJob(status){
   const known=[...new Set(S.jobs.flatMap(x=>[x.fwd,x.company]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"vi"));
-  const v=await ask({title:"Tạo job nhập tay",text:status&&status!==STAGES[0]?`Job sẽ nằm ở cột “${status}”. Các thông tin khác điền sau trong phiếu job.`:"Chỉ cần tiêu đề, các thông tin khác điền sau trong phiếu job.",ok:"Tạo job",
-    fields:[{id:"title",label:"Tiêu đề (VD: Khai nhập 2x40 máy móc cho Cty A)",required:true},
-      {id:"who",label:"FWD / công ty",list:known,value:S.group!=="__all"&&S.group!==NOGROUP?S.group:""},
-      {id:"summary",label:"Ghi chú / yêu cầu của khách"}]});
-  if(!v)return;
-  const type="Khác";
-  const asCompany=!!v.who&&!S.jobs.some(j=>j.fwd===v.who)&&S.jobs.some(j=>j.company===v.who);
-  await createJob({title:v.title,fwd:asCompany?"":v.who,company:asCompany?v.who:"",
-    type,summary:v.summary,source:"Điện thoại",tasks:[],status:status||(type==="Báo giá"?"Báo giá":STAGES[0])});
-  toast(`Đã tạo ${cur()?.code}. Điền thêm thông tin ở phiếu job.`);
+  const st={service:"",hang:"Nhập khẩu",vehicle:"Xe cont"};
+  const d=document.createElement("div");d.className="modal ask";
+  const pre=S.group!=="__all"&&S.group!==NOGROUP?S.group:"";
+  const IN=(id,label,ph="",type="text",cls="")=>`<label class="fld ${cls}"><span>${label}</span><input name="${id}" type="${type}" placeholder="${esc(ph)}" autocomplete="off" ${id==="fwd"||id==="company"?'list="mj-names"':""}></label>`;
+  d.innerHTML=`<div class="sheet lot" role="dialog" aria-modal="true" style="max-width:560px;margin-top:6vh"><h2>Tạo job nhập tay</h2>
+    <p class="note" style="margin:0">Chỉ cần tiêu đề. Ô nào biết thì điền, còn lại điền sau trong phiếu job.${status&&status!==STAGES[0]?` Job sẽ nằm ở cột “${esc(status)}”.`:""}</p>
+    <form><div class="g2">${IN("title","Tiêu đề *","VD: Khai nhập 2x40 máy móc cho Cty A","text","full")}
+      ${IN("fwd","FWD / đại lý")}${IN("company","Công ty / chủ hàng")}</div>
+      <datalist id="mj-names">${known.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
+      <div id="mj-chips"></div>
+      <div class="g2">${IN("bl","Số B/L / booking")}${IN("cont","Số cont / xe","VD: 2x40HC")}
+        ${IN("tkNo","Số tờ khai","12 số")}${IN("mst","MST khách","10 hoặc 13 số")}
+        ${IN("deadline","Hạn xử lý","","date")}${IN("contact","Người liên hệ","Tên, số điện thoại")}
+        ${IN("cargo","Hàng hoá / số lượng","VD: Máy móc, 25 kiện","text","full")}
+        <label class="fld full"><span>Ghi chú / yêu cầu của khách</span><textarea name="summary" rows="2"></textarea></label></div>
+      <div class="mrow"><span class="note err" data-e></span><button type="button" data-c>Huỷ bỏ</button><button class="primary" type="submit">Tạo job</button></div></form></div>`;
+  document.body.appendChild(d);
+  const f=d.querySelector("form");
+  if(pre){const known1=S.jobs.some(j=>j.fwd===pre);f.querySelector(`[name="${known1?"fwd":"company"}"]`).value=pre}
+  const chips=()=>{const hq=st.service&&st.service!=="VC",vc=st.service&&st.service!=="HQ";
+    d.querySelector("#mj-chips").innerHTML=`<div class="row1"><b>Dịch vụ</b>${chips2("service",SERVICES,st.service,["🛃 HQ","🚚 VC","🛃🚚 HQ+VC"])}</div>
+      ${hq?`<div class="row1"><b>Hàng</b>${chips2("hang",["Nhập khẩu","Xuất khẩu"],st.hang)}</div>`:""}
+      ${vc?`<div class="row1"><b>Loại xe</b>${chips2("vehicle",VEHICLES,st.vehicle)}</div>`:""}`};
+  chips();
+  d.querySelector("#mj-chips").addEventListener("click",e=>{const b=e.target.closest("[data-set]");if(!b)return;e.preventDefault();e.stopPropagation();
+    const k=b.dataset.set,v=b.dataset.v;st[k]=k==="service"&&st[k]===v?"":v;chips()});
+  return new Promise(res=>{
+    const esck=e=>{if(e.key==="Escape"){e.stopPropagation();done()}};
+    const done=()=>{d.remove();document.removeEventListener("keydown",esck,true);res()};
+    document.addEventListener("keydown",esck,true);
+    d.querySelector("[data-c]").onclick=done;d.addEventListener("click",e=>{if(e.target===d)done()});
+    f.onsubmit=async e=>{e.preventDefault();const v={};new FormData(f).forEach((x,k)=>v[k]=String(x).trim());
+      if(!v.title){d.querySelector("[data-e]").textContent="Chưa điền tiêu đề.";f.querySelector("[name=title]").focus();return}
+      const sv=st.service,type=!sv?"Khác":sv==="VC"?"Vận chuyển":st.hang==="Xuất khẩu"?"Khai HQ xuất":"Khai HQ nhập";
+      const data={title:v.title,fwd:v.fwd,company:v.company,type,source:"Điện thoại",tasks:sv?tplTasks(type):[],
+        status:status||STAGES[0],bl:v.bl,cont:v.cont,tkNo:v.tkNo.replace(/\D/g,"").slice(0,12),mst:v.mst,deadline:v.deadline,contact:v.contact,cargo:v.cargo,summary:v.summary};
+      if(sv){data.service=sv;if(sv!=="HQ")data.vehicle=st.vehicle}
+      done();await createJob(data);toast(`Đã tạo ${cur()?.code}.${sv?"":" Chọn dịch vụ trong phiếu job."}`);
+    };
+    setTimeout(()=>f.querySelector("[name=title]").focus(),20);
+  });
 }
 $("#btnManual").addEventListener("click",()=>manualJob());
 $("#kbFab").addEventListener("click",()=>manualJob());
