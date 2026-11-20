@@ -446,13 +446,15 @@
         if (!u) { if (!first) { location.reload(); return; } first = false; fuser = null; loginScreen(); return; }
         first = false; fuser = u;
         const mail = (u.email || "").toLowerCase();
+        // Chưa có trong members/: nếu vẫn đọc được sổ thì là quy tắc Firestore cũ (chỉ chủ sổ vào được) → chủ sổ
+        const legacyOwner = async () => { try { await fdb.doc("meta/templates").get({ source: "server" }); return true; } catch (e) { return false; } };
         const denied = () => loginScreen(`Tài khoản ${u.email} chưa được cấp quyền dùng sổ này. Gửi email này cho chủ sổ để được thêm vào (Cài đặt → Thành viên), hoặc đăng xuất để chọn tài khoản khác.`);
         // Chủ sổ: đọc được cả danh sách thành viên. Nhân viên: chỉ có hồ sơ của mình trong members/.
         try { await fdb.collection("members").limit(1).get({ source: "server" }); ROLE = "owner"; }
         catch (e) {
           if (e && e.code === "permission-denied") {
-            try { const m = await fdb.doc("members/" + mail).get({ source: "server" }); if (!m.exists) { denied(); return; } ROLE = "staff"; }
-            catch (e2) { if (e2 && e2.code === "permission-denied") { denied(); return; } ROLE = (localStorage.getItem(ROLE_LS + "." + mail) || "staff"); }
+            try { const m = await fdb.doc("members/" + mail).get({ source: "server" }); if (m.exists) ROLE = "staff"; else if (await legacyOwner()) ROLE = "owner"; else { denied(); return; } }
+            catch (e2) { if (e2 && e2.code === "permission-denied") { if (await legacyOwner()) ROLE = "owner"; else { denied(); return; } } else ROLE = (localStorage.getItem(ROLE_LS + "." + mail) || "staff"); }
           } else ROLE = (localStorage.getItem(ROLE_LS + "." + mail) || "staff"); // mất mạng: dùng vai trò lần trước
         }
         try { localStorage.setItem(ROLE_LS + "." + mail, ROLE); } catch (e) {}
