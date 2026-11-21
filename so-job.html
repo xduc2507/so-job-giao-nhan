@@ -439,6 +439,12 @@ table.q th.net,table.q input.net,table.q td.netamt{background:#FFF8E6}table.q in
 .vatbox{display:flex;flex-direction:column;gap:4px}.vatbox>span{font-size:13px;color:var(--muted)}
 .debitbtn{background:#8A5A00;color:#fff;border-color:#8A5A00}.debitbtn:hover{background:#6E4800}
 .dlrow{display:flex!important;flex-direction:row!important;align-items:center;justify-content:flex-start;gap:10px;flex-wrap:wrap;text-align:left}.dlrow>*{width:auto!important;margin:0!important;flex:0 0 auto}.dlrow label{font-weight:700;font-size:15px}.dlrow input{font-size:16px;min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}.dltag{font-size:14px;font-weight:600;padding:4px 10px;border-radius:20px;background:var(--surface-2)}.dltag.none{color:var(--muted);font-weight:400}.dltag.soon{background:#FFF6D6;color:#8A5A00}.dltag.today{background:#FFE8C2;color:#8A4A00}.dltag.late{background:#FDE5E2;color:#B42318}
+.dbbox .sheet{max-width:980px;width:calc(100vw - 32px);margin-top:3vh;max-height:94vh;overflow:auto}.dbgrid{display:grid;grid-template-columns:1fr 1.3fr;gap:16px}.dbgrid .fld{margin-top:8px}
+.dbbox .sub{font-weight:700;margin:14px 0 4px;font-size:14px}.dbbox .sub small{font-weight:400;color:var(--muted);margin-left:8px}.dbt td{vertical-align:middle}.dbt input,.dbt select{width:100%}
+.abtn{display:flex;gap:2px}.abtn button{padding:3px 8px;font-weight:700;border:1px solid var(--line);background:var(--surface);border-radius:6px;cursor:pointer}.abtn button.on{background:#1F5FAF;color:#fff;border-color:#1F5FAF}
+tr.sec-B .abtn button.on{background:#8A5A00;border-color:#8A5A00}tr.sec-B{background:#FFF8E6}.dbadd{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}.dbbox .muted{color:var(--muted);font-size:12.5px}
+.dbtot{display:flex;flex-direction:column;align-items:flex-end;gap:3px;margin:8px 0;font-size:14px}.dbtot .grand{font-size:17px;margin-top:4px}.dbstat{margin:6px 0 0;font-size:13.5px}.dbstat .ok{color:#18794E}.dbstat .wait{color:#8A5A00}
+@media (max-width:760px){.dbgrid{grid-template-columns:1fr}}
 .lanesel{font-weight:600}.lanesel.ln-g{background:#E3F4E8;border-color:#5FB37A}.lanesel.ln-y{background:#FFF6D6;border-color:#E0B83A}.lanesel.ln-r{background:#FDE5E2;border-color:#D9605A}.lanesel.ln-0{color:var(--muted);font-weight:400}
 .mvrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.mvrow .mvbtn{font-size:16px;padding:8px 14px;font-weight:600}.tkinfo{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px}.tkinfo small{color:var(--muted);font-size:13px}.tkst{font-size:15px}.tkst.bad{color:#B4541A}.mvframe{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0 10px;background:#fff}.mvframe iframe{width:100%;height:520px;border:0;display:block}
 </style>
@@ -1113,7 +1119,8 @@ function renderDetail(force){
     </tbody></table></div><span style="font-size:11.5px;color:var(--muted)">Giá lần trước lấy từ cùng FWD; dấu * là giá báo cho FWD khác.</span>`:`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có hạng mục. Bấm “+ Thêm dòng”.</p>`}
     <div class="grid2"><div class="vatbox"><span>VAT</span><div class="chips2">${VAT_OPEN?[8,10].map(v=>`<button type="button" class="${vatRate(j)===v?"on":""}" data-vat="${v}">${v}%</button>`).join(""):`<button type="button" class="on" data-vat="open" title="Bấm để đổi VAT">${vatRate(j)}% ▾</button>`}</div></div><div class="tot" id="qtot"></div></div>
     <label class="fld"><span>Ghi chú báo giá</span><textarea id="f-quoteNote" data-f="quoteNote" rows="2" placeholder="VD: Giá chưa gồm local charge, kiểm hoá, lưu kho…">${esc(j.quoteNote)}</textarea></label>
-    <div class="acts"><button data-act="copyQuote" class="primary">Copy báo giá</button><button data-act="draftDebit" class="debitbtn">🧾 Soạn debit</button><button data-act="copyBrief">Copy tóm tắt job</button>${j.quoteSentAt?`<span style="font-size:12px;color:var(--muted)">Đã gửi báo giá ${dmy(j.quoteSentAt)}</span>`:""}</div>
+    <div class="acts"><button data-act="copyQuote" class="primary">Copy báo giá</button>${dbOn(j)?`<button data-act="draftDebit" class="debitbtn">🧾 ${j.debit?"Mở debit":"Soạn debit"}</button>${boss()&&j.debitDate&&!j.paidDate?`<button data-act="debitPaid" class="ghost">✅ Đã thu tiền</button>`:""}`:""}<button data-act="copyBrief">Copy tóm tắt job</button>${j.quoteSentAt?`<span style="font-size:12px;color:var(--muted)">Đã gửi báo giá ${dmy(j.quoteSentAt)}</span>`:""}</div>
+    ${j.debitDate&&dbOn(j)?`<p class="dbstat">🧾 Debit <b>${fmt(j.debitAmount,"VND")}</b> đ · gửi ${dmy(j.debitDate)}${j.paidDate?` · <span class="ok">✅ đã thu ${dmy(j.paidDate)}</span>`:` · <span class="wait">chờ thu tiền</span>`}</p>`:""}
     <div id="copyFallback"></div>
   </div>
   <div class="sec"><h3>Lịch sử hoạt động <span class="mono">${(j.history||[]).length}</span></h3>
@@ -1403,7 +1410,8 @@ D.addEventListener("click",e=>{
     if(n){queueSave(j);renderDetail(true)}toast(n?`Đã điền giá cũ cho ${n} dòng. Kiểm tra lại trước khi gửi.`:"Không có dòng nào (đơn giá = 0) tìm được giá cũ cùng tên.")}
   if(a==="copyQuote"){copy(quoteText(j));if(!j.quoteSentAt){j.quoteSentAt=TODAY();if(j.status===STAGES[0])setStatus(j,"Báo giá","auto","Copy báo giá");queueSave(j);renderSide();renderMain();syncStages(j)}}
   if(a==="copyBrief")copy(briefText(j));
-  if(a==="draftDebit"){toast("Mẫu debit đang chờ cập nhật. Sẽ có sau khi có mẫu.");return}
+  if(a==="draftDebit"){debitOpen(j);return}
+  if(a==="debitPaid"){debitPaid(j);return}
   if(a==="debitFromQuote"){const t=totals(j),vat=vatRate(j),c=t.VND!==undefined?"VND":Object.keys(t)[0];
     if(!c){toast("Báo giá chưa có dòng nào.");return}
     if(Object.keys(t).length>1)toast("Báo giá có nhiều loại tiền: chỉ lấy tổng "+c+".");j.debitAmount=grandOf(t[c],vat,c);j.debitCurrency=c;queueSave(j);renderAll(true)}
@@ -2127,6 +2135,151 @@ async function tkCheck(id){const j=S.all.find(x=>x.id===id);if(!j)return;
   finally{TK_BUSY="";renderAll(true)}}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-tkcheck],[data-mvopen]");if(!b)return;e.preventDefault();e.stopPropagation();
   if(b.dataset.tkcheck)tkCheck(b.dataset.tkcheck);else{MV_OPEN=MV_OPEN===b.dataset.mvopen?"":b.dataset.mvopen;renderAll(true)}},true);
+/* ---------- Debit FDI: soạn, tính tiền, xuất Excel / in theo mẫu ---------- */
+const DB_VAT=["8","10","5","0","KCT"];
+const DB_BQ=[["Nâng cont","Cont"],["Thu bổ sung nâng cont","Cont"],["Hạ cont","Cont"],["Phí hạ tầng công nghệ","Cont"],["Phí lưu bãi","Cont"]];
+const DB_BANK=["CN. Công Ty TNHH Thương Mại & Dịch Vụ Giao Nhận Hàng Hóa F.D.I tại Đà Nẵng","Số tài khoản : 004.100.1105079","Ngân Hàng Ngoại Thương Việt Nam- Chi nhánh Đà Nẵng (VCB- Đà Nẵng)"];
+const DB_LOGO="fdi-logo.jpg";
+const dbOn=j=>!(spaceOn()&&isMine(j)); // Việc riêng không dùng mẫu FDI
+const dbConts=j=>[...new Set((String(j.cont||"").toUpperCase().match(/[A-Z]{4}\s?\d{7}/g)||[]).map(x=>x.replace(/\s/g,"")))].join(", ");
+const dbQty=j=>{const m=String(j.cont||"").match(/\d+\s*[x×]\s*(?:20|40|45)(?:\s?(?:HC|GP|DC|RF|OT|FR|HQ)\b)?/gi);return m?m.map(x=>x.replace(/\s/g,"").replace("×","x")).join(", "):""};
+function dbName(j,q){
+  if(q.name===FEE_HQ)return `Phí dịch vụ hải quan tk số: ${j.tkNo||""}`.trim();
+  if(q.name===FEE_VC)return `Cước vận chuyển nội địa ${j.pol||"[điểm đi]"} - ${j.pod||"[điểm đến]"}${j.truck?", BKS "+j.truck:""}`;
+  return q.name}
+function dbInit(j){
+  if(j.debit)return j.debit;
+  const prev=S.all.filter(x=>x.id!==j.id&&x.debit&&x.debit.cust&&x.company&&x.company===j.company).sort((a,b)=>(b.debit.at||0)-(a.debit.at||0))[0];
+  const cust=prev?{...prev.debit.cust}:{name:j.company||"",addr:"",mst:j.mst||"",email:""};
+  if(!cust.mst&&j.mst)cust.mst=j.mst;
+  const lines=(j.quote||[]).filter(q=>q.name).map((q,i)=>({sec:"A",name:dbName(j,q),unit:q.unit||"lô",price:num(q.price),qty:num(q.qty)||1,vat:"8",inv:i===0?"FDI":""}));
+  return {cust,info:{tk:j.tkNo||"",bl:j.bl||"",veh:j.vehicle||"",qty:dbQty(j),cargo:j.cargo||"",conts:dbConts(j)},lines,at:0}}
+const dbRate=v=>v==="KCT"?0:num(v)/100;
+function dbCalc(d){const r={A:[],B:[],sumA:0,vatA:0,sumB:0};
+  d.lines.forEach((l,i)=>{const amt=Math.round(num(l.price)*num(l.qty));
+    if(l.sec==="B"){r.B.push({...l,i,amt});r.sumB+=amt}else{const v=Math.round(amt*dbRate(l.vat));r.A.push({...l,i,amt,v});r.sumA+=amt;r.vatA+=v}});
+  r.totA=r.sumA+r.vatA;r.total=r.totA+r.sumB;return r}
+
+function debitOpen(j){
+  if(!dbOn(j))return toast("Việc riêng không dùng mẫu debit FDI.");
+  const d=JSON.parse(JSON.stringify(dbInit(j)));
+  const box=document.createElement("div");box.className="modal ask dbbox";
+  const save=()=>{d.at=Date.now();j.debit=JSON.parse(JSON.stringify(d));queueSave(j)};
+  const esck=e=>{if(e.key==="Escape"){e.stopPropagation();close()}};
+  const close=()=>{save();box.remove();document.removeEventListener("keydown",esck,true);renderAll(true)};
+  const IN=(path,label,ph="",cls="")=>{const[a,b]=path.split(".");return `<label class="fld ${cls}"><span>${label}</span><input data-db="${path}" value="${esc(d[a][b]||"")}" placeholder="${esc(ph)}"></label>`};
+  const tot=()=>{const r=dbCalc(d);return `<div class="dbtot"><span>Cộng A: <b class="mono">${fmt(r.sumA,"VND")}</b> + VAT <b class="mono">${fmt(r.vatA,"VND")}</b> = <b class="mono">${fmt(r.totA,"VND")}</b></span><span>Cộng B: <b class="mono">${fmt(r.sumB,"VND")}</b></span><span class="grand">Tổng cộng (A+B): <b class="mono">${fmt(r.total,"VND")}</b> VND</span></div>`};
+  const row=(l,i)=>`<tr class="sec-${l.sec}"><td><div class="abtn"><button type="button" class="${l.sec!=="B"?"on":""}" data-sec="${i}:A" title="FDI xuất hoá đơn">A</button><button type="button" class="${l.sec==="B"?"on":""}" data-sec="${i}:B" title="Chi trả hộ – hoá đơn đứng tên khách">B</button></div></td>
+    <td><input data-dl="${i}:name" value="${esc(l.name)}"></td><td><input data-dl="${i}:unit" value="${esc(l.unit)}"></td>
+    <td><input class="num mono" data-dl="${i}:price" value="${esc(num(l.price)?fmt(l.price,"VND"):"")}" inputmode="numeric"></td><td><input class="num mono" data-dl="${i}:qty" value="${esc(l.qty)}" inputmode="decimal"></td>
+    <td class="num mono" data-amt="${i}">${fmt(Math.round(num(l.price)*num(l.qty)),"VND")}</td>
+    <td>${l.sec==="B"?`<span class="muted">đã gồm</span>`:`<select data-dl="${i}:vat">${DB_VAT.map(v=>`<option value="${v}"${String(l.vat)===v?" selected":""}>${v==="KCT"?"KCT":v+"%"}</option>`).join("")}</select>`}</td>
+    <td><input data-dl="${i}:inv" value="${esc(l.inv||"")}" placeholder="${l.sec==="B"?"Số HĐ":"FDI / Xuất sau"}"></td><td><button class="x" data-dlx="${i}" aria-label="Xoá dòng">✕</button></td></tr>`;
+  const draw=()=>{
+    box.innerHTML=`<div class="sheet" role="dialog" aria-modal="true"><h2>🧾 Debit ${esc(j.code)}</h2>
+      <div class="dbgrid"><div><div class="sub">Khách hàng</div>${IN("cust.name","Tên công ty khách hàng","","full")}${IN("cust.addr","Địa chỉ")}${IN("cust.mst","Mã số thuế")}${IN("cust.email","Email nhận","nhiều email cách nhau dấu ;")}</div>
+      <div><div class="sub">Thông tin lô</div><div class="g2">${IN("info.tk","TKHQ")}${IN("info.qty","Số lượng","VD: 1x20")}${IN("info.bl","Bill")}${IN("info.cargo","Tên hàng")}${IN("info.veh","Loại xe")}${IN("info.conts","Số container")}</div></div></div>
+      <div class="sub">Bảng phí <small>A = FDI xuất hoá đơn (tính VAT) · B = chi trả hộ, hoá đơn đứng tên khách (đã gồm VAT)</small></div>
+      <div class="qwrap"><table class="q dbt"><thead><tr><th style="width:62px">Mục</th><th>Nội dung</th><th style="width:60px">ĐVT</th><th class="num" style="width:110px">Đơn giá</th><th class="num" style="width:50px">SL</th><th class="num" style="width:110px">Thành tiền</th><th style="width:72px">Thuế</th><th style="width:100px">Số HĐ</th><th style="width:28px"></th></tr></thead>
+      <tbody>${d.lines.map(row).join("")||`<tr><td colspan="9" class="muted">Chưa có dòng. Thêm dòng A hoặc bấm các mục chi hộ bên dưới.</td></tr>`}</tbody></table></div>
+      <div class="dbadd"><button type="button" class="ghost sm" data-dbadd="A">+ Dòng A</button><span class="muted">Chi hộ (B):</span>${DB_BQ.map(([n,u])=>`<button type="button" class="ghost sm" data-dbq="${esc(n)}|${u}">+ ${esc(n)}</button>`).join("")}<button type="button" class="ghost sm" data-dbadd="B">+ Dòng B khác</button></div>
+      <div id="dbTot">${tot()}</div>
+      <div class="ai-acts"><button class="primary" data-dbx="xlsx">📥 Tải Excel</button><button data-dbx="print">🖨 In / Lưu PDF</button><button data-dbx="close">Đóng</button></div></div>`};
+  draw();
+  box.addEventListener("input",e=>{const t=e.target;
+    if(t.dataset.db){const[a,b]=t.dataset.db.split(".");d[a][b]=t.value;save();return}
+    if(t.dataset.dl){const[i,f]=t.dataset.dl.split(":"),l=d.lines[+i];
+      l[f]=f==="price"?num(String(t.value).replace(/[.,\s]/g,"")):f==="qty"?String(t.value).replace(/[^\d.,]/g,"").replace(",","."):t.value;
+      const a=box.querySelector(`[data-amt="${i}"]`);if(a)a.textContent=fmt(Math.round(num(l.price)*num(l.qty)),"VND");
+      box.querySelector("#dbTot").innerHTML=tot();save()}});
+  box.addEventListener("focusout",e=>{const t=e.target;if(t.dataset.dl&&t.dataset.dl.endsWith(":price")){const l=d.lines[+t.dataset.dl.split(":")[0]];t.value=num(l.price)?fmt(l.price,"VND"):""}});
+  box.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b){if(e.target===box)close();return}
+    if(b.dataset.sec){const[i,s]=b.dataset.sec.split(":");const l=d.lines[+i];l.sec=s;if(s==="B"&&l.inv==="FDI")l.inv="";save();draw();return}
+    if(b.dataset.dlx){d.lines.splice(+b.dataset.dlx,1);save();draw();return}
+    if(b.dataset.dbadd){d.lines.push({sec:b.dataset.dbadd,name:"",unit:b.dataset.dbadd==="B"?"Cont":"lô",price:0,qty:1,vat:"8",inv:""});save();draw();box.querySelector(`[data-dl="${d.lines.length-1}:name"]`)?.focus();return}
+    if(b.dataset.dbq){const[n,u]=b.dataset.dbq.split("|");const q=num((d.info.qty.match(/^(\d+)/)||[])[1])||1;d.lines.push({sec:"B",name:n,unit:u,price:0,qty:q,vat:"8",inv:""});save();draw();box.querySelector(`[data-dl="${d.lines.length-1}:price"]`)?.focus();return}
+    const x=b.dataset.dbx;if(!x)return;
+    if(x==="close")return close();
+    if(!d.lines.length)return toast("Chưa có dòng phí nào.");
+    save();
+    try{if(x==="xlsx"){b.disabled=true;await debitXlsx(j,d)}else debitPrint(j,d);debitSent(j,dbCalc(d).total)}
+    catch(err){toast("Không xuất được: "+(err.message||err))}finally{b.disabled=false}});
+  document.addEventListener("keydown",esck,true);
+  document.body.appendChild(box);
+}
+function debitSent(j,total){
+  j.debitAmount=total;j.debitCurrency="VND";const first=!j.debitDate;if(first)j.debitDate=TODAY();
+  logH(j,{kind:"note",note:`Xuất debit ${fmt(total,"VND")} đ`});
+  if(isOpen(j.status)&&stIdx(j.status)<stIdx("Chờ thu tiền")){setStatus(j,"Chờ thu tiền","auto","Xuất debit");syncStages(j)}
+  queueSave(j)}
+function debitPaid(j){
+  if(!boss())return;j.paidDate=TODAY();logH(j,{kind:"note",note:"Đã thu tiền debit"});
+  if(isOpen(j.status)){if(needDeposit(j)&&!["Đã hoàn","Không có cược"].includes(j.deposit))toast("Đã ghi đã thu tiền. Lô có vận chuyển chưa hoàn cược nên chưa chuyển Hoàn thành.");else setStatus(j,DONE,"auto","Đã thu tiền debit")}
+  queueSave(j);renderAll(true)}
+
+async function debitXlsx(j,d){
+  const ExcelJS=await loadXL(),wb=new ExcelJS.Workbook(),ws=wb.addWorksheet("01",{pageSetup:{paperSize:9,orientation:"portrait",fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.47,right:.25,top:.4,bottom:.4,header:.2,footer:.2}}});
+  const W=[9.6,13.7,19.3,8.7,11.7,8.4,12,11.3,12.3];ws.columns=W.map(w=>({width:w}));
+  const F={name:"Times New Roman",size:11},NF='_(* #,##0_);_(* \\(#,##0\\);_(* "-"??_);_(@_)';
+  const th={style:"thin"},hr={style:"hair"},md={style:"medium"};
+  const put=(addr,v,o={})=>{const c=ws.getCell(addr);c.value=v;c.font={...F,...(o.font||{})};c.alignment={vertical:"middle",wrapText:!!o.wrap,horizontal:o.h||"left"};if(o.nf)c.numFmt=o.nf;if(o.border)c.border=o.border;return c};
+  const box=(r,c1,c2,top=hr,bot=hr)=>{for(let c=c1;c<=c2;c++){const cl=ws.getRow(r).getCell(c);cl.border={top,bottom:bot,left:c===1?md:th,right:c===9?md:th}}};
+  try{const buf=await (await fetch(DB_LOGO)).arrayBuffer();const id=wb.addImage({buffer:buf,extension:"jpeg"});ws.addImage(id,{tl:{col:0,row:0},ext:{width:690,height:64}})}catch(e){}
+  ws.getRow(1).height=17;ws.getRow(2).height=17;ws.getRow(3).height=20;
+  ws.mergeCells("A4:G4");put("A4","DEBIT NOTE",{font:{bold:true,size:20},h:"center"});ws.getRow(4).height=28;
+  ws.mergeCells("H4:I5");put("H4",j.code,{font:{bold:true,size:16},h:"center"});
+  ws.mergeCells("B7:I7");put("B7",d.cust.name||"",{font:{bold:true,size:12}});
+  ws.mergeCells("B8:I8");put("B8","Địa chỉ: "+(d.cust.addr||""),{font:{size:12},wrap:true});ws.getRow(8).height=30;
+  ws.mergeCells("B9:I9");put("B9","Mã số thuế: "+(d.cust.mst||""));
+  if(d.cust.email){ws.mergeCells("B10:I10");put("B10","Email: "+d.cust.email,{wrap:true})}
+  const info=[["TKHQ : ",d.info.tk,"Số lượng : ",d.info.qty],["Bill : ",d.info.bl,"Tên hàng : ",d.info.cargo],["Loại xe: ",d.info.veh,"Số container :",d.info.conts]];
+  info.forEach((x,k)=>{const r=12+k;put("A"+r,x[0]);ws.mergeCells(`B${r}:C${r}`);put("B"+r,x[1]||"",{font:{bold:true}});put("D"+r,x[2]);ws.mergeCells(`E${r}:I${r}`);put("E"+r,x[3]||"",{font:{bold:true},wrap:true});
+    for(let c=1;c<=9;c++){const cl=ws.getRow(r).getCell(c);cl.border={left:c===1?md:c===4?th:undefined,right:c===9?md:undefined,top:k===0?md:undefined,bottom:k===2?md:undefined}}});
+  ws.getRow(14).height=Math.max(18,Math.ceil(String(d.info.conts||"").length/40)*15);
+  let r=16;const HD=["STT","Nội dung","","Đơn vị tính","Đơn giá","Số lượng","Thành tiền","Thuế GTGT","Số hóa đơn"];
+  ws.mergeCells(`B${r}:C${r}`);HD.forEach((h,i)=>{if(h)put(ws.getRow(r).getCell(i+1).address,h,{font:{bold:true},h:"center",wrap:true})});box(r,1,9,md,th);ws.getRow(r).height=30;
+  const R=dbCalc(d),sec=(lab,title)=>{r++;put("A"+r,lab,{font:{bold:true},h:"center"});ws.mergeCells(`B${r}:I${r}`);put("B"+r,title,{font:{bold:true}});box(r,1,9,th,hr)};
+  const line=(l,n,isA)=>{r++;ws.mergeCells(`B${r}:C${r}`);put("A"+r,n,{h:"center"});put("B"+r,l.name,{wrap:true});put("D"+r,l.unit,{h:"center"});
+    put("E"+r,num(l.price),{nf:NF,h:"right"});put("F"+r,num(l.qty),{h:"center"});put("G"+r,{formula:`E${r}*F${r}`,result:l.amt},{nf:NF,h:"right"});
+    if(isA)put("H"+r,{formula:`ROUND(G${r}*${dbRate(l.vat)},0)`,result:l.v},{nf:NF,h:"right"});put("I"+r,l.inv||"",{h:"center"});box(r,1,9);
+    ws.getRow(r).height=Math.max(20,Math.ceil(String(l.name).length/32)*15)};
+  sec("A","Xuất hóa đơn trực tiếp");const a0=r+1;R.A.forEach((l,k)=>line(l,k+1,true));const a1=Math.max(r,a0);
+  r++;ws.mergeCells(`B${r}:F${r}`);put("B"+r,"Cộng A",{font:{bold:true},h:"center"});put("G"+r,{formula:`SUM(G${a0}:G${a1})`,result:R.sumA},{nf:NF,h:"right"});put("H"+r,{formula:`SUM(H${a0}:H${a1})`,result:R.vatA},{nf:NF,h:"right"});box(r,1,9,th,hr);
+  const ra=r;r++;ws.mergeCells(`G${r}:H${r}`);put("G"+r,{formula:`G${ra}+H${ra}`,result:R.totA},{nf:NF,h:"center",font:{bold:true}});box(r,1,9,hr,th);const rta=r;
+  sec("B","Chi trả hộ");const b0=r+1;R.B.forEach((l,k)=>line(l,k+1,false));const b1=Math.max(r,b0);
+  r++;ws.mergeCells(`B${r}:F${r}`);put("B"+r,"Cộng B",{font:{bold:true},h:"center"});ws.mergeCells(`G${r}:H${r}`);put("G"+r,{formula:`SUM(G${b0}:G${b1})`,result:R.sumB},{nf:NF,h:"center",font:{bold:true}});box(r,1,9,th,md);const rb=r;
+  r+=2;ws.mergeCells(`D${r}:F${r}`);put("D"+r,"Tổng cộng (A+B)",{font:{bold:true,size:12},h:"center"});ws.mergeCells(`G${r}:H${r}`);put("G"+r,{formula:`G${rta}+G${rb}`,result:R.total},{nf:NF,h:"center",font:{bold:true,size:12}});put("I"+r,"VND",{font:{bold:true},h:"center"});
+  r+=3;put("H"+r,"FDI DANANG",{font:{bold:true},h:"center"});r++;put("B"+r,"Thông tin chuyển khoản",{font:{bold:true,underline:true}});
+  DB_BANK.forEach(t=>{r++;ws.mergeCells(`A${r}:F${r}`);put("A"+r,t,{font:{bold:true}})});
+  ws.pageSetup.printArea=`A1:I${r}`;
+  const blob=new Blob([await wb.xlsx.writeBuffer()],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`DEBIT ${j.code} ${(d.cust.name||"").replace(/[\\/:*?"<>|]/g,"").slice(0,40)}.xlsx`.trim();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast("Đã tải file debit "+j.code+".")}
+
+function debitPrint(j,d){
+  const R=dbCalc(d),f=v=>fmt(v,"VND"),logo=new URL(DB_LOGO,location.href).href;
+  const ln=(l,n,isA)=>`<tr><td class="c">${n}</td><td>${esc(l.name)}</td><td class="c">${esc(l.unit)}</td><td class="r">${f(l.price)}</td><td class="c">${esc(l.qty)}</td><td class="r">${f(l.amt)}</td><td class="r">${isA?f(l.v):""}</td><td class="c">${esc(l.inv||"")}</td></tr>`;
+  const html=`<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>DEBIT ${esc(j.code)}</title><style>
+  @page{size:A4;margin:12mm 10mm}body{font:13px "Times New Roman",serif;color:#000;margin:0}img.logo{width:100%;display:block}
+  h1{text-align:center;font-size:24px;margin:10px 0 4px}.no{text-align:right;font-weight:bold;font-size:18px;margin-top:-30px}
+  .cust{margin:14px 0 10px 70px;line-height:1.5}.cust b{font-size:15px}
+  table{border-collapse:collapse;width:100%}.info{border:2px solid #000;margin-bottom:12px}.info td{padding:3px 6px;vertical-align:top}.info td:nth-child(3){border-left:1px solid #000}
+  .t th,.t td{border:1px solid #000;padding:4px 6px}.t th{text-align:center}.t{border:2px solid #000}.c{text-align:center}.r{text-align:right;white-space:nowrap}
+  .sec td{font-weight:bold}.sum td{font-weight:bold}.grand{margin-top:12px;text-align:right;font-size:16px;font-weight:bold}
+  .sign{text-align:right;margin:30px 60px 0 0;font-weight:bold}.bank{margin-top:30px;line-height:1.5;font-weight:bold}.bank u{display:block;margin-bottom:4px}
+  </style></head><body><img class="logo" src="${logo}" alt=""><h1>DEBIT NOTE</h1><div class="no">${esc(j.code)}</div>
+  <div class="cust"><b>${esc(d.cust.name||"")}</b><br>Địa chỉ: ${esc(d.cust.addr||"")}<br>Mã số thuế: ${esc(d.cust.mst||"")}${d.cust.email?`<br>Email: ${esc(d.cust.email)}`:""}</div>
+  <table class="info"><tr><td>TKHQ :</td><td><b>${esc(d.info.tk)}</b></td><td>Số lượng :</td><td><b>${esc(d.info.qty)}</b></td></tr><tr><td>Bill :</td><td><b>${esc(d.info.bl)}</b></td><td>Tên hàng :</td><td><b>${esc(d.info.cargo)}</b></td></tr><tr><td>Loại xe:</td><td><b>${esc(d.info.veh)}</b></td><td>Số container :</td><td><b>${esc(d.info.conts)}</b></td></tr></table>
+  <table class="t"><tr><th>STT</th><th>Nội dung</th><th>Đơn vị tính</th><th>Đơn giá</th><th>Số lượng</th><th>Thành tiền</th><th>Thuế GTGT</th><th>Số hóa đơn</th></tr>
+  <tr class="sec"><td class="c">A</td><td colspan="7">Xuất hóa đơn trực tiếp</td></tr>${R.A.map((l,k)=>ln(l,k+1,true)).join("")}
+  <tr class="sum"><td></td><td colspan="4" class="c">Cộng A</td><td class="r">${f(R.sumA)}</td><td class="r">${f(R.vatA)}</td><td></td></tr><tr class="sum"><td></td><td colspan="4"></td><td colspan="2" class="c">${f(R.totA)}</td><td></td></tr>
+  <tr class="sec"><td class="c">B</td><td colspan="7">Chi trả hộ</td></tr>${R.B.map((l,k)=>ln(l,k+1,false)).join("")}
+  <tr class="sum"><td></td><td colspan="4" class="c">Cộng B</td><td colspan="2" class="c">${f(R.sumB)}</td><td></td></tr></table>
+  <div class="grand">Tổng cộng (A+B): ${f(R.total)} VND</div><div class="sign">FDI DANANG</div>
+  <div class="bank"><u>Thông tin chuyển khoản</u>${DB_BANK.map(esc).join("<br>")}</div>
+  <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`;
+  const w=window.open("","_blank");if(!w)throw new Error("Trình duyệt chặn cửa sổ in. Cho phép cửa sổ bật lên rồi thử lại.");
+  w.document.open();w.document.write(html);w.document.close()}
 let tt;function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,Math.min(12000,Math.max(3500,String(t).length*55)))}
 
 /* ---------- boot ---------- */
