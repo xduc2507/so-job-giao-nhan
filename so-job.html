@@ -2224,33 +2224,34 @@ async function debitXlsx(j,d){
   const th={style:"thin"},hr={style:"hair"},md={style:"medium"};
   const put=(addr,v,o={})=>{const c=ws.getCell(addr);c.value=v;c.font={...F,...(o.font||{})};c.alignment={vertical:"middle",wrapText:!!o.wrap,horizontal:o.h||"left"};if(o.nf)c.numFmt=o.nf;if(o.border)c.border=o.border;return c};
   const box=(r,c1,c2,top=hr,bot=hr)=>{for(let c=c1;c<=c2;c++){const cl=ws.getRow(r).getCell(c);cl.border={top,bottom:bot,left:c===1?md:th,right:c===9?md:th}}};
-  try{const buf=await (await fetch(DB_LOGO)).arrayBuffer();const id=wb.addImage({buffer:buf,extension:"jpeg"});ws.addImage(id,{tl:{col:0,row:0},ext:{width:690,height:64}})}catch(e){}
-  ws.getRow(1).height=17;ws.getRow(2).height=17;ws.getRow(3).height=20;
-  ws.mergeCells("A4:G4");put("A4","DEBIT NOTE",{font:{bold:true,size:20},h:"center"});ws.getRow(4).height=28;
-  ws.mergeCells("H4:I5");put("H4",j.code,{font:{bold:true,size:16},h:"center"});
+  for(let i=1;i<=3;i++){ws.getCell("A"+i).font=F;ws.getRow(i).height=18}
+  try{const buf=await (await fetch(DB_LOGO)).arrayBuffer();const id=wb.addImage({buffer:buf,extension:"jpeg"});ws.addImage(id,{tl:{col:0.05,row:0.1},ext:{width:740,height:69},editAs:"oneCell"})}catch(e){}
+  ws.getCell("A4").font=F;ws.getRow(4).height=10;
+  ws.mergeCells("A5:G5");put("A5","DEBIT NOTE",{font:{bold:true,size:20},h:"center"});ws.getRow(5).height=30;
+  ws.mergeCells("H5:I5");put("H5",j.code,{font:{bold:true,size:14},h:"center"});
   ws.mergeCells("B7:I7");put("B7",d.cust.name||"",{font:{bold:true,size:12}});
   ws.mergeCells("B8:I8");put("B8","Địa chỉ: "+(d.cust.addr||""),{font:{size:12},wrap:true});ws.getRow(8).height=30;
   ws.mergeCells("B9:I9");put("B9","Mã số thuế: "+(d.cust.mst||""));
   if(d.cust.email){ws.mergeCells("B10:I10");put("B10","Email: "+d.cust.email,{wrap:true})}
   const info=[["TKHQ : ",d.info.tk,"Số lượng : ",d.info.qty],["Bill : ",d.info.bl,"Tên hàng : ",d.info.cargo],["Loại xe: ",d.info.veh,"Số container :",d.info.conts]];
-  info.forEach((x,k)=>{const r=12+k;put("A"+r,x[0]);ws.mergeCells(`B${r}:C${r}`);put("B"+r,x[1]||"",{font:{bold:true}});put("D"+r,x[2]);ws.mergeCells(`E${r}:I${r}`);put("E"+r,x[3]||"",{font:{bold:true},wrap:true});
+  info.forEach((x,k)=>{const r=12+k;put("A"+r,x[0]);ws.mergeCells(`B${r}:C${r}`);put("B"+r,x[1]||"",{font:{bold:true}});ws.mergeCells(`D${r}:E${r}`);put("D"+r,x[2]);ws.mergeCells(`F${r}:I${r}`);put("F"+r,x[3]||"",{font:{bold:true},wrap:true});ws.getRow(r).height=20;
     for(let c=1;c<=9;c++){const cl=ws.getRow(r).getCell(c);cl.border={left:c===1?md:c===4?th:undefined,right:c===9?md:undefined,top:k===0?md:undefined,bottom:k===2?md:undefined}}});
-  ws.getRow(14).height=Math.max(18,Math.ceil(String(d.info.conts||"").length/40)*15);
+  ws.getRow(14).height=Math.max(20,Math.ceil(String(d.info.conts||"").length/42)*16);ws.getRow(13).height=Math.max(20,Math.ceil(String(d.info.cargo||"").length/42)*16);
   let r=16;const HD=["STT","Nội dung","","Đơn vị tính","Đơn giá","Số lượng","Thành tiền","Thuế GTGT","Số hóa đơn"];
-  ws.mergeCells(`B${r}:C${r}`);HD.forEach((h,i)=>{if(h)put(ws.getRow(r).getCell(i+1).address,h,{font:{bold:true},h:"center",wrap:true})});box(r,1,9,md,th);ws.getRow(r).height=30;
-  const R=dbCalc(d),sec=(lab,title)=>{r++;put("A"+r,lab,{font:{bold:true},h:"center"});ws.mergeCells(`B${r}:I${r}`);put("B"+r,title,{font:{bold:true}});box(r,1,9,th,hr)};
+  ws.mergeCells(`B${r}:C${r}`);HD.forEach((h,i)=>{if(h)put(ws.getRow(r).getCell(i+1).address,h,{font:{bold:true},h:"center",wrap:true})});box(r,1,9,md,th);ws.getRow(r).height=34;
+  const R=dbCalc(d),sec=(lab,title)=>{r++;ws.getRow(r).height=22;put("A"+r,lab,{font:{bold:true},h:"center"});ws.mergeCells(`B${r}:I${r}`);put("B"+r,title,{font:{bold:true}});box(r,1,9,th,hr)};
   const line=(l,n,isA)=>{r++;ws.mergeCells(`B${r}:C${r}`);put("A"+r,n,{h:"center"});put("B"+r,l.name,{wrap:true});put("D"+r,l.unit,{h:"center"});
     put("E"+r,num(l.price),{nf:NF,h:"right"});put("F"+r,num(l.qty),{h:"center"});put("G"+r,{formula:`E${r}*F${r}`,result:l.amt},{nf:NF,h:"right"});
     if(isA)put("H"+r,{formula:`ROUND(G${r}*${dbRate(l.vat)},0)`,result:l.v},{nf:NF,h:"right"});put("I"+r,l.inv||"",{h:"center"});box(r,1,9);
-    ws.getRow(r).height=Math.max(20,Math.ceil(String(l.name).length/32)*15)};
+    ws.getRow(r).height=Math.max(22,Math.ceil(String(l.name).length/30)*16)};
   sec("A","Xuất hóa đơn trực tiếp");const a0=r+1;R.A.forEach((l,k)=>line(l,k+1,true));const a1=Math.max(r,a0);
-  r++;ws.mergeCells(`B${r}:F${r}`);put("B"+r,"Cộng A",{font:{bold:true},h:"center"});put("G"+r,{formula:`SUM(G${a0}:G${a1})`,result:R.sumA},{nf:NF,h:"right"});put("H"+r,{formula:`SUM(H${a0}:H${a1})`,result:R.vatA},{nf:NF,h:"right"});box(r,1,9,th,hr);
-  const ra=r;r++;ws.mergeCells(`G${r}:H${r}`);put("G"+r,{formula:`G${ra}+H${ra}`,result:R.totA},{nf:NF,h:"center",font:{bold:true}});box(r,1,9,hr,th);const rta=r;
+  r++;ws.getRow(r).height=22;ws.mergeCells(`B${r}:F${r}`);put("B"+r,"Cộng A",{font:{bold:true},h:"center"});put("G"+r,{formula:`SUM(G${a0}:G${a1})`,result:R.sumA},{nf:NF,h:"right"});put("H"+r,{formula:`SUM(H${a0}:H${a1})`,result:R.vatA},{nf:NF,h:"right"});box(r,1,9,th,hr);
+  const ra=r;r++;ws.mergeCells(`B${r}:F${r}`);ws.mergeCells(`G${r}:H${r}`);put("G"+r,{formula:`G${ra}+H${ra}`,result:R.totA},{nf:NF,h:"center",font:{bold:true}});box(r,1,9,hr,th);const rta=r;
   sec("B","Chi trả hộ");const b0=r+1;R.B.forEach((l,k)=>line(l,k+1,false));const b1=Math.max(r,b0);
-  r++;ws.mergeCells(`B${r}:F${r}`);put("B"+r,"Cộng B",{font:{bold:true},h:"center"});ws.mergeCells(`G${r}:H${r}`);put("G"+r,{formula:`SUM(G${b0}:G${b1})`,result:R.sumB},{nf:NF,h:"center",font:{bold:true}});box(r,1,9,th,md);const rb=r;
+  r++;ws.getRow(r).height=22;ws.mergeCells(`B${r}:F${r}`);put("B"+r,"Cộng B",{font:{bold:true},h:"center"});ws.mergeCells(`G${r}:H${r}`);put("G"+r,{formula:`SUM(G${b0}:G${b1})`,result:R.sumB},{nf:NF,h:"center",font:{bold:true}});box(r,1,9,th,md);const rb=r;
   r+=2;ws.mergeCells(`D${r}:F${r}`);put("D"+r,"Tổng cộng (A+B)",{font:{bold:true,size:12},h:"center"});ws.mergeCells(`G${r}:H${r}`);put("G"+r,{formula:`G${rta}+G${rb}`,result:R.total},{nf:NF,h:"center",font:{bold:true,size:12}});put("I"+r,"VND",{font:{bold:true},h:"center"});
   r+=3;put("H"+r,"FDI DANANG",{font:{bold:true},h:"center"});r++;put("B"+r,"Thông tin chuyển khoản",{font:{bold:true,underline:true}});
-  DB_BANK.forEach(t=>{r++;ws.mergeCells(`A${r}:F${r}`);put("A"+r,t,{font:{bold:true}})});
+  DB_BANK.forEach(t=>{r++;ws.mergeCells(`A${r}:I${r}`);put("A"+r,t,{font:{bold:true}})});
   ws.pageSetup.printArea=`A1:I${r}`;
   const blob=new Blob([await wb.xlsx.writeBuffer()],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`DEBIT ${j.code} ${(d.cust.name||"").replace(/[\\/:*?"<>|]/g,"").slice(0,40)}.xlsx`.trim();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
