@@ -433,6 +433,8 @@ table.q .num{text-align:right}
   .grid3{grid-template-columns:1fr 1fr}
   .tpl-grid{grid-template-columns:minmax(0,1fr)}
 }
+.tkbtn{background:#1F5FAF;color:#fff;border:1px solid #1F5FAF;border-radius:10px;cursor:pointer}.tkbtn:hover{background:#174C8E}.tkbtn:disabled{opacity:.7;cursor:wait}
+.lanesel{font-weight:600}.lanesel.ln-g{background:#E3F4E8;border-color:#5FB37A}.lanesel.ln-y{background:#FFF6D6;border-color:#E0B83A}.lanesel.ln-r{background:#FDE5E2;border-color:#D9605A}.lanesel.ln-0{color:var(--muted);font-weight:400}
 .mvrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.mvrow .mvbtn{font-size:16px;padding:8px 14px;font-weight:600}.tkinfo{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px}.tkinfo small{color:var(--muted);font-size:13px}.tkst{font-size:15px}.tkst.bad{color:#B4541A}.mvframe{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0 10px;background:#fff}.mvframe iframe{width:100%;height:520px;border:0;display:block}
 </style>
 
@@ -1341,7 +1343,7 @@ D.addEventListener("input",e=>{
     queueSave(j);
     if(LISTF.includes(f)||f==="debitDate"||f==="paidDate"){renderSide();renderMain()}
     if(f==="vat")renderTotals(j);
-    if(f==="type"||f==="service"||f==="vehicle"){renderDetail(true)}
+    if(f==="type"||f==="service"||f==="vehicle"||f==="lane"){renderDetail(true)}
   }
   else if(t.dataset.t!==undefined){j.tasks[+t.dataset.t].text=t.value;queueSave(j)}
   else if(t.dataset.q){const[i,fl]=t.dataset.q.split(":");const q=j.quote[+i];
@@ -1536,6 +1538,8 @@ ${text.slice(0,12000)||"(không có, chỉ có ảnh)"}`,{images:files,maxImages
 
 /* ---------- Thông tin lô hàng: chọn dịch vụ rồi mới hiện ô tương ứng ---------- */
 const chips2=(f,opts,val,labels,cls)=>`<div class="chips2" role="group">${opts.map((o,i)=>`<button type="button" class="${cls?cls[i]:""}${val===o?" on":""}" data-set="${f}" data-v="${esc(o)}" aria-pressed="${val===o}">${labels?labels[i]:esc(o)}</button>`).join("")}</div>`;
+const CHECKS=[["kh","Kiểm hoá","🔍","Phí kiểm hoá"],["tv","KDTV","🌿","Phí kiểm dịch thực vật"],["dv","KDĐV","🐄","Phí kiểm dịch động vật"],["attp","ATTP","🥫","Phí kiểm tra ATTP"],["cl","KTCL","🧪","Phí kiểm tra chất lượng"]];
+let OPT_OPEN="";
 const CO_FORMS=["E","D","AK","AJ","VJ","RCEP","CPTPP","EUR.1","B","Khác"];
 const LF=(f,label,val,ph="",cls="",type="text")=>`<label class="fld ${cls}"><span>${label}</span><input id="f-${f}" data-f="${f}" type="${type}" value="${esc(val||"")}" placeholder="${esc(ph)}"></label>`;
 const MORE=["deadline","pol","pod","incoterm","refs","contact","summary","questions"];
@@ -1556,13 +1560,14 @@ function lotSec(j){
   const sv=svcOf(j),hq=sv!=="VC",vc=sv!=="HQ",truck=isTruck(j);
   const svcRow=`<div class="row1"><b>Dịch vụ</b>${chips2("service",SERVICES,sv,["🛃 HQ","🚚 VC","🛃🚚 HQ+VC"])}</div>`;
   const hqBlk=`${vc?`<div class="sub">Hải quan</div>`:""}
-    <div class="row1"><b>Hàng</b>${chips2("type",["Khai HQ nhập","Khai HQ xuất"],j.type==="Khai HQ xuất"?"Khai HQ xuất":j.type==="Khai HQ nhập"?"Khai HQ nhập":"",["Nhập khẩu","Xuất khẩu"])}${j.type==="Khai HQ xuất"||j.coNeed==="Có"?`<div class="chips2"><button type="button" class="co${j.coNeed==="Có"?" on":""}" data-set="coNeed" data-v="Có" aria-pressed="${j.coNeed==="Có"}">${j.coNeed==="Có"?"✓ Xin C/O":"+ Xin C/O"}</button></div>`:""}</div>
+    <div class="row1"><b>Hàng</b>${chips2("type",["Khai HQ nhập","Khai HQ xuất"],j.type==="Khai HQ xuất"?"Khai HQ xuất":j.type==="Khai HQ nhập"?"Khai HQ nhập":"",["Nhập khẩu","Xuất khẩu"])}</div>
+    ${OPT_OPEN===j.id&&["Khai HQ nhập","Khai HQ xuất"].includes(j.type)?`<div class="row1"><b>Tuỳ chọn</b><div class="chips2 chk" role="group">${CHECKS.map(([k,l,ic,fee])=>{const on=(j.checks||[]).includes(k);return `<button type="button" class="${on?"on":""}" title="${fee.slice(4)}" data-set="chk" data-v="${k}" aria-pressed="${on}">${on?"✓":ic} ${l}</button>`}).join("")}${j.type==="Khai HQ xuất"||j.coNeed==="Có"?`<button type="button" class="${j.coNeed==="Có"?"on":""}" title="Xin C/O" data-set="coNeed" data-v="Có" aria-pressed="${j.coNeed==="Có"}">${j.coNeed==="Có"?"✓":"📜"} C/O</button>`:""}</div></div>`:""}
     <div class="g2">${j.type==="Khai HQ xuất"?LF("bl","Số booking",j.bl,"VD: BKG2411087"):LF("bl","Số B/L",j.bl,"VD: HPH123456789")}${LF("cont",truck?"Số xe / tải trọng":"Số cont",j.cont,truck?"VD: 1 xe 8 tấn":"VD: 2x40HC TGHU1234567")}
       ${LF("tkNo","Số tờ khai",j.tkNo,"12 số")}${LF("tkDate","Ngày tờ khai",j.tkDate,"","","date")}
       ${LF("hqCode","Mã Hải quan",j.hqCode,"VD: 02CI")}${LF("mst","MST khách",j.mst,"10 hoặc 13 số")}
-      ${LF("hqOfficer","Cán bộ HQ làm tờ khai",j.hqOfficer,"Tên người hải quan")}</div>
+      ${LF("hqOfficer","Cán bộ HQ làm tờ khai",j.hqOfficer,"Tên người hải quan")}<label class="fld"><span>Luồng</span><select id="f-lane" data-f="lane" class="lanesel ln-${{Xanh:"g",Vàng:"y",Đỏ:"r"}[j.lane]||"0"}"><option value="">Chọn luồng</option>${[["Xanh","🟢"],["Vàng","🟡"],["Đỏ","🔴"]].map(([v,i])=>`<option value="${v}"${j.lane===v?" selected":""}>${i} ${v}</option>`).join("")}</select></label></div>
+    <div class="g2">${LF("cargo","Hàng hoá / số lượng",j.cargo,"VD: Máy móc, 25 kiện","full")}</div>
     ${tkCheckRow(j)}
-    <div class="row1"><b>Luồng</b>${chips2("lane",["Xanh","Vàng","Đỏ"],j.lane||"",["🟢 Xanh","🟡 Vàng","🔴 Đỏ"],["ln-g","ln-y","ln-r"])}</div>
     ${j.coNeed==="Có"?`<div class="sub">Xin C/O</div><div class="row1"><b>Form</b>${chips2("coForm",CO_FORMS,j.coForm||"")}</div>
     <div class="g2">${LF("coNo","Số C/O",j.coNo,"Số trên C/O")}${LF("coDate","Ngày cấp C/O",j.coDate,"","","date")}</div>
     <div class="row1"><b>Tình trạng</b>${chips2("coStatus",["Đang làm hồ sơ","Đã nộp","Đã cấp"],j.coStatus||"")}</div>`:""}`;
@@ -1577,10 +1582,11 @@ function lotSec(j){
     <div class="g2">${LF("qty","Số lượng (cont / kiện)",j.qty,"VD: 2")}${LF("cost","Chi (đ)",j.cost?fmt(j.cost,"VND"):"","VD: 300.000")}</div>
     <p style="margin:8px 0 0;font-size:14px">Thu: <b>${fmt(j.debitAmount,"VND")}</b> đ <span style="color:var(--muted)">(sửa ở mục Debit)</span> · Lãi: <b>${fmt(num(j.debitAmount)-num(j.cost),"VND")}</b> đ${j.doer==="Tuấn"?` · trả Tuấn ${fmt(FEE_TUAN,"VND")} đ`:""}</p>`:"";
   return `<div class="sec lot">${head}${svcRow}${hq?hqBlk:""}${vc?vcBlk:""}${mineBlk}
-    <div class="g2">${LF("cargo","Hàng hoá / số lượng",j.cargo,"VD: Máy móc, 25 kiện","full")}</div>
+    ${hq?"":`<div class="g2">${LF("cargo","Hàng hoá / số lượng",j.cargo,"VD: Máy móc, 25 kiện","full")}</div>`}
     ${more}</div>`;
 }
 function setLotField(j,f,v){
+  if(f==="type"&&["Khai HQ nhập","Khai HQ xuất"].includes(v))OPT_OPEN=OPT_OPEN===j.id&&j.type===v?"":j.id; // bấm NK / XK thì mở tuỳ chọn, bấm lại thì ẩn
   if(["lane","deposit","coForm","coStatus","coNeed","doer"].includes(f))v=j[f]===v?"":v; // bấm lại để bỏ chọn
   if(f==="coStatus"&&v==="Đã cấp"&&!j.coDate)j.coDate=TODAY();
   if(f==="service"){
@@ -1590,6 +1596,11 @@ function setLotField(j,f,v){
     if(v!=="VC"&&["Khác","Vận chuyển"].includes(j.type))j.type="Khai HQ nhập";
     if(was&&!(j.tasks||[]).length)j.tasks=tplTasks(j.type);
     logH(j,{kind:"note",note:"Chọn dịch vụ "+v});
+  }else if(f==="chk"){const c=CHECKS.find(x=>x[0]===v);if(!c)return;const fee=c[3],has=(j.checks||[]).includes(v);
+    j.checks=has?j.checks.filter(x=>x!==v):(j.checks||[]).concat(v);j.quote=j.quote||[];
+    if(has)j.quote=j.quote.filter(q=>q.name!==fee);
+    else if(!j.quote.some(q=>q.name===fee)){const h=lastPrice(fee,groupKey(j),j.id);j.quote.push({name:fee,qty:1,unit:h&&h.unit||"lô",price:h?h.price:0,currency:h?h.currency:"VND"})}
+    logH(j,{kind:"note",note:(has?"Bỏ ":"Chọn ")+fee.slice(4)});
   }else j[f]=v;
   queueSave(j);renderAll(true);
 }
@@ -2077,7 +2088,7 @@ function tkCheckRow(j){const c=j.tkCheck,busy=TK_BUSY===j.id;
   const line=!c?"":c.ok?`<span class="tkst ok">${/thông quan/i.test(c.status)?"✅":"📦"} <b>${esc(c.status||"Đã có mã vạch")}</b>${c.lane?` · ${c.lane==="Xanh"?"🟢":c.lane==="Vàng"?"🟡":c.lane==="Đỏ"?"🔴":""} Luồng ${esc(c.lane)}`:""}${c.kind?` · ${esc(c.kind)}`:""}</span>`
     :`<span class="tkst bad">${/chưa được cấp phép/i.test(c.msg||"")?"⏳":"❌"} ${esc(c.msg||"Chưa có kết quả")}</span>`;
   const when=c?`<small>Kiểm tra lúc ${new Date(c.at).toLocaleString("vi-VN",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"})}${c.tkNo&&c.tkNo!==j.tkNo?` · TK ${esc(c.tkNo)}`:""}</small>`:`<small>Tờ khai đã sửa thì ghi số TK bản sửa mới nhất (số cuối 0, 1, 2…).</small>`;
-  return `<div class="mvrow"><button type="button" class="ghost mvbtn" data-tkcheck="${esc(j.id)}"${busy?" disabled":""}>${busy?"⏳ Đang kiểm tra…":"🔍 Kiểm tra trạng thái tờ khai"}</button>
+  return `<div class="mvrow"><button type="button" class="mvbtn tkbtn" data-tkcheck="${esc(j.id)}"${busy?" disabled":""}>${busy?"⏳ Đang kiểm tra…":"🔍 Kiểm tra trạng thái tờ khai"}</button>
     ${c&&c.ok&&c.mv&&c.url?`<button type="button" class="primary mvbtn" data-mvopen="${esc(j.id)}">${MV_OPEN===j.id?"✕ Đóng MV":"📄 Lấy MV"}</button>`:""}
     <div class="tkinfo">${line}${when}</div></div>
     ${MV_OPEN===j.id&&c&&c.url?`<div class="mvframe"><iframe src="${esc(c.url)}" title="Bản kê mã vạch"></iframe></div>`:""}`}
