@@ -438,6 +438,7 @@ table.q .num{text-align:right}
 table.q th.net,table.q input.net,table.q td.netamt{background:#FFF8E6}table.q input.net{border-color:#E7C77A}.netsum{color:#8A5A00}
 .vatbox{display:flex;flex-direction:column;gap:4px}.vatbox>span{font-size:13px;color:var(--muted)}
 .debitbtn{background:#8A5A00;color:#fff;border-color:#8A5A00}.debitbtn:hover{background:#6E4800}
+.dlrow{display:flex!important;flex-direction:row!important;align-items:center;justify-content:flex-start;gap:10px;flex-wrap:wrap;text-align:left}.dlrow>*{width:auto!important;margin:0!important;flex:0 0 auto}.dlrow label{font-weight:700;font-size:15px}.dlrow input{font-size:16px;min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}.dltag{font-size:14px;font-weight:600;padding:4px 10px;border-radius:20px;background:var(--surface-2)}.dltag.none{color:var(--muted);font-weight:400}.dltag.soon{background:#FFF6D6;color:#8A5A00}.dltag.today{background:#FFE8C2;color:#8A4A00}.dltag.late{background:#FDE5E2;color:#B42318}
 .lanesel{font-weight:600}.lanesel.ln-g{background:#E3F4E8;border-color:#5FB37A}.lanesel.ln-y{background:#FFF6D6;border-color:#E0B83A}.lanesel.ln-r{background:#FDE5E2;border-color:#D9605A}.lanesel.ln-0{color:var(--muted);font-weight:400}
 .mvrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.mvrow .mvbtn{font-size:16px;padding:8px 14px;font-weight:600}.tkinfo{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px}.tkinfo small{color:var(--muted);font-size:13px}.tkst{font-size:15px}.tkst.bad{color:#B4541A}.mvframe{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0 10px;background:#fff}.mvframe iframe{width:100%;height:520px;border:0;display:block}
 </style>
@@ -1100,6 +1101,7 @@ function renderDetail(force){
     <datalist id="names">${knownNames.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
     <datalist id="items">${itemNames.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
   </div>
+  ${dlRow(j)}
   ${team()?chatSec(j):`<div class="sec"><h3>Việc cần làm <span class="mono">${done}/${tasks.length}</span></h3>
     ${tasks.length?`<div class="prog"><i style="width:${done/tasks.length*100}%"></i></div>`:""}
     ${tasks.map((t,i)=>`<div class="task ${t.done?"done":""}"><input type="checkbox" id="t-c-${i}" data-tdone="${i}" ${t.done?"checked":""} aria-label="Xong"><input type="text" id="t-${i}" data-t="${i}" value="${esc(t.text)}"><button class="x" data-act="tdel" data-i="${i}" aria-label="Xoá việc">✕</button></div>`).join("")}
@@ -1346,7 +1348,7 @@ D.addEventListener("input",e=>{
     queueSave(j);
     if(LISTF.includes(f)||f==="debitDate"||f==="paidDate"){renderSide();renderMain()}
     if(f==="vat")renderTotals(j);
-    if(f==="type"||f==="service"||f==="vehicle"||f==="lane"){renderDetail(true)}
+    if(f==="type"||f==="service"||f==="vehicle"||f==="lane"||f==="deadline"){renderDetail(true)}
   }
   else if(t.dataset.t!==undefined){j.tasks[+t.dataset.t].text=t.value;queueSave(j)}
   else if(t.dataset.q){const[i,fl]=t.dataset.q.split(":");const q=j.quote[+i];
@@ -1550,12 +1552,12 @@ function addFee(j,name,unit="lô",first=false){j.quote=j.quote||[];if(j.quote.so
 const dropFee=(j,name)=>{if(j.quote)j.quote=j.quote.filter(q=>q.name!==name)};
 const CO_FORMS=["E","D","AK","AJ","VJ","RCEP","CPTPP","EUR.1","B","Khác"];
 const LF=(f,label,val,ph="",cls="",type="text")=>`<label class="fld ${cls}"><span>${label}</span><input id="f-${f}" data-f="${f}" type="${type}" value="${esc(val||"")}" placeholder="${esc(ph)}"></label>`;
-const MORE=["deadline","pol","pod","incoterm","refs","contact","summary","questions"];
+const MORE=["pol","pod","incoterm","refs","contact","summary","questions"];
 function lotSec(j){
   const head=`<h3>Thông tin lô hàng<button class="ghost sm" data-act="lotFill" style="margin-left:auto">📋 Dán chữ / ảnh để tự điền</button></h3>`;
   const filled=MORE.filter(f=>String(j[f]||"").trim()).length;
-  const more=`<details ${S.lotMore?"open":""} id="lotMore"><summary>Thêm chi tiết${filled?` (${filled} ô đã điền)`:" (hạn, cảng, incoterm, liên hệ…)"}</summary>
-    <div class="g2">${LF("deadline","Hạn xử lý",j.deadline,"","","date")}${LF("incoterm","Incoterm",j.incoterm,"FOB, CIF…")}
+  const more=`<details ${S.lotMore?"open":""} id="lotMore"><summary>Thêm chi tiết${filled?` (${filled} ô đã điền)`:" (cảng, incoterm, liên hệ…)"}</summary>
+    <div class="g2">${LF("incoterm","Incoterm",j.incoterm,"FOB, CIF…")}
       ${LF("pol","Nơi đi (POL)",j.pol,"Ningbo, Shanghai…")}${LF("pod","Nơi đến (POD)",j.pod,"Cát Lái, Hải Phòng…")}
       ${LF("refs","Số booking / invoice",j.refs)}${LF("contact","Người liên hệ",j.contact,"Tên, số điện thoại")}
       <label class="fld full"><span>Tóm tắt yêu cầu</span><textarea id="f-summary" data-f="summary" rows="2">${esc(j.summary||"")}</textarea></label>
@@ -1719,6 +1721,9 @@ function chatMsgs(id){
   if(!ms.length)return `<div class="none">Chưa có trao đổi nào. Gõ tin bên dưới, mọi người thấy job này đều đọc được.</div>`;
   return ms.map(m=>`<div class="m${m.by===me()?" me":""}"><small>${m.by===me()?"":`<b>${esc(m.byName||m.by)}</b> · `}${hm(m.at)}</small>${esc(m.text)}</div>`).join("");
 }
+function dlRow(j){const k=dayDiff(j.deadline),open=isOpen(j.status);
+  const tag=!j.deadline?`<span class="dltag none">Chưa đặt hạn</span>`:!open?"":k<0?`<span class="dltag late">⚠ Quá hạn ${-k} ngày</span>`:k===0?`<span class="dltag today">Hôm nay</span>`:`<span class="dltag ${k<=2?"soon":""}">Còn ${k} ngày</span>`;
+  return `<div class="sec dlrow"><label for="f-deadline">⏰ Thời hạn xử lý</label><input id="f-deadline" data-f="deadline" type="date" value="${esc(j.deadline||"")}">${tag}</div>`}
 function chatSec(j){
   chatWatch(j);
   return `<div class="sec"><h3>Trao đổi <span class="mono">${(S.chat[j.id]||[]).length||""}</span></h3>
