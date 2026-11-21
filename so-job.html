@@ -276,6 +276,7 @@ button.primary.bad{background:var(--bad);border-color:var(--bad);color:#fff}
 .hk{font-weight:600}.hk-return,.hk-fail{color:var(--bad)}.hk-move,.hk-auto{color:var(--info)}.hk-reopen{color:var(--warn)}
 .review{border-bottom:1px solid var(--line)}
 .review summary{padding:10px 14px;font-size:13px;font-weight:700;color:var(--ink);background:var(--warn-soft);display:flex;gap:8px;align-items:center}
+.rv-set{padding:6px 14px 10px}.review .rv-set summary{font-size:12.5px;color:var(--muted);cursor:pointer;background:none;padding:4px 0;font-weight:500}.rv-set .stall-grid{margin-top:8px}
 .review summary .mono{margin-left:auto;font-weight:500}
 .rv-g{border-top:1px solid var(--line)}
 .rv-h{display:flex;justify-content:space-between;padding:6px 14px;font-size:12px;font-weight:600;color:var(--muted);background:var(--surface-2)}
@@ -458,8 +459,6 @@ table.q th.net,table.q input.net,table.q td.netamt{background:#FFF8E6}table.q in
       <div class="tabs" role="tablist">
         <button data-view="list" class="on">Danh sách</button>
         <button data-view="board">Quy trình</button>
-        <button data-view="plan">Kế hoạch việc</button>
-        <button data-view="tpl">Mẫu checklist</button>
       </div>
       <span class="sp"></span>
       <select id="fStatus" aria-label="Lọc trạng thái">
@@ -670,7 +669,7 @@ function nextCode(){
   const n=(S.all.length?S.all:S.jobs).filter(j=>(j.code||"").startsWith(p+"-"+tag)).length+1;return `${p}-${tag}${pad(n)}`;
 }
 function newId(){try{if(db)return db.collection("jobs").doc().id}catch(e){}return "j"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
-function tplTasks(type){return (S.tpl[type]||[]).map(t=>({text:t,done:false}))}
+function tplTasks(type){return team()?[]:(S.tpl[type]||[]).map(t=>({text:t,done:false}))} // nhiều người dùng: đã thay checklist bằng khung Trao đổi
 async function createJob(data){
   const j=Object.assign({
     code:nextCode(),title:"",fwd:"",company:"",contact:"",source:"Email",type:"Khác",mode:"",pol:"",pod:"",
@@ -983,12 +982,13 @@ function renderMain(){
   el.dataset.v=S.view;
   if(!S.jobs.length&&S.view==="list"){el.innerHTML=`<div class="empty"><b>Chưa có job nào</b>Bấm “+ Tạo job” để gõ tay, hoặc “+ Từ ảnh” rồi dán ảnh chụp email / Zalo (Ctrl+V). Bạn cũng có thể dán ảnh thẳng vào trang này.</div>`;return}
   if(S.view==="list"){
+    if(document.activeElement?.dataset?.stall&&el.contains(document.activeElement))return;
     const jobs=visibleJobs();
     if(!jobs.length){el.innerHTML=`<div class="empty"><b>Không có job khớp bộ lọc</b>Đổi bộ lọc trạng thái hoặc chọn “Tất cả”.</div>`;return}
     if(S.group==="__all"){
       const m=new Map();jobs.forEach(j=>{const k=groupKey(j);(m.get(k)||m.set(k,[]).get(k)).push(j)});
-      el.innerHTML=`<div class="list">`+[...m.entries()].map(([k,arr])=>`<div class="grp-h"><span>${esc(k)}</span><span class="mono">${arr.length}</span></div>`+arr.map(jobRow).join("")).join("")+`</div>`;
-    }else el.innerHTML=`<div class="list">${jobs.map(jobRow).join("")}</div>`;
+      el.innerHTML=`<div class="list">`+reviewHtml()+[...m.entries()].map(([k,arr])=>`<div class="grp-h"><span>${esc(k)}</span><span class="mono">${arr.length}</span></div>`+arr.map(jobRow).join("")).join("")+`</div>`;
+    }else el.innerHTML=`<div class="list">${reviewHtml()}${jobs.map(jobRow).join("")}</div>`;
   }else if(S.view==="board"){
     const sx=[...el.querySelectorAll(".kb,.col-b")].map(x=>[x.scrollLeft,x.scrollTop]);
     renderBoard(el);
@@ -996,6 +996,8 @@ function renderMain(){
   }
 }
 /* Rà sáng: những lô dễ sót, không cần đặt hạn */
+const rvOpen=()=>{try{return localStorage.getItem("sojob.rvOpen")!=="0"}catch(e){return true}};
+document.addEventListener("toggle",e=>{if(e.target.id==="rvBox")try{localStorage.setItem("sojob.rvOpen",e.target.open?"1":"0")}catch(x){}},true);
 function reviewHtml(){
   const open=visibleJobs(true).filter(j=>isOpen(j.status));
   const G=[["Đứng yên quá ngưỡng / quá hạn",j=>isLate(j),j=>isOverdue(j)?`quá hạn ${-dayDiff(j.deadline)} ngày`:`đứng yên ${stageDays(j)} ngày (ngưỡng ${num(S.stall[j.status])})`],
@@ -1005,7 +1007,8 @@ function reviewHtml(){
     ["Chờ thu tiền",j=>j.status==="Chờ thu tiền",j=>`${num(j.debitAmount)?fmt(j.debitAmount,j.debitCurrency)+" "+(j.debitCurrency||"VND"):"chưa ghi số tiền"}${j.debitDate?" · gửi debit "+dmy(j.debitDate):""}`]];
   const parts=G.map(([name,f,why])=>{const arr=open.filter(f);if(!arr.length)return"";
     return `<div class="rv-g"><span class="rv-h">${name}<span class="mono">${arr.length}</span></span>${arr.map(j=>`<div class="rv" data-open="${j.id}" tabindex="0"><span class="mono">${esc(j.code)}</span><span class="t">${esc(j.title||"(chưa có tiêu đề)")}<small>${esc(groupKey(j))} · ${esc(j.status)} · ${esc(why(j))}</small></span><span class="pill svc">${svcTag(j)}</span></div>`).join("")}</div>`}).filter(Boolean);
-  return `<details class="review" open><summary>Rà sáng: lô dễ sót <span class="mono">${parts.length?open.filter(j=>G.some(g=>g[1](j))).length:0}</span></summary>${parts.join("")||'<p class="rv-ok">Không có lô nào đứng yên, vướng mắc hay chờ thu tiền. Tốt!</p>'}</details>`;
+  const stall=boss()?`<details class="rv-set"><summary>⚙ Ngưỡng tô đỏ: lô đứng yên quá bao nhiêu ngày ở mỗi bước (0 = tắt)</summary><div class="stall-grid">${STAGES.filter(isOpen).map(st=>`<label class="fld"><span>${esc(st)}</span><input type="number" min="0" step="1" inputmode="numeric" data-stall="${esc(st)}" value="${esc(S.stall[st]??"")}"></label>`).join("")}</div></details>`:"";
+  return `<details class="review" id="rvBox"${rvOpen()?" open":""}><summary>Rà sáng: lô dễ sót <span class="mono">${parts.length?open.filter(j=>G.some(g=>g[1](j))).length:0}</span></summary>${parts.join("")||'<p class="rv-ok">Không có lô nào đứng yên, vướng mắc hay chờ thu tiền. Tốt!</p>'}${stall}</details>`;
 }
 function renderPlan(el){
   if(el.dataset.v!=="plan"||!$("#pa-text")){
@@ -1073,7 +1076,7 @@ function renderDetail(force){
   if(!force&&j&&el.dataset.id===j.id&&el.contains(document.activeElement))return;
   el.dataset.id=j?j.id:"";
   document.body.classList.toggle("has-detail",!!j);
-  if(!j){el.innerHTML=`<div class="empty-detail">Chọn một job để xem việc cần làm, báo giá và công nợ.</div>`;return}
+  if(!j){el.innerHTML=`<div class="empty-detail">Chọn một job để xem thông tin, trao đổi và báo giá.</div>`;return}
   const tasks=j.tasks||[],done=tasks.filter(t=>t.done).length,si=stIdx(j.status);
   const knownNames=[...new Set(S.jobs.flatMap(x=>[x.fwd,x.company]).filter(Boolean))];
   const itemNames=[...new Set(S.jobs.flatMap(x=>(x.quote||[]).map(q=>q.name)).filter(Boolean))];
