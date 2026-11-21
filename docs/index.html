@@ -1295,7 +1295,7 @@ async function manualJob(status){
       const data={title:v.title,fwd:v.fwd,company:v.company,type,source:"Điện thoại",tasks:sv?tplTasks(type):[],
         status:status||STAGES[0],bl:v.bl,cont:v.cont,tkNo:v.tkNo.replace(/\D/g,"").slice(0,12),mst:v.mst,deadline:v.deadline,contact:v.contact,cargo:v.cargo,summary:v.summary};
       if(sv){data.service=sv;if(sv!=="HQ")data.vehicle=st.vehicle}
-      done();await createJob(data);{const nj=cur();if(nj&&sv&&sv!=="VC"){addFee(nj,FEE_HQ,"tờ khai",true);queueSave(nj);renderAll(true)}}toast(`Đã tạo ${cur()?.code}.${sv?"":" Chọn dịch vụ trong phiếu job."}`);
+      done();await createJob(data);{const nj=cur();if(nj&&sv){if(sv!=="VC")addFee(nj,FEE_HQ,"tờ khai",true);if(sv!=="HQ")addFee(nj,FEE_VC,isTruck(nj)?"chuyến":"cont");queueSave(nj);renderAll(true)}}toast(`Đã tạo ${cur()?.code}.${sv?"":" Chọn dịch vụ trong phiếu job."}`);
     };
     setTimeout(()=>f.querySelector("[name=title]").focus(),20);
   });
@@ -1544,7 +1544,7 @@ ${text.slice(0,12000)||"(không có, chỉ có ảnh)"}`,{images:files,maxImages
 const chips2=(f,opts,val,labels,cls)=>`<div class="chips2" role="group">${opts.map((o,i)=>`<button type="button" class="${cls?cls[i]:""}${val===o?" on":""}" data-set="${f}" data-v="${esc(o)}" aria-pressed="${val===o}">${labels?labels[i]:esc(o)}</button>`).join("")}</div>`;
 const CHECKS=[["kh","Kiểm hoá","🔍","Phí kiểm hoá"],["tv","KDTV","🌿","Phí kiểm dịch thực vật"],["dv","KDĐV","🐄","Phí kiểm dịch động vật"],["attp","ATTP","🥫","Phí kiểm tra ATTP"],["cl","KTCL","🧪","Phí kiểm tra chất lượng"]];
 let OPT_OPEN="";
-const FEE_HQ="Phí khai báo hải quan";
+const FEE_HQ="Phí khai báo hải quan",FEE_VC="Phí vận chuyển";
 function addFee(j,name,unit="lô",first=false){j.quote=j.quote||[];if(j.quote.some(q=>q.name===name))return;const h=lastPrice(name,groupKey(j),j.id);
   const q={name,qty:1,unit:h&&h.unit||unit,price:h?h.price:0,currency:h?h.currency:"VND"};first?j.quote.unshift(q):j.quote.push(q)}
 const dropFee=(j,name)=>{if(j.quote)j.quote=j.quote.filter(q=>q.name!==name)};
@@ -1600,6 +1600,7 @@ function setLotField(j,f,v){
   if(f==="service"){
     const was=j.svcPending;delete j.svcPending;j.service=v;
     if(v==="VC"){dropFee(j,FEE_HQ);CHECKS.forEach(c=>dropFee(j,c[3]));j.checks=[]}else addFee(j,FEE_HQ,"tờ khai",true);
+    if(v==="HQ")dropFee(j,FEE_VC);else addFee(j,FEE_VC,isTruck(j)?"chuyến":"cont");
     if(v!=="HQ"&&!j.vehicle)j.vehicle="Xe cont";
     if(v==="VC"&&["Khác","Khai HQ nhập","Khai HQ xuất"].includes(j.type))j.type="Vận chuyển";
     if(v!=="VC"&&["Khác","Vận chuyển"].includes(j.type))j.type="Khai HQ nhập";
@@ -1610,6 +1611,7 @@ function setLotField(j,f,v){
     has?dropFee(j,fee):addFee(j,fee);
     logH(j,{kind:"note",note:(has?"Bỏ ":"Chọn ")+fee.slice(4)});
   }else j[f]=v;
+  if(f==="vehicle"){const q=(j.quote||[]).find(q=>q.name===FEE_VC);if(q&&["cont","chuyến"].includes(q.unit))q.unit=v==="Xe tải"?"chuyến":"cont"}
   queueSave(j);renderAll(true);
 }
 
