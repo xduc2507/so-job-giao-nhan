@@ -48,7 +48,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;white-space:nowrap}
 .brand i{width:18px;height:18px;border-radius:0 70% 0 70%;background:linear-gradient(135deg,var(--accent),var(--info));display:inline-block;transform:rotate(-8deg)}
 .top input{max-width:340px;margin-left:auto}
-.app{display:grid;grid-template-columns:220px minmax(0,1fr) minmax(0,460px);gap:16px;align-items:start;
+.app{display:grid;grid-template-columns:220px minmax(0,1fr) minmax(0,680px);gap:16px;align-items:start;
   padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 
 #side{display:flex;flex-direction:column;gap:2px;position:sticky;top:72px;max-height:calc(100vh - 90px);overflow:auto}
@@ -129,7 +129,7 @@ body.view-board .app{grid-template-columns:minmax(0,1fr)}
 body.view-board #side{display:none}
 body.view-board #content{background:transparent;border:0}
 body.view-board #detail{display:none}
-body.view-board.has-detail #detail{display:block;position:fixed;top:0;right:0;bottom:0;width:min(480px,100vw);max-height:none;z-index:20;border-radius:0;
+body.view-board.has-detail #detail{display:block;position:fixed;top:0;right:0;bottom:0;width:min(700px,100vw);max-height:none;z-index:20;border-radius:0;
   box-shadow:-12px 0 32px rgba(10,16,22,.22);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body.view-board .back{display:inline-block}
 .kb-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
@@ -210,7 +210,7 @@ body.view-board .back{display:inline-block}
 .lbox .chips{display:flex;gap:6px;flex-wrap:wrap}.lbox .chips button{min-height:0;padding:4px 9px;font-size:12.5px;border-radius:999px}
 .lbox .chips button.on{background:var(--bad);color:#fff;border-color:var(--bad)}
 .lbox .lrow{display:flex;gap:6px;flex-wrap:wrap}.lbox .lrow input{flex:1;min-width:160px}
-.chat{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;padding:4px 2px;margin-bottom:8px}
+.chat{display:flex;flex-direction:column;gap:6px;min-height:220px;max-height:680px;overflow:auto;padding:4px 2px;margin-bottom:8px}
 .chat .m{max-width:85%;align-self:flex-start;background:var(--surface-2);border:1px solid var(--line);border-radius:10px 10px 10px 2px;padding:6px 10px;font-size:13.5px;white-space:pre-wrap;word-break:break-word}
 .chat .m.me{align-self:flex-end;background:var(--info-soft);border-color:transparent;border-radius:10px 10px 2px 10px}
 .chat .m small{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
@@ -434,6 +434,9 @@ table.q .num{text-align:right}
   .tpl-grid{grid-template-columns:minmax(0,1fr)}
 }
 .tkbtn{background:#1F5FAF;color:#fff;border:1px solid #1F5FAF;border-radius:10px;cursor:pointer}.tkbtn:hover{background:#174C8E}.tkbtn:disabled{opacity:.7;cursor:wait}
+table.q th.net,table.q input.net,table.q td.netamt{background:#FFF8E6}table.q input.net{border-color:#E7C77A}.netsum{color:#8A5A00}
+.vatbox{display:flex;flex-direction:column;gap:4px}.vatbox>span{font-size:13px;color:var(--muted)}
+.debitbtn{background:#8A5A00;color:#fff;border-color:#8A5A00}.debitbtn:hover{background:#6E4800}
 .lanesel{font-weight:600}.lanesel.ln-g{background:#E3F4E8;border-color:#5FB37A}.lanesel.ln-y{background:#FFF6D6;border-color:#E0B83A}.lanesel.ln-r{background:#FDE5E2;border-color:#D9605A}.lanesel.ln-0{color:var(--muted);font-weight:400}
 .mvrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.mvrow .mvbtn{font-size:16px;padding:8px 14px;font-weight:600}.tkinfo{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px}.tkinfo small{color:var(--muted);font-size:13px}.tkst{font-size:15px}.tkst.bad{color:#B4541A}.mvframe{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0 10px;background:#fff}.mvframe iframe{width:100%;height:520px;border:0;display:block}
 </style>
@@ -675,7 +678,7 @@ async function createJob(data){
     code:nextCode(),title:"",fwd:"",company:"",contact:"",source:"Email",type:"Khác",mode:"",pol:"",pod:"",
     cargo:"",incoterm:"",refs:"",deadline:"",priority:"Thường",status:"Mới nhận",summary:"",questions:"",
     service:"",vehicle:"",yard:"",cbm:"",mst:"",bl:"",cont:"",tkNo:"",lane:"",truck:"",deposit:"",blocker:"",returnNote:"",
-    tasks:[],quote:[],vat:0,quoteNote:"",quoteSentAt:"",debitAmount:0,debitCurrency:"VND",debitDate:"",paidDate:"",
+    tasks:[],quote:[],vat:8,quoteNote:"",quoteSentAt:"",debitAmount:0,debitCurrency:"VND",debitDate:"",paidDate:"",
     raw:"",images:[],createdAt:Date.now(),updatedAt:Date.now(),stageAt:Date.now(),history:[]
   },data);
   if(!SERVICES.includes(j.service)){j.service="";j.svcPending=true}
@@ -695,6 +698,10 @@ const JOB_MAX=950*1024;
 const jobBytes=j=>{try{return new Blob([JSON.stringify(body(j))]).size}catch(e){return 0}};
 const kb=n=>n>=1048576?(n/1048576).toFixed(2)+" MB":Math.round(n/1024)+" KB";
 function sizeBar(j){const n=jobBytes(j),p=Math.min(100,n/JOB_MAX*100);if(n<60*1024)return "";return `<div class="jsize ${p>=97?"full":p>=80?"hi":""}" title="Firebase cho mỗi job tối đa 1 MB, ảnh và tệp lưu ngay trong job"><span>Dung lượng job: ${kb(n)} / 1 MB</span><i><b style="width:${p}%"></b></i>${p>=80?"<span>Tài liệu nặng nên để OneDrive rồi gắn link</span>":""}</div>`}
+let VAT_OPEN=false;
+document.addEventListener("click",e=>{const b=e.target.closest("[data-vat]");if(!b)return;e.preventDefault();e.stopPropagation();const j=cur();if(!j)return;
+  if(b.dataset.vat==="open")VAT_OPEN=true;else{VAT_OPEN=false;j.vat=+b.dataset.vat;queueSave(j)}renderDetail(true)},true);
+const vatRate=j=>num(j.vat)===10?10:8; // mặc định 8%, chọn được 10%
 function totals(j){const t={};(j.quote||[]).forEach(q=>{const c=q.currency||"VND";t[c]=(t[c]||0)+num(q.qty)*num(q.price)});return t}
 function logH(j,o){(j.history=j.history||[]).push(Object.assign({at:Date.now(),by:window.SOJOB_USER||""},o));if(j.history.length>200)j.history=j.history.slice(-200)}
 function setStatus(j,st,kind="move",note=""){
@@ -1076,7 +1083,7 @@ function renderDetail(force){
   el.innerHTML=`<div class="d">
   <div class="d-head">
     <div class="l1"><button class="back" data-act="close">← Danh sách</button><span class="acts">${isOpen(j.status)?`${nextStage(j)?`<button class="primary go" data-st="${esc(nextStage(j))}">Chuyển tiếp →</button>`:""}<button class="ghost sm danger" data-st="${FAIL}">Thất bại</button>`:`<button class="sm" data-st="${esc(STAGES[0])}">Mở lại</button>`}</span></div>
-    <div class="l2"><span class="mono jcode">${esc(j.code)}${j.example?' <span class="ex">VÍ DỤ</span>':""}</span><button class="ghost sm urg${j.priority==="Gấp"?" on":""}" data-act="urgent" title="Bật / tắt job gấp">⚡ Gấp</button>${spaceOn()?`<button class="ghost sm shr" data-act="share" title="${isMine(j)?"Đưa job này sang Sổ chung: nhân viên thấy và làm cùng":"Đưa job này về Việc riêng: nhân viên không thấy nữa"}">${isMine(j)?"→ Chuyển sang Sổ chung":"→ Chuyển về Việc riêng"}</button>`:""}</div>
+    <div class="l2"><span class="mono jcode">${esc(j.code)}${j.example?' <span class="ex">VÍ DỤ</span>':""}</span><button class="ghost sm urg${j.priority==="Gấp"?" on":""}" data-act="urgent" title="Bật / tắt job gấp">⚡ Gấp</button>${spaceOn()&&isMine(j)?`<button class="ghost sm shr" data-act="share" title="Đưa job này sang Sổ chung: nhân viên thấy và làm cùng">→ Chuyển sang Sổ chung</button>`:""}</div>
     <div id="stagebar">${stagesHtml(j)}</div>
     ${lateBox(j)}
     ${j.status===FAIL?`<div class="alert bad">Thất bại: ${esc(j.failReason||"chưa ghi lý do")}${j.failNote?" · "+esc(j.failNote):""}</div>`:""}
@@ -1098,21 +1105,13 @@ function renderDetail(force){
   </div>`}
   ${lotSec(j)}
   <div class="sec"><h3>Báo giá <span class="acts"><button class="ghost sm ai" data-act="aiQuote" title="Claude lập báo giá từ yêu cầu và giá đã báo trước đây">✦ Claude soạn</button><button class="ghost sm" data-act="fillPrices">Điền giá lần trước</button><button class="ghost sm" data-act="qadd">+ Thêm dòng</button></span></h3>
-    ${(j.quote||[]).length?`<div class="qwrap"><table class="q"><thead><tr><th style="width:32%">Hạng mục</th><th class="num" style="width:8%">SL</th><th style="width:10%">ĐVT</th><th class="num" style="width:15%">Đơn giá</th><th style="width:9%">Tiền tệ</th><th class="num">Thành tiền</th><th>Giá lần trước</th><th></th></tr></thead><tbody>
-    ${j.quote.map((q,i)=>`<tr><td><input id="q-${i}-name" data-q="${i}:name" list="items" value="${esc(q.name)}"></td><td><input class="num mono" id="q-${i}-qty" data-q="${i}:qty" value="${esc(q.qty)}" inputmode="decimal"></td><td><input id="q-${i}-unit" data-q="${i}:unit" value="${esc(q.unit)}"></td><td><input class="num mono" id="q-${i}-price" data-q="${i}:price" value="${esc(q.price)}" inputmode="decimal"></td><td><select id="q-${i}-currency" data-q="${i}:currency">${opt(CURS,q.currency||"VND")}</select></td><td class="num mono" data-amt="${i}">${fmt(num(q.qty)*num(q.price),q.currency)}</td><td data-hint="${i}">${hintHtml(q,j,i)}</td><td><button class="x" data-act="qdel" data-i="${i}" aria-label="Xoá dòng">✕</button></td></tr>`).join("")}
+    ${(j.quote||[]).length?`<div class="qwrap"><table class="q"><thead><tr><th style="width:24%">Hạng mục</th><th class="num" style="width:6%">SL</th><th style="width:8%">ĐVT</th><th class="num" style="width:13%">Đơn giá</th><th class="num" style="width:13%">Thành tiền</th><th class="num net" style="width:13%" title="Giá vốn / giá nhập hệ thống công ty – không gửi khách">Giá NET</th><th class="num net" style="width:13%">Thành tiền NET</th><th>Giá lần trước</th><th></th></tr></thead><tbody>
+    ${j.quote.map((q,i)=>`<tr><td><input id="q-${i}-name" data-q="${i}:name" list="items" value="${esc(q.name)}"></td><td><input class="num mono" id="q-${i}-qty" data-q="${i}:qty" value="${esc(q.qty)}" inputmode="decimal"></td><td><input id="q-${i}-unit" data-q="${i}:unit" value="${esc(q.unit)}"></td><td><input class="num mono" id="q-${i}-price" data-q="${i}:price" value="${esc(q.price)}" inputmode="decimal"></td><td class="num mono" data-amt="${i}">${fmt(num(q.qty)*num(q.price),q.currency)}</td><td><input class="num mono net" id="q-${i}-net" data-q="${i}:net" value="${esc(q.net||"")}" inputmode="decimal" placeholder="NET"></td><td class="num mono netamt" data-namt="${i}">${num(q.net)?fmt(num(q.qty)*num(q.net),q.currency):""}</td><td data-hint="${i}">${hintHtml(q,j,i)}</td><td><button class="x" data-act="qdel" data-i="${i}" aria-label="Xoá dòng">✕</button></td></tr>`).join("")}
     </tbody></table></div><span style="font-size:11.5px;color:var(--muted)">Giá lần trước lấy từ cùng FWD; dấu * là giá báo cho FWD khác.</span>`:`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có hạng mục. Bấm “+ Thêm dòng”.</p>`}
-    <div class="grid2"><label class="fld"><span>VAT (%)</span><input id="f-vat" data-f="vat" type="number" min="0" step="1" value="${esc(j.vat||0)}"></label><div class="tot" id="qtot"></div></div>
+    <div class="grid2"><div class="vatbox"><span>VAT</span><div class="chips2">${VAT_OPEN?[8,10].map(v=>`<button type="button" class="${vatRate(j)===v?"on":""}" data-vat="${v}">${v}%</button>`).join(""):`<button type="button" class="on" data-vat="open" title="Bấm để đổi VAT">${vatRate(j)}% ▾</button>`}</div></div><div class="tot" id="qtot"></div></div>
     <label class="fld"><span>Ghi chú báo giá</span><textarea id="f-quoteNote" data-f="quoteNote" rows="2" placeholder="VD: Giá chưa gồm local charge, kiểm hoá, lưu kho…">${esc(j.quoteNote)}</textarea></label>
-    <div class="acts"><button data-act="copyQuote" class="primary">Copy báo giá</button><button data-act="copyBrief">Copy tóm tắt job</button>${j.quoteSentAt?`<span style="font-size:12px;color:var(--muted)">Đã gửi báo giá ${dmy(j.quoteSentAt)}</span>`:""}</div>
+    <div class="acts"><button data-act="copyQuote" class="primary">Copy báo giá</button><button data-act="draftDebit" class="debitbtn">🧾 Soạn debit</button><button data-act="copyBrief">Copy tóm tắt job</button>${j.quoteSentAt?`<span style="font-size:12px;color:var(--muted)">Đã gửi báo giá ${dmy(j.quoteSentAt)}</span>`:""}</div>
     <div id="copyFallback"></div>
-  </div>
-  <div class="sec"><h3>Debit & thanh toán <button class="ghost sm" data-act="debitFromQuote" style="letter-spacing:0;text-transform:none">Lấy tổng từ báo giá</button><button class="ghost sm ai" data-act="aiRemind" style="letter-spacing:0;text-transform:none" title="Claude soạn tin nhắc thanh toán / hoàn cược, gộp các lô của cùng FWD">✦ Soạn tin nhắc</button></h3>
-    <div class="grid2">
-      <label class="fld"><span>Số tiền debit</span><input class="mono" id="f-debitAmount" data-f="debitAmount" inputmode="decimal" value="${esc(num(j.debitAmount)?j.debitAmount:"")}" placeholder="0"></label>
-      ${SEL("debitCurrency","Tiền tệ",CURS,j.debitCurrency||"VND")}
-      ${F("debitDate","Ngày gửi debit",j.debitDate,"","date")}${F("paidDate","Ngày khách trả",j.paidDate,"","date")}
-    </div>
-    <span style="font-size:12px;color:var(--muted)">Điền ngày gửi debit → job sang “Chờ thu tiền”. Điền ngày khách trả → job sang “Hoàn thành”${needDeposit(j)?" (khi đã hoàn cược cont)":""}.</span>
   </div>
   <div class="sec"><h3>Lịch sử hoạt động <span class="mono">${(j.history||[]).length}</span></h3>
     ${(j.history||[]).length?`<ol class="hist">${[...j.history].reverse().slice(0,40).map(h=>`<li><span class="mono">${new Date(h.at).toLocaleString("vi-VN",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</span><span>${histText(h)}</span></li>`).join("")}</ol>`:`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có. Mỗi lần chuyển bước, trả về, ghi vướng mắc sẽ được ghi lại ở đây.</p>`}
@@ -1128,9 +1127,10 @@ function renderDetail(force){
   renderTotals(j);
 }
 function renderTotals(j){
-  const t=totals(j),vat=num(j.vat),el=$("#qtot");if(!el)return;
+  const t=totals(j),vat=vatRate(j),el=$("#qtot");if(!el)return;
   const ks=Object.keys(t);if(!ks.length){el.innerHTML="";return}
-  el.innerHTML=ks.map(c=>`<span>Cộng ${c}: <span class="mono">${fmt(t[c],c)}</span></span>${vat?`<span>VAT ${vat}%: <span class="mono">${fmt(vatOf(t[c],vat,c),c)}</span></span>`:""}<span>Tổng ${c}: <b>${fmt(grandOf(t[c],vat,c),c)}</b></span>`).join("");
+  const nt={};(j.quote||[]).forEach(q=>{if(num(q.net)>0){const c=q.currency||"VND";nt[c]=(nt[c]||0)+num(q.qty)*num(q.net)}});
+  el.innerHTML=ks.map(c=>`<span>Cộng ${c}: <span class="mono">${fmt(t[c],c)}</span></span>${vat?`<span>VAT ${vat}%: <span class="mono">${fmt(vatOf(t[c],vat,c),c)}</span></span>`:""}<span>Tổng ${c}: <b>${fmt(grandOf(t[c],vat,c),c)}</b></span>${nt[c]?`<span class="netsum">NET ${c}: <span class="mono">${fmt(nt[c],c)}</span> · Chênh lệch: <b class="mono">${fmt(t[c]-nt[c],c)}</b></span>`:""}`).join("");
 }
 function lateBox(j){
   let st=lateState(j);if(!st)return "";const a=j.lateAck||{},nx=nextStage(j)||"bước sau";const editing=S.lateEdit===j.id&&st==="pend";if(editing)st="none";
@@ -1196,7 +1196,7 @@ function quoteText(j){
   const route=[j.pol||j.pod?`${j.pol||"?"} → ${j.pod||"?"}`:"",j.mode,j.incoterm].filter(Boolean).join(" | ");if(route)L.push(`Tuyến: ${route}`);
   if(j.cargo)L.push(`Hàng: ${j.cargo}`);L.push("");
   (j.quote||[]).forEach((q,i)=>L.push(`${i+1}. ${q.name}: ${fmt(q.qty)} ${q.unit||""} × ${fmt(q.price,q.currency)} = ${fmt(num(q.qty)*num(q.price),q.currency)} ${q.currency||"VND"}`));
-  const t=totals(j),vat=num(j.vat);L.push("");
+  const t=totals(j),vat=vatRate(j);L.push("");
   Object.keys(t).forEach(c=>{L.push(`Cộng: ${fmt(t[c],c)} ${c}`);if(vat){L.push(`VAT ${vat}%: ${fmt(vatOf(t[c],vat,c),c)} ${c}`);L.push(`Tổng cộng: ${fmt(grandOf(t[c],vat,c),c)} ${c}`)}});
   if(j.quoteNote)L.push("","Ghi chú: "+j.quoteNote);
   return L.join("\n").replace(/\n{3,}/g,"\n\n").trim();
@@ -1292,7 +1292,7 @@ async function manualJob(status){
       const data={title:v.title,fwd:v.fwd,company:v.company,type,source:"Điện thoại",tasks:sv?tplTasks(type):[],
         status:status||STAGES[0],bl:v.bl,cont:v.cont,tkNo:v.tkNo.replace(/\D/g,"").slice(0,12),mst:v.mst,deadline:v.deadline,contact:v.contact,cargo:v.cargo,summary:v.summary};
       if(sv){data.service=sv;if(sv!=="HQ")data.vehicle=st.vehicle}
-      done();await createJob(data);toast(`Đã tạo ${cur()?.code}.${sv?"":" Chọn dịch vụ trong phiếu job."}`);
+      done();await createJob(data);{const nj=cur();if(nj&&sv&&sv!=="VC"){addFee(nj,FEE_HQ,"tờ khai",true);queueSave(nj);renderAll(true)}}toast(`Đã tạo ${cur()?.code}.${sv?"":" Chọn dịch vụ trong phiếu job."}`);
     };
     setTimeout(()=>f.querySelector("[name=title]").focus(),20);
   });
@@ -1335,7 +1335,7 @@ D.addEventListener("input",e=>{
     let v=t.type==="checkbox"?t.checked:t.value;
     if(f==="vat")v=num(v);
     if(f==="cost")v=roundMoney(num(String(v).replace(/[.,\s]/g,"")),"VND");
-    if(f==="debitAmount")v=roundMoney(num(v),j.debitCurrency);
+    if(f==="debitAmount")v=roundMoney(num(String(v).replace(/[.,\s]/g,"")),"VND");
     j[f]=v;
     if(f==="debitDate"&&v&&isOpen(j.status)&&stIdx(j.status)<9){setStatus(j,"Chờ thu tiền","auto","Điền ngày gửi debit");syncStages(j)}
     if(f==="paidDate"&&v&&isOpen(j.status)){if(needDeposit(j)&&!["Đã hoàn","Không có cược"].includes(j.deposit))toast("Đã ghi ngày trả. Lô có vận chuyển chưa hoàn cược nên chưa chuyển Hoàn thành.");else{setStatus(j,DONE,"auto","Điền ngày khách trả");renderDetail(true)}}
@@ -1347,8 +1347,8 @@ D.addEventListener("input",e=>{
   }
   else if(t.dataset.t!==undefined){j.tasks[+t.dataset.t].text=t.value;queueSave(j)}
   else if(t.dataset.q){const[i,fl]=t.dataset.q.split(":");const q=j.quote[+i];
-    q[fl]=(fl==="qty"||fl==="price")?t.value.replace(/[^\d.,\-]/g,"").replace(/,(?=\d{1,2}$)/,".").replace(/,/g,""):t.value;
-    queueSave(j);const a=D.querySelector(`[data-amt="${i}"]`);if(a)a.textContent=fmt(num(q.qty)*num(q.price),q.currency);
+    q[fl]=(fl==="qty"||fl==="price"||fl==="net")?t.value.replace(/[^\d.,\-]/g,"").replace(/,(?=\d{1,2}$)/,".").replace(/,/g,""):t.value;
+    queueSave(j);const a=D.querySelector(`[data-amt="${i}"]`);if(a)a.textContent=fmt(num(q.qty)*num(q.price),q.currency);const na=D.querySelector(`[data-namt="${i}"]`);if(na)na.textContent=num(q.net)?fmt(num(q.qty)*num(q.net),q.currency):"";
     if(fl==="name"){const h=D.querySelector(`[data-hint="${i}"]`);if(h)h.innerHTML=hintHtml(q,j,+i)}
     renderTotals(j)}
 });
@@ -1400,7 +1400,8 @@ D.addEventListener("click",e=>{
     if(n){queueSave(j);renderDetail(true)}toast(n?`Đã điền giá cũ cho ${n} dòng. Kiểm tra lại trước khi gửi.`:"Không có dòng nào (đơn giá = 0) tìm được giá cũ cùng tên.")}
   if(a==="copyQuote"){copy(quoteText(j));if(!j.quoteSentAt){j.quoteSentAt=TODAY();if(j.status===STAGES[0])setStatus(j,"Báo giá","auto","Copy báo giá");queueSave(j);renderSide();renderMain();syncStages(j)}}
   if(a==="copyBrief")copy(briefText(j));
-  if(a==="debitFromQuote"){const t=totals(j),vat=num(j.vat),c=t.VND!==undefined?"VND":Object.keys(t)[0];
+  if(a==="draftDebit"){toast("Mẫu debit đang chờ cập nhật. Sẽ có sau khi có mẫu.");return}
+  if(a==="debitFromQuote"){const t=totals(j),vat=vatRate(j),c=t.VND!==undefined?"VND":Object.keys(t)[0];
     if(!c){toast("Báo giá chưa có dòng nào.");return}
     if(Object.keys(t).length>1)toast("Báo giá có nhiều loại tiền: chỉ lấy tổng "+c+".");j.debitAmount=grandOf(t[c],vat,c);j.debitCurrency=c;queueSave(j);renderAll(true)}
   if(a==="srcFile"){srcPick();return}
@@ -1540,6 +1541,10 @@ ${text.slice(0,12000)||"(không có, chỉ có ảnh)"}`,{images:files,maxImages
 const chips2=(f,opts,val,labels,cls)=>`<div class="chips2" role="group">${opts.map((o,i)=>`<button type="button" class="${cls?cls[i]:""}${val===o?" on":""}" data-set="${f}" data-v="${esc(o)}" aria-pressed="${val===o}">${labels?labels[i]:esc(o)}</button>`).join("")}</div>`;
 const CHECKS=[["kh","Kiểm hoá","🔍","Phí kiểm hoá"],["tv","KDTV","🌿","Phí kiểm dịch thực vật"],["dv","KDĐV","🐄","Phí kiểm dịch động vật"],["attp","ATTP","🥫","Phí kiểm tra ATTP"],["cl","KTCL","🧪","Phí kiểm tra chất lượng"]];
 let OPT_OPEN="";
+const FEE_HQ="Phí khai báo hải quan";
+function addFee(j,name,unit="lô",first=false){j.quote=j.quote||[];if(j.quote.some(q=>q.name===name))return;const h=lastPrice(name,groupKey(j),j.id);
+  const q={name,qty:1,unit:h&&h.unit||unit,price:h?h.price:0,currency:h?h.currency:"VND"};first?j.quote.unshift(q):j.quote.push(q)}
+const dropFee=(j,name)=>{if(j.quote)j.quote=j.quote.filter(q=>q.name!==name)};
 const CO_FORMS=["E","D","AK","AJ","VJ","RCEP","CPTPP","EUR.1","B","Khác"];
 const LF=(f,label,val,ph="",cls="",type="text")=>`<label class="fld ${cls}"><span>${label}</span><input id="f-${f}" data-f="${f}" type="${type}" value="${esc(val||"")}" placeholder="${esc(ph)}"></label>`;
 const MORE=["deadline","pol","pod","incoterm","refs","contact","summary","questions"];
@@ -1579,8 +1584,8 @@ function lotSec(j){
     ${truck?"":`<div class="row1"><b>Hoàn cược</b>${chips2("deposit",["Chưa hoàn","Đã hoàn","Không có cược"],j.deposit||"",["Chưa hoàn","Đã hoàn","Không cược"])}</div>`}`;
   const mineBlk=spaceOn()&&isMine(j)?`<div class="sub">Việc riêng · thu chi</div>
     <div class="row1"><b>Thực hiện</b>${chips2("doer",["R","Tuấn","CHUNG THÁNG"],j.doer||"",["Tự trình (R)","Tuấn · 50k/tk","Chung tháng"])}</div>
-    <div class="g2">${LF("qty","Số lượng (cont / kiện)",j.qty,"VD: 2")}${LF("cost","Chi (đ)",j.cost?fmt(j.cost,"VND"):"","VD: 300.000")}</div>
-    <p style="margin:8px 0 0;font-size:14px">Thu: <b>${fmt(j.debitAmount,"VND")}</b> đ <span style="color:var(--muted)">(sửa ở mục Debit)</span> · Lãi: <b>${fmt(num(j.debitAmount)-num(j.cost),"VND")}</b> đ${j.doer==="Tuấn"?` · trả Tuấn ${fmt(FEE_TUAN,"VND")} đ`:""}</p>`:"";
+    <div class="g2">${LF("qty","Số lượng (cont / kiện)",j.qty,"VD: 2")}${LF("debitAmount","Thu (đ)",num(j.debitAmount)?fmt(j.debitAmount,"VND"):"","VD: 500.000")}${LF("cost","Chi (đ)",j.cost?fmt(j.cost,"VND"):"","VD: 300.000")}</div>
+    <p style="margin:8px 0 0;font-size:14px">Lãi: <b>${fmt(num(j.debitAmount)-num(j.cost),"VND")}</b> đ${j.doer==="Tuấn"?` · trả Tuấn ${fmt(FEE_TUAN,"VND")} đ`:""}</p>`:"";
   return `<div class="sec lot">${head}${svcRow}${hq?hqBlk:""}${vc?vcBlk:""}${mineBlk}
     ${hq?"":`<div class="g2">${LF("cargo","Hàng hoá / số lượng",j.cargo,"VD: Máy móc, 25 kiện","full")}</div>`}
     ${more}</div>`;
@@ -1591,15 +1596,15 @@ function setLotField(j,f,v){
   if(f==="coStatus"&&v==="Đã cấp"&&!j.coDate)j.coDate=TODAY();
   if(f==="service"){
     const was=j.svcPending;delete j.svcPending;j.service=v;
+    if(v==="VC"){dropFee(j,FEE_HQ);CHECKS.forEach(c=>dropFee(j,c[3]));j.checks=[]}else addFee(j,FEE_HQ,"tờ khai",true);
     if(v!=="HQ"&&!j.vehicle)j.vehicle="Xe cont";
     if(v==="VC"&&["Khác","Khai HQ nhập","Khai HQ xuất"].includes(j.type))j.type="Vận chuyển";
     if(v!=="VC"&&["Khác","Vận chuyển"].includes(j.type))j.type="Khai HQ nhập";
     if(was&&!(j.tasks||[]).length)j.tasks=tplTasks(j.type);
     logH(j,{kind:"note",note:"Chọn dịch vụ "+v});
   }else if(f==="chk"){const c=CHECKS.find(x=>x[0]===v);if(!c)return;const fee=c[3],has=(j.checks||[]).includes(v);
-    j.checks=has?j.checks.filter(x=>x!==v):(j.checks||[]).concat(v);j.quote=j.quote||[];
-    if(has)j.quote=j.quote.filter(q=>q.name!==fee);
-    else if(!j.quote.some(q=>q.name===fee)){const h=lastPrice(fee,groupKey(j),j.id);j.quote.push({name:fee,qty:1,unit:h&&h.unit||"lô",price:h?h.price:0,currency:h?h.currency:"VND"})}
+    j.checks=has?j.checks.filter(x=>x!==v):(j.checks||[]).concat(v);
+    has?dropFee(j,fee):addFee(j,fee);
     logH(j,{kind:"note",note:(has?"Bỏ ":"Chọn ")+fee.slice(4)});
   }else j[f]=v;
   queueSave(j);renderAll(true);
