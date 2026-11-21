@@ -2094,7 +2094,7 @@ function tkCheckRow(j){const c=j.tkCheck,busy=TK_BUSY===j.id;
     :`<span class="tkst bad">${/chưa được cấp phép/i.test(c.msg||"")?"⏳":"❌"} ${esc(c.msg||"Chưa có kết quả")}</span>`;
   const when=c?`<small>Kiểm tra lúc ${new Date(c.at).toLocaleString("vi-VN",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"})}${c.tkNo&&c.tkNo!==j.tkNo?` · TK ${esc(c.tkNo)}`:""}</small>`:`<small>Tờ khai đã sửa thì ghi số TK bản sửa mới nhất (số cuối 0, 1, 2…).</small>`;
   return `<div class="mvrow"><button type="button" class="mvbtn tkbtn" data-tkcheck="${esc(j.id)}"${busy?" disabled":""}>${busy?"⏳ Đang kiểm tra…":"🔍 Kiểm tra trạng thái tờ khai"}</button>
-    ${c&&c.ok&&c.mv&&c.url?`<button type="button" class="primary mvbtn" data-mvopen="${esc(j.id)}">${MV_OPEN===j.id?"✕ Đóng MV":"📄 Lấy MV"}</button>`:""}
+    ${c&&c.ok&&c.url?`<button type="button" class="primary mvbtn" data-mvopen="${esc(j.id)}">${MV_OPEN===j.id?"✕ Đóng MV":"📄 Lấy MV"}</button>`:""}
     <div class="tkinfo">${line}${when}</div></div>
     ${MV_OPEN===j.id&&c&&c.url?`<div class="mvframe"><iframe src="${esc(c.url)}" title="Bản kê mã vạch"></iframe></div>`:""}`}
 function tkInputs(j){const g=f=>{const el=document.getElementById("f-"+f);return String((el&&el.value)||j[f]||"").trim()};

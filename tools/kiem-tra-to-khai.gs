@@ -53,7 +53,7 @@ function docBangKe(html) {
   var st = lay("lblTrangThaiToKhai");
   if (!st && !lay("lblSoToKhai")) return docLoi(html);
   return {
-    ok: true, mv: /ImgBarcode128/.test(html),
+    ok: true, mv: /<img[^>]*src="data:image\//.test(html), // hàng lẻ: mã vạch dài; hàng container: mã QR
     status: st, lane: lay("lblLuong"), kind: lay("lblTenLoaiHinh"), company: lay("lblTenDVXNK"),
     tkNo: lay("lblSoToKhai"), dates: lay("lblNgayToKhai"), qlhh: lay("lblSoQuanLyHangHoa"),
     qty: lay("lblSoLuongHang"), weight: lay("lblTongTrongLuong"), gs: lay("lblTenChiCucHQGS"), seal: lay("lblTrangThaiNiemPhong")
