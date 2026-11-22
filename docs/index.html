@@ -457,6 +457,17 @@ tr.sec-B .abtn button.on{background:#8A5A00;border-color:#8A5A00}tr.sec-B{backgr
 .cpop-x{position:absolute;top:6px;right:6px;border:0;background:none;cursor:pointer;color:var(--muted);font-size:13px}.cpop:hover{border-left-color:#174C8E}
 @keyframes cpin{from{transform:translateY(-6px);opacity:0}to{transform:none;opacity:1}}
 .mutebtn{margin-left:auto;letter-spacing:0;text-transform:none;font-weight:500}#btnBell.on{color:#1F7A4D}
+.tbadge{display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#D9534F;color:#fff;font-size:11.5px;line-height:18px;text-align:center}
+.teamchat{display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:420px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r,12px);padding:10px 12px}
+.tm-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid var(--line)}.tm-h b{font-size:16px}.tm-h .muted{font-size:12.5px;color:var(--muted);flex:1}
+.teamchat .tm-list{flex:1;max-height:none;min-height:0;margin:8px 0}.teamchat .chat .m{font-size:14.5px;max-width:80%}
+.tday{align-self:center;font-size:12px;color:var(--muted);margin:6px 0;padding:2px 10px;border-radius:10px;background:var(--surface-2)}
+.jchip{display:inline-flex;align-items:center;gap:4px;margin:2px 0 4px;padding:2px 8px;border-radius:12px;border:1px solid #9FC1E8;background:#EAF2FC;color:#174C8E;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.chat .m .jchip{display:flex;width:fit-content}.jchip.on button{border:0;background:none;cursor:pointer;color:#174C8E;margin-left:4px}
+.tm-in{position:relative}.tm-in .chatin textarea{min-height:52px;font-size:15px}#tmJob{margin-bottom:4px;font-size:12.5px}#tmJob .muted{color:var(--muted)}
+.tm-sug{position:absolute;bottom:100%;left:0;right:0;max-height:300px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:5}
+.tm-sug input{padding:8px;border:1px solid var(--line);border-radius:8px;margin-bottom:4px;font-size:14px}.tm-sug button{text-align:left;border:0;background:none;padding:7px 8px;border-radius:6px;cursor:pointer;font-size:14px}.tm-sug button:hover{background:var(--surface-2)}.tm-sug .muted{color:var(--muted);font-size:12px}
+#tmPick{min-width:44px;font-size:18px;padding:6px 8px;flex:0 0 auto}.tmore{align-self:center}.cpop.team{border-left-color:#1F7A4D}
 .lanesel{font-weight:600}.lanesel.ln-g{background:#E3F4E8;border-color:#5FB37A}.lanesel.ln-y{background:#FFF6D6;border-color:#E0B83A}.lanesel.ln-r{background:#FDE5E2;border-color:#D9605A}.lanesel.ln-0{color:var(--muted);font-weight:400}
 .mvrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.mvrow .mvbtn{font-size:16px;padding:8px 14px;font-weight:600}.tkinfo{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px}.tkinfo small{color:var(--muted);font-size:13px}.tkst{font-size:15px}.tkst.bad{color:#B4541A}.mvframe{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0 10px;background:#fff}.mvframe iframe{width:100%;height:520px;border:0;display:block}
 </style>
@@ -477,6 +488,7 @@ tr.sec-B .abtn button.on{background:#8A5A00;border-color:#8A5A00}tr.sec-B{backgr
     <div id="latebar"></div>
     <div class="bar">
       <div class="tabs" role="tablist">
+        <button data-view="team" hidden>💬 Chat chung<span class="tbadge" id="teamBadge" hidden></span></button>
         <button data-view="list" class="on">Danh sách</button>
         <button data-view="board">Quy trình</button>
       </div>
@@ -517,7 +529,7 @@ tr.sec-B .abtn button.on{background:#8A5A00;border-color:#8A5A00}tr.sec-B{backgr
 <div id="toast" hidden></div>
 
 <script src="firebase-config.js?v=483007a3c3"></script>
-<script src="static-shim.js?v=68a3f5f52f"></script>
+<script src="static-shim.js?v=8d525e94ee"></script>
 <script>
 const TYPES=["Báo giá","Khai HQ nhập","Khai HQ xuất","Vận chuyển","Chứng từ / C/O","Kiểm tra chuyên ngành","Khác"];
 const MODES=["","Sea FCL","Sea LCL","Air","Road","Express"];
@@ -990,6 +1002,11 @@ function renderMain(){
   renderProfile();
   const el=$("#content");
   if(!S.loaded)return;
+  if(!S.view0){S.view0=true;if(teamOn())S.view="team"} // mở sổ: vào Chat chung
+  if(S.view==="team"&&!teamOn())S.view="list";
+  teamWatch();teamBadge();
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===S.view));$("#fStatus").hidden=S.view!=="list";
+  if(S.view==="team"){renderTeam(el);return}
   if(S.view==="tpl"){
     if(el.dataset.v==="tpl"&&el.contains(document.activeElement))return;
     el.dataset.v="tpl";
@@ -1778,7 +1795,7 @@ async function chatSend(j){
   (S.chat[j.id]=S.chat[j.id]||[]).push(Object.assign({id:"tmp"+msg.at},msg));chatPaint(j.id);
   try{await db.collection("jobs/"+j.id+"/chat").add(msg)}
   catch(e){toast("Chưa gửi được: "+(e?.message||e?.code));S.chat[j.id]=S.chat[j.id].filter(m=>m.id!=="tmp"+msg.at);chatPaint(j.id);t.value=text;return}
-  j.chatAt=msg.at;j.chatBy=me();j.chatByName=msg.byName;j.chatLast=text.slice(0,80);queueSave(j);chatMarkSeen(j);setTimeout(()=>pushPing(j),1500);
+  j.chatAt=msg.at;j.chatBy=me();j.chatByName=msg.byName;j.chatLast=text.slice(0,80);queueSave(j);chatMarkSeen(j);setTimeout(()=>pushPing(j),1500);teamMirror(j,msg);
 }
 const chatToasted=new Map();
 const chatMuted=j=>(j.mute||[]).includes(me());
@@ -1809,17 +1826,128 @@ async function openJobAny(id){
   const inTeam=!(boss()&&isMine(j));
   if(inTeam&&SPACE==="mine")await setSpace("team");
   if(!inTeam&&SPACE!=="mine")await setSpace("mine");
-  if(S.view!=="list"&&S.view!=="board")S.view="list";
+  if(!["list","board","team"].includes(S.view))S.view="list";
+  if(S.view==="team"&&!inTeam)S.view="list";
   openJob(id);
 }
 let urlJobDone=false;
 function openFromUrl(){
-  if(urlJobDone)return;const id=new URLSearchParams(location.search).get("job");if(!id){urlJobDone=true;return}
+  if(urlJobDone)return;if(new URLSearchParams(location.search).get("view")==="team"){urlJobDone=true;S.view0=true;S.view="team";try{history.replaceState(null,"",location.pathname)}catch(e){}setTimeout(renderMain,0);return}const id=new URLSearchParams(location.search).get("job");if(!id){urlJobDone=true;return}
   if(!S.all.some(x=>x.id===id))return;urlJobDone=true;
   try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}
   setTimeout(()=>openJobAny(id),0)}
 if(navigator.serviceWorker)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.openJob)openJobAny(e.data.openJob)});
 
+/* ---------- Chat chung: cả nhóm trao đổi, gắn job bấm được ---------- */
+const TEAM_PAGE=200;
+let teamSub=null,teamN=TEAM_PAGE,teamPopFrom=Date.now(),teamMuteOn=null;
+S.team=[];S.teamJob=null;S.teamDraft="";
+const teamOn=()=>team()&&SPACE!=="mine";
+const teamPickable=()=>S.all.filter(j=>j.shared&&isOpen(j.status)).sort((a,b)=>(b.chatAt||b.createdAt||0)-(a.chatAt||a.createdAt||0));
+const jobLabel=j=>String(j.company||j.title||"").slice(0,32);
+let teamSeen=(()=>{try{return +localStorage.getItem("sojob.teamSeen")||0}catch(e){return 0}})();
+const teamSeenSave=()=>{try{localStorage.setItem("sojob.teamSeen",String(teamSeen))}catch(e){}};
+const teamUnread=()=>S.team.filter(m=>m.by!==me()&&(m.at||0)>teamSeen).length;
+function teamWatch(){
+  if(!team()||!db||teamSub)return;
+  try{
+    teamSub=db.collection("teamchat").orderBy("at","desc").limit(teamN).onSnapshot(snap=>{
+      const list=snap.docs.map(d=>Object.assign({id:d.id},d.data())).sort((a,b)=>(a.at||0)-(b.at||0));
+      const fresh=list.filter(m=>(m.at||0)>teamPopFrom&&m.by!==me()&&!m.job);
+      S.team=list;teamPopFrom=Math.max(teamPopFrom,...list.map(m=>m.at||0));
+      if(fresh.length&&!(S.view==="team"&&!document.hidden)&&!teamMuteOn)teamPop(fresh[fresh.length-1],fresh.length);
+      teamPaint();
+    },e=>{S.teamErr=e?.message||e?.code||"lỗi";teamPaint()});
+  }catch(e){S.teamErr=String(e)}
+  if(teamMuteOn===null)db.collection("push").doc(me()).get().then(s=>{teamMuteOn=!!(s.exists&&s.data().muteTeam);teamPaint()}).catch(()=>{teamMuteOn=false});
+}
+function teamMore(){if(teamSub)try{teamSub()}catch(e){}teamSub=null;teamN+=TEAM_PAGE;teamWatch()}
+function teamPop(m,n){
+  const fake={id:"__team",chatByName:m.byName||m.by,code:"Chat chung",title:n>1?`${n} tin mới`:"",chatLast:m.text};
+  let box=$("#chatPops");if(!box){box=document.createElement("div");box.id="chatPops";document.body.appendChild(box)}
+  box.querySelector('[data-pop="__team"]')?.remove();
+  const c=document.createElement("div");c.className="cpop team";c.dataset.pop="__team";
+  c.innerHTML=`<button class="cpop-x" aria-label="Đóng">✕</button><b>💬 ${esc(fake.chatByName)} · Chat chung</b>${fake.title?`<span class="t">${esc(fake.title)}</span>`:""}<span class="m">${esc(m.text||"")}</span>`;
+  c.onclick=e=>{c.remove();if(!e.target.closest(".cpop-x")){if(SPACE==="mine")setSpace("team").then(()=>{S.view="team";renderMain()});else{S.view="team";renderMain()}}};
+  box.prepend(c);setTimeout(()=>c.remove(),15000);
+  if(document.hidden&&!PUSH_ON&&window.Notification&&Notification.permission==="granted")try{const no=new Notification(`💬 ${fake.chatByName} · Chat chung`,{body:m.text||"",tag:"teamchat",icon:"icon-192.png"});no.onclick=()=>{window.focus();S.view="team";renderMain();no.close()}}catch(e){}
+}
+function teamBadge(){const b=$("#teamBadge"),t=document.querySelector('.tabs [data-view="team"]');if(t)t.hidden=!teamOn();if(!b)return;const n=teamUnread();b.hidden=!n;b.textContent=n>99?"99+":n}
+const tmTime=at=>{const d=new Date(at||0),t=new Date();const hm=d.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});return d.toDateString()===t.toDateString()?hm:hm+" "+d.toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"})};
+function teamMsgs(){
+  if(S.teamErr&&!S.team.length)return `<div class="none">Chưa đọc được Chat chung: ${esc(S.teamErr)}</div>`;
+  if(!S.team.length)return `<div class="none">Chưa có tin nào. Nhắn cho cả nhóm ở ô bên dưới, bấm 📎 hoặc gõ # để gắn job.</div>`;
+  let day="";
+  return (S.team.length>=teamN?`<button class="ghost sm tmore" data-tm="more">Tải thêm tin cũ</button>`:"")+S.team.map(m=>{
+    const d=new Date(m.at||0).toLocaleDateString("vi-VN",{weekday:"long",day:"2-digit",month:"2-digit"});const sep=d!==day?`<div class="tday">${esc(d)}</div>`:"";day=d;
+    const j=m.job&&S.all.find(x=>x.id===m.job.id);
+    const chip=m.job?`<button class="jchip" data-tmjob="${esc(m.job.id)}" title="Mở job">📁 ${esc(m.job.code||"")}${m.job.label?" · "+esc(m.job.label):""}${m.from==="job"?" · trong job":""}</button>`:"";
+    return sep+`<div class="m${m.by===me()?" me":""}"><small>${esc(m.by===me()?"Bạn":(m.byName||m.by))} · ${tmTime(m.at)}</small>${chip}${esc(m.text||"")}</div>`}).join("");
+}
+function renderTeam(el){
+  if(el.dataset.v!=="team"||!$("#tmList")){
+    el.dataset.v="team";
+    el.innerHTML=`<div class="teamchat"><div class="tm-h"><b>💬 Chat chung</b><span class="muted">Cả nhóm trao đổi. Tin nhắn trong job ở Sổ chung cũng hiện ở đây, bấm 📁 để mở job.</span><button class="ghost sm" id="tmMute"></button></div>
+      <div class="chat tm-list" id="tmList"></div>
+      <div class="tm-in"><div id="tmJob"></div><div id="tmSug" class="tm-sug" hidden></div>
+        <div class="chatin"><button class="ghost" id="tmPick" title="Gắn job vào tin nhắn">📎</button><textarea id="tmTxt" rows="2" placeholder="Nhắn cho cả nhóm… (gõ # để gắn job)">${esc(S.teamDraft)}</textarea><button class="primary" id="tmSend">Gửi</button></div></div></div>`;
+  }
+  teamPaint(true);
+}
+function teamPaint(force){
+  teamBadge();
+  if(S.view!=="team")return;
+  const L=$("#tmList");if(!L)return;
+  const atBottom=force||L.scrollHeight-L.scrollTop-L.clientHeight<80;
+  L.innerHTML=teamMsgs();if(atBottom)L.scrollTop=L.scrollHeight;
+  const mb=$("#tmMute");if(mb){mb.textContent=teamMuteOn?"🔕 Đã tắt báo":"🔔 Đang báo";mb.title=teamMuteOn?"Bấm để bật lại thông báo Chat chung":"Bấm để tắt thông báo Chat chung trên mọi máy của bạn"}
+  const jb=$("#tmJob");if(jb){const j=S.teamJob&&S.all.find(x=>x.id===S.teamJob);jb.innerHTML=j?`<span class="jchip on">📁 ${esc(j.code)} · ${esc(jobLabel(j))}<button data-tm="unjob" aria-label="Bỏ gắn job">✕</button></span><span class="muted"> Tin này sẽ lưu cả vào Trao đổi của job.</span>`:""}
+  if(!document.hidden&&S.team.length){const last=Math.max(...S.team.map(m=>m.at||0));if(last>teamSeen){teamSeen=last;teamSeenSave();teamBadge()}}
+}
+function teamSug(q){
+  const box=$("#tmSug");if(!box)return;
+  if(q===null){box.hidden=true;return}
+  const k=q.toLowerCase();const list=teamPickable().filter(j=>!k||[j.code,j.company,j.title,j.fwd,j.tkNo,j.bl].join(" ").toLowerCase().includes(k)).slice(0,8);
+  box.hidden=false;
+  box.innerHTML=`<input id="tmSugQ" placeholder="Tìm job: mã, công ty, số TK, B/L…" value="${esc(q)}">`+(list.map(j=>`<button data-tmpick="${esc(j.id)}"><b class="mono">${esc(j.code)}</b> ${esc(jobLabel(j))} <span class="muted">${esc(j.status)}</span></button>`).join("")||`<div class="muted" style="padding:6px">Không có job nào khớp (chỉ gắn được job ở Sổ chung đang mở).</div>`);
+}
+async function teamSend(){
+  const t=$("#tmTxt");const text=(t?.value||"").trim();if(!text)return;
+  if(text.length>4000)return toast("Tin quá dài (tối đa 4000 ký tự).");
+  const j=S.teamJob&&S.all.find(x=>x.id===S.teamJob);
+  const msg={text,by:me(),byName:window.SOJOB_USER||me(),at:Date.now()};
+  const doc=j?Object.assign({job:{id:j.id,code:j.code,label:jobLabel(j)}},msg):msg;
+  t.value="";S.teamDraft="";S.teamJob=null;teamSug(null);
+  try{await db.collection("teamchat").add(doc)}catch(e){toast("Chưa gửi được: "+(e?.message||e?.code));t.value=text;return}
+  if(j){
+    try{await db.collection("jobs/"+j.id+"/chat").add(Object.assign({fromTeam:true},msg));
+      j.chatAt=msg.at;j.chatBy=me();j.chatByName=msg.byName;j.chatLast=text.slice(0,80);queueSave(j);chatMarkSeen(j);setTimeout(()=>pushPing(j),1500)}
+    catch(e){toast("Đã gửi ở Chat chung nhưng chưa lưu được vào job: "+(e?.message||e?.code))}
+  }else setTimeout(()=>pushPingTeam(),800);
+  teamPaint(true);
+}
+function pushPingTeam(){if(!PUSH_URL)return;try{fetch(PUSH_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({team:true})}).catch(()=>{})}catch(e){}}
+function teamMirror(j,msg){ // tin nhắn trong job ở Sổ chung → hiện ở Chat chung
+  if(!j.shared||!db)return;
+  db.collection("teamchat").add(Object.assign({job:{id:j.id,code:j.code,label:jobLabel(j)},from:"job"},msg)).catch(()=>{});
+}
+document.addEventListener("click",async e=>{
+  if(S.view!=="team")return;
+  const c=e.target.closest("[data-tmjob]");if(c){e.preventDefault();openJobAny(c.dataset.tmjob);return}
+  const p=e.target.closest("[data-tmpick]");if(p){e.preventDefault();S.teamJob=p.dataset.tmpick;const t=$("#tmTxt");if(t){t.value=t.value.replace(/#\S*$/,"").trimEnd();S.teamDraft=t.value;t.focus()}teamSug(null);teamPaint();return}
+  const b=e.target.closest("#tmSend,#tmPick,#tmMute,[data-tm]");if(!b)return;e.preventDefault();
+  if(b.id==="tmSend")return teamSend();
+  if(b.id==="tmPick"){const box=$("#tmSug");if(box&&!box.hidden)return teamSug(null);teamSug("");$("#tmSugQ")?.focus();return}
+  if(b.id==="tmMute"){teamMuteOn=!teamMuteOn;teamPaint();toast(teamMuteOn?"Đã tắt thông báo Chat chung.":"Đã bật thông báo Chat chung.");try{await db.collection("push").doc(me()).set({muteTeam:teamMuteOn},{merge:true})}catch(x){}return}
+  if(b.dataset.tm==="unjob"){S.teamJob=null;teamPaint();return}
+  if(b.dataset.tm==="more")return teamMore();
+},true);
+document.addEventListener("input",e=>{
+  if(e.target.id==="tmTxt"){S.teamDraft=e.target.value;const m=/(?:^|\s)#(\S*)$/.exec(e.target.value);teamSug(m?m[1]:null);return}
+  if(e.target.id==="tmSugQ"){const q=e.target.value;const box=$("#tmSug");teamSug(q);const i=$("#tmSugQ");if(i){i.focus();i.setSelectionRange(q.length,q.length)}}
+});
+document.addEventListener("keydown",e=>{if(e.target.id==="tmTxt"&&e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();teamSend()}if((e.target.id==="tmTxt"||e.target.id==="tmSugQ")&&e.key==="Escape"){teamSug(null)}});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)teamPaint()});
 /* ---------- Thông báo đẩy lên điện thoại (Firebase Cloud Messaging) ---------- */
 const PUSH_VAPID="BDjnLQYfQlgYjKmNbQuWvJDTPkMbaDsZCtSg9RuxcAEcWFJy6IuQzD_gUbWKg1jU1QjFVatUImRx1CLgYCLY0RM"; // khoá công khai Web Push trong Firebase Console → Cloud Messaging
 const PUSH_URL="https://script.google.com/macros/s/AKfycbybwZjSrdEh0xrt0MFKtbwh6dEfCCJuldpqVrQSAgP4e14RwZZs04FB_fPUZ7vKRFP2XQ/exec"; // Apps Script "So Job - Thong bao" (tools/thong-bao-chat.gs)

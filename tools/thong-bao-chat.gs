@@ -16,7 +16,7 @@ function doPost(e) {
   var out = { ok: false };
   try {
     var body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
-    out = guiThongBao(String(body.job || ""));
+    out = body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
   } catch (err) { out = { ok: false, msg: String(err) }; }
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -101,3 +101,48 @@ function guiThongBao(jobId) {
 
 /** Chạy thử bằng tay trong trình soạn Apps Script để cấp quyền lần đầu. */
 function thu() { Logger.log(Session.getEffectiveUser().getEmail()); Logger.log(JSON.stringify(goi(FS + "/members?pageSize=1").code)); }
+
+/** Gửi 1 thông báo thử tới các máy của chủ sổ (chọn hàm này rồi bấm Chạy trong trình soạn Apps Script). */
+function thuGuiChu() {
+  var owner = Session.getEffectiveUser().getEmail().toLowerCase();
+  var p = docFs("push/" + owner), toks = (p && p.tokens) || [], kq = [];
+  toks.forEach(function (t) {
+    var r = goi("https://fcm.googleapis.com/v1/projects/" + PID + "/messages:send", { method: "post", payload: { message: { token: t,
+      webpush: { notification: { title: "💬 Sổ Job · thử thông báo", body: "Nếu thấy dòng này trên điện thoại là thông báo đã chạy.", icon: APP + "icon-192.png" }, fcm_options: { link: APP } } } } });
+    kq.push(r.code + " " + r.text);
+  });
+  Logger.log(toks.length + " máy: " + kq.join(" | "));
+}
+
+/** Chat chung: báo tin mới nhất (không gắn job) cho mọi thành viên, trừ người gửi và người tắt báo Chat chung. */
+function guiChatChung() {
+  var owner = Session.getEffectiveUser().getEmail().toLowerCase();
+  var q = goi(FS + ":runQuery", { method: "post", payload: { structuredQuery: {
+    from: [{ collectionId: "teamchat" }], orderBy: [{ field: { fieldPath: "at" }, direction: "DESCENDING" }], limit: 1 } } });
+  var last = (Array.isArray(q.json) ? q.json : []).filter(function (x) { return x.document; })[0];
+  if (!last) return { ok: false, msg: "Chưa có tin", q: q.code };
+  var f = last.document.fields || {};
+  if (f.job) return { ok: true, sent: 0, msg: "Tin gắn job: đã báo theo job" };
+  var msg = { text: giaTri(f.text) || "", by: String(giaTri(f.by) || "").toLowerCase(), byName: giaTri(f.byName) || "", at: Number(giaTri(f.at) || 0) };
+  if (Date.now() - msg.at > 10 * 60 * 1000) return { ok: true, sent: 0, msg: "Tin cũ" };
+  var props = PropertiesService.getScriptProperties();
+  if (Number(props.getProperty("last_team") || 0) >= msg.at) return { ok: true, sent: 0, msg: "Đã gửi" };
+  props.setProperty("last_team", String(msg.at));
+  var nguoi = [owner];
+  var m = goi(FS + "/members?pageSize=200");
+  ((m.json && m.json.documents) || []).forEach(function (d) { nguoi.push(decodeURIComponent(d.name.split("/").pop()).toLowerCase()); });
+  nguoi = nguoi.filter(function (x, i, a) { return x && a.indexOf(x) === i && x !== msg.by; });
+  var sent = 0, loi = [];
+  nguoi.forEach(function (mail) {
+    var p = docFs("push/" + mail);
+    if (!p || p.muteTeam) return;
+    (p.tokens || []).forEach(function (t) {
+      var r = goi("https://fcm.googleapis.com/v1/projects/" + PID + "/messages:send", { method: "post", payload: { message: { token: t,
+        data: { view: "team" },
+        webpush: { notification: { title: "💬 " + (msg.byName || msg.by) + " · Chat chung", body: String(msg.text).slice(0, 200), icon: APP + "icon-192.png", badge: APP + "icon-192.png", tag: "teamchat", renotify: true },
+          fcm_options: { link: APP + "?view=team" } } } } });
+      if (r.code === 200) sent++; else loi.push(r.code);
+    });
+  });
+  return { ok: true, sent: sent, to: nguoi.length, loi: loi };
+}

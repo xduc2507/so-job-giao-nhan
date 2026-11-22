@@ -105,6 +105,8 @@
     return {
       path: name,
       where: (f, op, v) => colRef(name, [f, v]),
+      orderBy: () => colRef(name, filt),
+      limit: () => colRef(name, filt),
       doc: id => docRef(name, id || rid()),
       async add(data) { const r = docRef(name, rid()); await r.set(data); return r; },
       async get() { await loaded; return pick(buildSnap(st)); },
