@@ -1999,7 +1999,7 @@ async function bellClick(){
 }
 function pushPing(j){if(!PUSH_URL||(boss()&&isMine(j)))return;try{fetch(PUSH_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({job:j.id})}).catch(()=>{})}catch(e){}}
 // Thông báo luôn bật: trình duyệt chỉ cho hỏi quyền khi người dùng chạm / bấm, nên hỏi ở lần chạm đầu tiên sau khi mở sổ
-const APP_VER="2026-11-22c";
+const APP_VER="2026-11-22d";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
@@ -2022,6 +2022,16 @@ function autoNotify(){
   Promise.resolve(req).then(p=>{if(p==="granted")pushGo();else{notifyBusy=false;pushDiag("ask:"+p)}});
 }
 ["click","touchend","keydown"].forEach(ev=>document.addEventListener(ev,autoNotify,{capture:true,passive:true}));
+// Tự cập nhật: mở / quay lại app thì kiểm tra trang trên máy chủ, có bản mới thì tải lại (tránh điện thoại giữ bản cũ)
+let updChecking=false;
+async function checkUpdate(){
+  if(updChecking||!/^https?:/.test(location.protocol)||/localhost|127\.0\.0\.1/.test(location.hostname))return;updChecking=true;
+  try{const t=await (await fetch(location.pathname+"?v="+Date.now(),{cache:"no-store"})).text();const m=/APP_VER="([^"]+)"/.exec(t);
+    if(m&&m[1]!==APP_VER){let last=0;try{last=+sessionStorage.getItem("sojob.updAt")||0}catch(e){}
+      if(Date.now()-last>60000){try{sessionStorage.setItem("sojob.updAt",String(Date.now()))}catch(e){}toast("Đang cập nhật bản mới…");setTimeout(()=>location.reload(),800)}}}
+  catch(e){}finally{updChecking=false}}
+setTimeout(checkUpdate,4000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdate()});
 (function openMark(n){if(team()&&S.loaded&&db&&me()){pushDiag("open");return}if(n<60)setTimeout(()=>openMark(n+1),1000)})(0);
 setTimeout(()=>{if(team()&&window.Notification&&Notification.permission==="granted"&&!notifyBusy){notifyBusy=true;pushGo()}},1500);
 
