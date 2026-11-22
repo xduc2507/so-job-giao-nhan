@@ -153,5 +153,5 @@ function chanDoan() {
   var owner = Session.getEffectiveUser().getEmail().toLowerCase(), nguoi = [owner];
   var m = goi(FS + "/members?pageSize=200");
   ((m.json && m.json.documents) || []).forEach(function (d) { nguoi.push(decodeURIComponent(d.name.split("/").pop()).toLowerCase()); });
-  nguoi.forEach(function (mail) { var p = docFs("push/" + mail); Logger.log(mail.replace(/^(.{3}).*@/, "$1…@") + ": " + ((p && p.tokens) || []).length + " máy" + (p && p.at ? ", đăng ký " + new Date(p.at).toLocaleString() : "") + (p && p.diag ? " | lần cuối: " + p.diag.stage + (p.diag.err ? " (" + p.diag.err + ")" : "") + ", quyền " + p.diag.perm + ", màn hình chính " + p.diag.standalone + ", " + new Date(p.diag.at).toLocaleString() + " | " + p.diag.ua : "")); });
+  nguoi.forEach(function (mail) { var p = docFs("push/" + mail); Logger.log(mail.replace(/^(.{3}).*@/, "$1…@") + ": " + ((p && p.tokens) || []).length + " máy" + (p && p.at ? ", đăng ký " + new Date(p.at).toLocaleString() : "") + (p && p.diag ? " | bản " + (p.diag.ver || "cũ") + " | lần cuối: " + p.diag.stage + (p.diag.err ? " (" + p.diag.err + ")" : "") + ", quyền " + p.diag.perm + ", màn hình chính " + p.diag.standalone + ", " + new Date(p.diag.at).toLocaleString() + " | " + p.diag.ua : "")); });
 }

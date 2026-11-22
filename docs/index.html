@@ -1981,12 +1981,13 @@ function bellPaint(){const b=$("#btnBell");if(!b)return;b.hidden=!team();
 const loadSdk=src=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`))return res();const sc=document.createElement("script");sc.src=src;sc.onload=res;sc.onerror=()=>rej(new Error("Không tải được "+src));document.head.appendChild(sc)});
 async function pushSetup(){
   if(!PUSH_VAPID||!window.firebase||!navigator.serviceWorker||!db||!me()){pushDiag("precheck",[!PUSH_VAPID&&"vapid",!window.firebase&&"firebase",!navigator.serviceWorker&&"sw",!db&&"db",!me()&&"me"].filter(Boolean).join(","));return false}
-  const reg=await navigator.serviceWorker.register("sw.js");await navigator.serviceWorker.ready;
-  await loadSdk("https://www.gstatic.com/firebasejs/"+firebase.SDK_VERSION+"/firebase-messaging-compat.js");
+  pushDiag("sw-register");const reg=await withTimeout(navigator.serviceWorker.register("sw.js"),15000,"đăng ký service worker");
+  pushDiag("sw-ready");await withTimeout(navigator.serviceWorker.ready,15000,"chờ service worker");
+  pushDiag("sdk");await withTimeout(loadSdk("https://www.gstatic.com/firebasejs/"+firebase.SDK_VERSION+"/firebase-messaging-compat.js"),15000,"tải thư viện thông báo");
   if(firebase.messaging.isSupported&&!(await firebase.messaging.isSupported())){pushDiag("fcm-unsupported");return false}
-  const tok=await firebase.messaging().getToken({vapidKey:PUSH_VAPID,serviceWorkerRegistration:reg});
+  pushDiag("token");const tok=await withTimeout(firebase.messaging().getToken({vapidKey:PUSH_VAPID,serviceWorkerRegistration:reg}),20000,"lấy mã máy");
   if(!tok)return false;
-  if(localStorage.getItem("sojob.pushTok")!==tok){await db.collection("push").doc(me()).set({tokens:firebase.firestore.FieldValue.arrayUnion(tok),at:Date.now()},{merge:true});try{localStorage.setItem("sojob.pushTok",tok)}catch(e){}}
+  if(localStorage.getItem("sojob.pushTok")!==tok||!diagSent.has("saved")){diagSent.add("saved");await db.collection("push").doc(me()).set({tokens:firebase.firestore.FieldValue.arrayUnion(tok),at:Date.now()},{merge:true});try{localStorage.setItem("sojob.pushTok",tok)}catch(e){}}
   PUSH_ON=true;bellPaint();return true}
 async function bellClick(){
   if(!window.Notification){toast(isIOS&&!isStandalone?"Trên iPhone: bấm nút Chia sẻ (ô vuông có mũi tên) → “Thêm vào MH chính”, rồi mở Sổ Job từ biểu tượng ngoài màn hình và bấm 🔕 lần nữa.":"Trình duyệt này không hỗ trợ thông báo.");return}
@@ -1998,10 +1999,12 @@ async function bellClick(){
 }
 function pushPing(j){if(!PUSH_URL||(boss()&&isMine(j)))return;try{fetch(PUSH_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({job:j.id})}).catch(()=>{})}catch(e){}}
 // Thông báo luôn bật: trình duyệt chỉ cho hỏi quyền khi người dùng chạm / bấm, nên hỏi ở lần chạm đầu tiên sau khi mở sổ
+const APP_VER="2026-11-22c";
 let notifyBusy=false;const diagSent=new Set();
+const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
   if(!db||!me()||diagSent.has(stage))return;diagSent.add(stage);
-  const d={stage,err:String((err&&(err.code||err.message))||err||"").slice(0,200),perm:window.Notification?Notification.permission:"none",
+  const d={stage,ver:APP_VER,err:String((err&&(err.code||err.message))||err||"").slice(0,200),perm:window.Notification?Notification.permission:"none",
     sw:!!navigator.serviceWorker,standalone:isStandalone,ua:navigator.userAgent.slice(0,160),at:Date.now()};
   try{db.collection("push").doc(me()).set({diag:d},{merge:true}).catch(()=>{})}catch(e){}
 }
@@ -2015,10 +2018,11 @@ function autoNotify(){
   if(Notification.permission==="denied"){notifyBusy=true;pushDiag("denied");notifyHint("Thông báo đang bị chặn trên máy này. Vào Cài đặt → Thông báo → Sổ Job (hoặc cài đặt trang web của trình duyệt), cho phép Thông báo.","sojob.denyHint");return}
   notifyBusy=true;
   if(Notification.permission==="granted"){pushGo();return}
-  let req;try{req=Notification.requestPermission()}catch(e){notifyBusy=false;pushDiag("ask-throw",e);return}
+  pushDiag("ask");let req;try{req=Notification.requestPermission()}catch(e){notifyBusy=false;pushDiag("ask-throw",e);return}
   Promise.resolve(req).then(p=>{if(p==="granted")pushGo();else{notifyBusy=false;pushDiag("ask:"+p)}});
 }
 ["click","touchend","keydown"].forEach(ev=>document.addEventListener(ev,autoNotify,{capture:true,passive:true}));
+(function openMark(n){if(team()&&S.loaded&&db&&me()){pushDiag("open");return}if(n<60)setTimeout(()=>openMark(n+1),1000)})(0);
 setTimeout(()=>{if(team()&&window.Notification&&Notification.permission==="granted"&&!notifyBusy){notifyBusy=true;pushGo()}},1500);
 
 /* ---------- nguồn gốc: thêm ảnh, tệp, link OneDrive / Drive ---------- */
