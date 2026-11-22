@@ -376,6 +376,7 @@
   const FB = window.SOJOB_FIREBASE && window.SOJOB_FIREBASE.apiKey ? window.SOJOB_FIREBASE : null;
   const COLS = ["jobs", "meta", "partners", "todos", "members", "mypartners"];
   const FBV = "10.12.2";
+  const GSI_CLIENT = "873642807388-5o6iava8425nmu0bnn9mv0aqdfth1885.apps.googleusercontent.com"; // mã OAuth web công khai của dự án Firebase
   function addScript(src) {
     return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Không tải được " + src.split("/").pop() + ". Kiểm tra mạng.")); document.head.appendChild(s); });
   }
@@ -411,7 +412,8 @@
       sheet.innerHTML = `<h2>Đăng nhập Sổ Job</h2>
         <p>Dữ liệu lưu online. Đăng nhập cùng tài khoản Google trên điện thoại và máy tính để thấy chung một sổ.</p>
         ${err ? `<div class="banner">${esc(err)}</div>` : ""}
-        <div class="mrow" style="justify-content:stretch"><button class="primary" id="sj-g" style="flex:1;padding:10px">Đăng nhập bằng Google</button></div>
+        <div id="sj-gsi" style="display:flex;justify-content:center;min-height:46px;margin:12px 0 4px"></div>
+        <div class="mrow" style="justify-content:center"><button class="ghost sm" id="sj-g">Không thấy nút? Đăng nhập cách khác</button></div>
         ${fuser ? `<div class="mrow"><button class="ghost" id="sj-out2">Đăng xuất ${esc(fuser.email || "")}</button></div>` : ""}`;
       sheet.querySelector("#sj-g").onclick = async () => {
         const p = new firebase.auth.GoogleAuthProvider();
@@ -424,6 +426,18 @@
         }
       };
       const o = sheet.querySelector("#sj-out2"); if (o) o.onclick = () => fauth.signOut();
+      // Đăng nhập bằng cửa sổ của Google (không đi vòng qua firebaseapp.com → chạy được trên Safari / iPhone / app ngoài màn hình chính)
+      addScript("https://accounts.google.com/gsi/client").then(() => {
+        const box = sheet.querySelector("#sj-gsi"); if (!box || !window.google || !google.accounts) throw new Error("gsi");
+        google.accounts.id.initialize({
+          client_id: GSI_CLIENT, ux_mode: "popup", auto_select: false, itp_support: true, use_fedcm_for_prompt: true,
+          callback: async r => {
+            try { await fauth.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(r.credential)); }
+            catch (e) { loginScreen("Không đăng nhập được: " + (e && (e.message || e.code))); }
+          }
+        });
+        google.accounts.id.renderButton(box, { theme: "filled_blue", size: "large", shape: "pill", text: "signin_with", locale: "vi", width: 280 });
+      }).catch(() => { const g = sheet.querySelector("#sj-g"); if (g) { g.className = "primary"; g.style.padding = "10px"; g.textContent = "Đăng nhập bằng Google"; } });
     });
   }
   function userBar() {
