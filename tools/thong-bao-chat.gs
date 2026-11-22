@@ -3,7 +3,7 @@
  * App gọi: POST <link>/exec  với nội dung {"job":"<id job>"}.
  * Script tự đọc job và tin nhắn mới nhất trong Firestore (không tin nội dung gửi kèm),
  * gửi cho người thấy được job (chủ sổ; nhân viên nếu job đã chia sẻ hoặc do họ tạo),
- * trừ người gửi và người đã tắt 🔕 ở job đó. Việc riêng của chủ sổ không bao giờ gửi.
+ * trừ người gửi. Việc riêng của chủ sổ không bao giờ gửi.
  * Chạy bằng tài khoản chủ sổ (chủ dự án Firebase) nên đọc được Firestore và gửi được FCM.
  * appsscript.json: "oauthScopes": [datastore, firebase.messaging, script.external_request, userinfo.email],
  * "webapp": {"executeAs":"USER_DEPLOYING","access":"ANYONE_ANONYMOUS"}. Triển khai: Ứng dụng web.
@@ -18,6 +18,7 @@ function doPost(e) {
     var body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
     out = body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
   } catch (err) { out = { ok: false, msg: String(err) }; }
+  console.log(JSON.stringify(out));
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
 function doGet() { return ContentService.createTextOutput("ok"); }
@@ -74,7 +75,7 @@ function guiThongBao(jobId) {
     ((m.json && m.json.documents) || []).forEach(function (d) { nguoi.push(decodeURIComponent(d.name.split("/").pop()).toLowerCase()); });
   } else if (createdBy) nguoi.push(createdBy);
   var tat = (job.mute || []).map(function (x) { return String(x).toLowerCase(); });
-  nguoi = nguoi.filter(function (x, i, a) { return x && a.indexOf(x) === i && x !== msg.by && tat.indexOf(x) < 0; });
+  nguoi = nguoi.filter(function (x, i, a) { return x && a.indexOf(x) === i && x !== msg.by; });
 
   var title = "💬 " + (msg.byName || msg.by) + " · " + (job.code || "");
   var body = (job.title ? String(job.title).slice(0, 60) + "\n" : "") + String(msg.text).slice(0, 160);
@@ -135,7 +136,7 @@ function guiChatChung() {
   var sent = 0, loi = [];
   nguoi.forEach(function (mail) {
     var p = docFs("push/" + mail);
-    if (!p || p.muteTeam) return;
+    if (!p) return;
     (p.tokens || []).forEach(function (t) {
       var r = goi("https://fcm.googleapis.com/v1/projects/" + PID + "/messages:send", { method: "post", payload: { message: { token: t,
         data: { view: "team" },
@@ -145,4 +146,12 @@ function guiChatChung() {
     });
   });
   return { ok: true, sent: sent, to: nguoi.length, loi: loi };
+}
+
+/** Kiểm tra: ai đã đăng ký máy nhận thông báo (chọn hàm này rồi bấm Chạy). */
+function chanDoan() {
+  var owner = Session.getEffectiveUser().getEmail().toLowerCase(), nguoi = [owner];
+  var m = goi(FS + "/members?pageSize=200");
+  ((m.json && m.json.documents) || []).forEach(function (d) { nguoi.push(decodeURIComponent(d.name.split("/").pop()).toLowerCase()); });
+  nguoi.forEach(function (mail) { var p = docFs("push/" + mail); Logger.log(mail.replace(/^(.{3}).*@/, "$1…@") + ": " + ((p && p.tokens) || []).length + " máy" + (p && p.at ? ", đăng ký " + new Date(p.at).toLocaleString() : "")); });
 }

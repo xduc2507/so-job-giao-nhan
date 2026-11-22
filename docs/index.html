@@ -478,7 +478,6 @@ tr.sec-B .abtn button.on{background:#8A5A00;border-color:#8A5A00}tr.sec-B{backgr
   <input id="q" type="search" placeholder="Tìm job, FWD, công ty, số B/L…" aria-label="Tìm job">
   <button id="btnManual" title="Tạo job bằng cách gõ tay, không cần ảnh / email">+ Tạo job</button>
   <button id="btnNew" class="primary" title="Dán ảnh chụp email / Zalo để Claude tạo job">+ Từ ảnh</button>
-  <button id="btnBell" class="ghost" title="Bật thông báo tin nhắn trên máy này" hidden>🔔</button>
 </header>
 
 <div class="app">
@@ -1765,7 +1764,7 @@ function dlRow(j){const k=dayDiff(j.deadline),open=isOpen(j.status);
   return `<div class="sec dlrow"><label for="f-deadline">⏰ Thời hạn xử lý</label><input id="f-deadline" data-f="deadline" type="date" value="${esc(j.deadline||"")}">${tag}</div>`}
 function chatSec(j){
   chatWatch(j);
-  return `<div class="sec"><h3>Trao đổi <span class="mono">${(S.chat[j.id]||[]).length||""}</span>${boss()&&isMine(j)?"":`<button class="ghost sm mutebtn" data-act="chatMute" title="${chatMuted(j)?"Đang tắt thông báo job này – bấm để bật":"Bấm để tắt thông báo tin nhắn của job này"}">${chatMuted(j)?"🔕 Đã tắt báo":"🔔 Đang báo"}</button>`}</h3>
+  return `<div class="sec"><h3>Trao đổi <span class="mono">${(S.chat[j.id]||[]).length||""}</span></h3>
     <div class="chat" id="chatList">${chatMsgs(j.id)}</div>
     <div class="chatin"><textarea id="chatTxt" rows="1" placeholder="Nhắn cho nhóm…" title="Enter để gửi, Shift+Enter để xuống dòng">${esc(S.chatDraft[j.id]||"")}</textarea><button class="primary" data-act="chatSend">Gửi</button></div></div>`;
 }
@@ -1798,7 +1797,7 @@ async function chatSend(j){
   j.chatAt=msg.at;j.chatBy=me();j.chatByName=msg.byName;j.chatLast=text.slice(0,80);queueSave(j);chatMarkSeen(j);setTimeout(()=>pushPing(j),1500);teamMirror(j,msg);
 }
 const chatToasted=new Map();
-const chatMuted=j=>(j.mute||[]).includes(me());
+const chatMuted=j=>false; // thông báo luôn bật, không cho tắt
 const chatPool=()=>S.all.filter(j=>!(boss()&&isMine(j))); // Việc riêng không báo
 function chatNotify(){
   if(!team()||!S.loaded)return;
@@ -1840,7 +1839,7 @@ if(navigator.serviceWorker)navigator.serviceWorker.addEventListener("message",e=
 
 /* ---------- Chat chung: cả nhóm trao đổi, gắn job bấm được ---------- */
 const TEAM_PAGE=200;
-let teamSub=null,teamN=TEAM_PAGE,teamPopFrom=Date.now(),teamMuteOn=null;
+let teamSub=null,teamN=TEAM_PAGE,teamPopFrom=Date.now(),teamMuteOn=false;
 S.team=[];S.teamJob=null;S.teamDraft="";
 const teamOn=()=>team()&&SPACE!=="mine";
 const teamPickable=()=>S.all.filter(j=>j.shared&&isOpen(j.status)).sort((a,b)=>(b.chatAt||b.createdAt||0)-(a.chatAt||a.createdAt||0));
@@ -1859,7 +1858,6 @@ function teamWatch(){
       teamPaint();
     },e=>{S.teamErr=e?.message||e?.code||"lỗi";teamPaint()});
   }catch(e){S.teamErr=String(e)}
-  if(teamMuteOn===null)db.collection("push").doc(me()).get().then(s=>{teamMuteOn=!!(s.exists&&s.data().muteTeam);teamPaint()}).catch(()=>{teamMuteOn=false});
 }
 function teamMore(){if(teamSub)try{teamSub()}catch(e){}teamSub=null;teamN+=TEAM_PAGE;teamWatch()}
 function teamPop(m,n){
@@ -1887,7 +1885,7 @@ function teamMsgs(){
 function renderTeam(el){
   if(el.dataset.v!=="team"||!$("#tmList")){
     el.dataset.v="team";
-    el.innerHTML=`<div class="teamchat"><div class="tm-h"><b>💬 Chat chung</b><span class="muted">Cả nhóm trao đổi. Tin nhắn trong job ở Sổ chung cũng hiện ở đây, bấm 📁 để mở job.</span><button class="ghost sm" id="tmMute"></button></div>
+    el.innerHTML=`<div class="teamchat"><div class="tm-h"><b>💬 Chat chung</b><span class="muted">Cả nhóm trao đổi. Tin nhắn trong job ở Sổ chung cũng hiện ở đây, bấm 📁 để mở job.</span></div>
       <div class="chat tm-list" id="tmList"></div>
       <div class="tm-in"><div id="tmJob"></div><div id="tmSug" class="tm-sug" hidden></div>
         <div class="chatin"><button class="ghost" id="tmPick" title="Gắn job vào tin nhắn">📎</button><textarea id="tmTxt" rows="2" placeholder="Nhắn cho cả nhóm… (gõ # để gắn job)">${esc(S.teamDraft)}</textarea><button class="primary" id="tmSend">Gửi</button></div></div></div>`;
@@ -1974,8 +1972,19 @@ async function bellClick(){
   catch(e){toast("Đã bật thông báo khi app đang mở. Chưa đăng ký được thông báo khi tắt app: "+(e.message||e))}
 }
 function pushPing(j){if(!PUSH_URL||(boss()&&isMine(j)))return;try{fetch(PUSH_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({job:j.id})}).catch(()=>{})}catch(e){}}
-$("#btnBell")?.addEventListener("click",bellClick);
-setTimeout(()=>{bellPaint();if(team()&&window.Notification&&Notification.permission==="granted")pushSetup().catch(()=>{})},1500);
+// Thông báo luôn bật: trình duyệt chỉ cho hỏi quyền khi người dùng chạm / bấm, nên hỏi ở lần chạm đầu tiên sau khi mở sổ
+let autoAsked=false;
+async function autoNotify(){
+  if(autoAsked||!team()||!S.loaded)return;autoAsked=true;
+  if(!window.Notification){
+    try{if(isIOS&&!isStandalone&&!sessionStorage.getItem("sojob.iosHint")){sessionStorage.setItem("sojob.iosHint","1");toast("Để nhận thông báo trên iPhone: bấm Chia sẻ → “Thêm vào MH chính”, rồi mở Sổ Job từ biểu tượng ngoài màn hình.")}}catch(e){}
+    return}
+  if(Notification.permission==="denied"){try{if(!sessionStorage.getItem("sojob.denyHint")){sessionStorage.setItem("sojob.denyHint","1");toast("Thông báo đang bị chặn trên máy này. Vào cài đặt trang web của trình duyệt (hoặc Cài đặt → Thông báo → Sổ Job), cho phép Thông báo.")}}catch(e){}return}
+  if(Notification.permission!=="granted"&&await Notification.requestPermission()!=="granted")return;
+  pushSetup().catch(e=>console.warn("push",e));
+}
+["pointerdown","keydown","touchend"].forEach(ev=>document.addEventListener(ev,()=>{autoNotify()},{capture:true,passive:true}));
+setTimeout(()=>{if(team()&&window.Notification&&Notification.permission==="granted"){autoAsked=true;pushSetup().catch(()=>{})}},1500);
 
 /* ---------- nguồn gốc: thêm ảnh, tệp, link OneDrive / Drive ---------- */
 const extOf=n=>((/\.([a-z0-9]{1,5})$/i.exec(n||"")||[])[1]||"tệp").toUpperCase();
