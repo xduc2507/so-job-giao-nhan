@@ -457,8 +457,16 @@ tr.sec-B .abtn button.on{background:#8A5A00;border-color:#8A5A00}tr.sec-B{backgr
 .cpop-x{position:absolute;top:6px;right:6px;border:0;background:none;cursor:pointer;color:var(--muted);font-size:13px}.cpop:hover{border-left-color:#174C8E}
 @keyframes cpin{from{transform:translateY(-6px);opacity:0}to{transform:none;opacity:1}}
 .mutebtn{margin-left:auto;letter-spacing:0;text-transform:none;font-weight:500}#btnBell.on{color:#1F7A4D}
+@media (max-width:780px){
+  body.view-team #side{display:none}
+  body.view-team .teamchat{border-radius:10px;padding:8px}
+  .tm-note{display:none}.tm-h{padding-bottom:6px}.tm-h b{font-size:15px}
+  .teamchat .chat .m{max-width:88%;font-size:15px}
+  .tm-in .chatin textarea{min-height:44px;font-size:16px}
+  .tm-sug{max-height:45vh}
+}
 .tbadge{display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:#D9534F;color:#fff;font-size:11.5px;line-height:18px;text-align:center}
-.teamchat{display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:420px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r,12px);padding:10px 12px}
+.teamchat{display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:320px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r,12px);padding:10px 12px}
 .tm-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid var(--line)}.tm-h b{font-size:16px}.tm-h .muted{font-size:12.5px;color:var(--muted);flex:1}
 .teamchat .tm-list{flex:1;max-height:none;min-height:0;margin:8px 0}.teamchat .chat .m{font-size:14.5px;max-width:80%}
 .tday{align-self:center;font-size:12px;color:var(--muted);margin:6px 0;padding:2px 10px;border-radius:10px;background:var(--surface-2)}
@@ -1005,6 +1013,7 @@ function renderMain(){
   if(S.view==="team"&&!teamOn())S.view="list";
   teamWatch();teamBadge();
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===S.view));$("#fStatus").hidden=S.view!=="list";
+  document.body.classList.toggle("view-team",S.view==="team");
   if(S.view==="team"){renderTeam(el);return}
   if(S.view==="tpl"){
     if(el.dataset.v==="tpl"&&el.contains(document.activeElement))return;
@@ -1885,15 +1894,19 @@ function teamMsgs(){
 function renderTeam(el){
   if(el.dataset.v!=="team"||!$("#tmList")){
     el.dataset.v="team";
-    el.innerHTML=`<div class="teamchat"><div class="tm-h"><b>💬 Chat chung</b><span class="muted">Cả nhóm trao đổi. Tin nhắn trong job ở Sổ chung cũng hiện ở đây, bấm 📁 để mở job.</span></div>
+    el.innerHTML=`<div class="teamchat"><div class="tm-h"><b>💬 Chat chung</b><span class="muted tm-note">Cả nhóm trao đổi. Tin nhắn trong job ở Sổ chung cũng hiện ở đây, bấm 📁 để mở job.</span></div>
       <div class="chat tm-list" id="tmList"></div>
       <div class="tm-in"><div id="tmJob"></div><div id="tmSug" class="tm-sug" hidden></div>
         <div class="chatin"><button class="ghost" id="tmPick" title="Gắn job vào tin nhắn">📎</button><textarea id="tmTxt" rows="2" placeholder="Nhắn cho cả nhóm… (gõ # để gắn job)">${esc(S.teamDraft)}</textarea><button class="primary" id="tmSend">Gửi</button></div></div></div>`;
   }
   teamPaint(true);
 }
+function teamFit(){const b=document.querySelector(".teamchat");if(!b||S.view!=="team")return;
+  const top=b.getBoundingClientRect().top+window.scrollY,vh=window.visualViewport?window.visualViewport.height:window.innerHeight;
+  b.style.height=Math.max(320,Math.round(vh-top-10))+"px"}
+window.addEventListener("resize",()=>teamFit());window.visualViewport?.addEventListener("resize",()=>teamFit());
 function teamPaint(force){
-  teamBadge();
+  teamBadge();teamFit();
   if(S.view!=="team")return;
   const L=$("#tmList");if(!L)return;
   const atBottom=force||L.scrollHeight-L.scrollTop-L.clientHeight<80;
