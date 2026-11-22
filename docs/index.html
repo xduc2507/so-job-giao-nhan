@@ -1,5 +1,11 @@
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="same-origin"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,"Segoe UI",sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Sổ Job Giao Nhận</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1E6B45">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sổ Job">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
 <style>
@@ -445,6 +451,12 @@ table.q th.net,table.q input.net,table.q td.netamt{background:#FFF8E6}table.q in
 tr.sec-B .abtn button.on{background:#8A5A00;border-color:#8A5A00}tr.sec-B{background:#FFF8E6}.dbadd{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}.dbbox .muted{color:var(--muted);font-size:12.5px}
 .dbtot{display:flex;flex-direction:column;align-items:flex-end;gap:3px;margin:8px 0;font-size:14px}.dbtot .grand{font-size:17px;margin-top:4px}.dbstat{margin:6px 0 0;font-size:13.5px}.dbstat .ok{color:#18794E}.dbstat .wait{color:#8A5A00}
 @media (max-width:760px){.dbgrid{grid-template-columns:1fr}}
+#chatPops{position:fixed;top:64px;right:16px;z-index:60;display:flex;flex-direction:column;gap:8px;width:min(340px,calc(100vw - 32px))}
+.cpop{position:relative;background:var(--surface);border:1px solid var(--line);border-left:4px solid #1F5FAF;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:10px 30px 10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px;animation:cpin .2s ease-out}
+.cpop b{font-size:14px}.cpop .t{font-size:12.5px;color:var(--muted)}.cpop .m{font-size:14px;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.cpop-x{position:absolute;top:6px;right:6px;border:0;background:none;cursor:pointer;color:var(--muted);font-size:13px}.cpop:hover{border-left-color:#174C8E}
+@keyframes cpin{from{transform:translateY(-6px);opacity:0}to{transform:none;opacity:1}}
+.mutebtn{margin-left:auto;letter-spacing:0;text-transform:none;font-weight:500}#btnBell.on{color:#1F7A4D}
 .lanesel{font-weight:600}.lanesel.ln-g{background:#E3F4E8;border-color:#5FB37A}.lanesel.ln-y{background:#FFF6D6;border-color:#E0B83A}.lanesel.ln-r{background:#FDE5E2;border-color:#D9605A}.lanesel.ln-0{color:var(--muted);font-weight:400}
 .mvrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.mvrow .mvbtn{font-size:16px;padding:8px 14px;font-weight:600}.tkinfo{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px}.tkinfo small{color:var(--muted);font-size:13px}.tkst{font-size:15px}.tkst.bad{color:#B4541A}.mvframe{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0 10px;background:#fff}.mvframe iframe{width:100%;height:520px;border:0;display:block}
 </style>
@@ -455,6 +467,7 @@ tr.sec-B .abtn button.on{background:#8A5A00;border-color:#8A5A00}tr.sec-B{backgr
   <input id="q" type="search" placeholder="Tìm job, FWD, công ty, số B/L…" aria-label="Tìm job">
   <button id="btnManual" title="Tạo job bằng cách gõ tay, không cần ảnh / email">+ Tạo job</button>
   <button id="btnNew" class="primary" title="Dán ảnh chụp email / Zalo để Claude tạo job">+ Từ ảnh</button>
+  <button id="btnBell" class="ghost" title="Bật thông báo tin nhắn trên máy này" hidden>🔔</button>
 </header>
 
 <div class="app">
@@ -1413,6 +1426,7 @@ D.addEventListener("click",e=>{
   if(a==="copyQuote"){copy(quoteText(j));if(!j.quoteSentAt){j.quoteSentAt=TODAY();if(j.status===STAGES[0])setStatus(j,"Báo giá","auto","Copy báo giá");queueSave(j);renderSide();renderMain();syncStages(j)}}
   if(a==="copyBrief")copy(briefText(j));
   if(a==="draftDebit"){debitOpen(j);return}
+  if(a==="chatMute"){const m=new Set(j.mute||[]);const off=!m.has(me());off?m.add(me()):m.delete(me());j.mute=[...m];queueSave(j);renderDetail(true);toast(off?"Đã tắt thông báo tin nhắn của "+j.code+".":"Đã bật lại thông báo cho "+j.code+".");return}
   if(a==="debitPaid"){debitPaid(j);return}
   if(a==="debitFromQuote"){const t=totals(j),vat=vatRate(j),c=t.VND!==undefined?"VND":Object.keys(t)[0];
     if(!c){toast("Báo giá chưa có dòng nào.");return}
@@ -1734,7 +1748,7 @@ function dlRow(j){const k=dayDiff(j.deadline),open=isOpen(j.status);
   return `<div class="sec dlrow"><label for="f-deadline">⏰ Thời hạn xử lý</label><input id="f-deadline" data-f="deadline" type="date" value="${esc(j.deadline||"")}">${tag}</div>`}
 function chatSec(j){
   chatWatch(j);
-  return `<div class="sec"><h3>Trao đổi <span class="mono">${(S.chat[j.id]||[]).length||""}</span></h3>
+  return `<div class="sec"><h3>Trao đổi <span class="mono">${(S.chat[j.id]||[]).length||""}</span>${boss()&&isMine(j)?"":`<button class="ghost sm mutebtn" data-act="chatMute" title="${chatMuted(j)?"Đang tắt thông báo job này – bấm để bật":"Bấm để tắt thông báo tin nhắn của job này"}">${chatMuted(j)?"🔕 Đã tắt báo":"🔔 Đang báo"}</button>`}</h3>
     <div class="chat" id="chatList">${chatMsgs(j.id)}</div>
     <div class="chatin"><textarea id="chatTxt" rows="1" placeholder="Nhắn cho nhóm…" title="Enter để gửi, Shift+Enter để xuống dòng">${esc(S.chatDraft[j.id]||"")}</textarea><button class="primary" data-act="chatSend">Gửi</button></div></div>`;
 }
@@ -1764,17 +1778,76 @@ async function chatSend(j){
   (S.chat[j.id]=S.chat[j.id]||[]).push(Object.assign({id:"tmp"+msg.at},msg));chatPaint(j.id);
   try{await db.collection("jobs/"+j.id+"/chat").add(msg)}
   catch(e){toast("Chưa gửi được: "+(e?.message||e?.code));S.chat[j.id]=S.chat[j.id].filter(m=>m.id!=="tmp"+msg.at);chatPaint(j.id);t.value=text;return}
-  j.chatAt=msg.at;j.chatBy=me();j.chatByName=msg.byName;j.chatLast=text.slice(0,80);queueSave(j);chatMarkSeen(j);
+  j.chatAt=msg.at;j.chatBy=me();j.chatByName=msg.byName;j.chatLast=text.slice(0,80);queueSave(j);chatMarkSeen(j);setTimeout(()=>pushPing(j),1500);
 }
 const chatToasted=new Map();
+const chatMuted=j=>(j.mute||[]).includes(me());
+const chatPool=()=>S.all.filter(j=>!(boss()&&isMine(j))); // Việc riêng không báo
 function chatNotify(){
   if(!team()||!S.loaded)return;
-  if(!chatSeen){chatSeen={};S.jobs.forEach(j=>{if(j.chatAt)chatSeen[j.id]=j.chatAt});chatSeenSave();return}
-  const fresh=S.jobs.filter(j=>chatNew(j)&&j.id!==cur()?.id&&chatToasted.get(j.id)!==j.chatAt);
+  openFromUrl();
+  if(!chatSeen){chatSeen={};S.all.forEach(j=>{if(j.chatAt)chatSeen[j.id]=j.chatAt});chatSeenSave();return}
+  const fresh=chatPool().filter(j=>chatNew(j)&&j.id!==cur()?.id&&!chatMuted(j)&&chatToasted.get(j.id)!==j.chatAt);
   fresh.forEach(j=>chatToasted.set(j.id,j.chatAt));
-  if(fresh.length===1){const j=fresh[0];toast(`💬 ${j.chatByName||j.chatBy} · ${j.code}: ${j.chatLast||""}`)}
-  else if(fresh.length>1)toast(`💬 ${fresh.length} job có tin nhắn mới.`);
+  if(!fresh.length)return;
+  fresh.slice(0,3).forEach(chatPop);
+  if(fresh.length>3)toast(`💬 Còn ${fresh.length-3} job khác có tin nhắn mới.`);
+  if(document.hidden&&!PUSH_ON&&window.Notification&&Notification.permission==="granted")
+    fresh.slice(0,3).forEach(j=>{try{const n=new Notification(`💬 ${j.chatByName||j.chatBy} · ${j.code}`,{body:(j.title?String(j.title).slice(0,60)+"\n":"")+(j.chatLast||""),tag:"job-"+j.id,icon:"icon-192.png"});n.onclick=()=>{window.focus();openJobAny(j.id);n.close()}}catch(e){}});
 }
+function chatPop(j){
+  let box=$("#chatPops");if(!box){box=document.createElement("div");box.id="chatPops";document.body.appendChild(box)}
+  box.querySelector(`[data-pop="${j.id}"]`)?.remove();
+  const c=document.createElement("div");c.className="cpop";c.dataset.pop=j.id;c.setAttribute("role","status");
+  c.innerHTML=`<button class="cpop-x" aria-label="Đóng">✕</button><b>💬 ${esc(j.chatByName||j.chatBy)} · <span class="mono">${esc(j.code)}</span></b><span class="t">${esc((j.title||"").slice(0,50))}</span><span class="m">${esc(j.chatLast||"")}</span>`;
+  c.onclick=e=>{c.remove();if(!e.target.closest(".cpop-x"))openJobAny(j.id)};
+  box.prepend(c);while(box.children.length>3)box.lastChild.remove();
+  setTimeout(()=>c.remove(),15000);
+}
+async function openJobAny(id){
+  const j=S.all.find(x=>x.id===id);if(!j)return;
+  const inTeam=!(boss()&&isMine(j));
+  if(inTeam&&SPACE==="mine")await setSpace("team");
+  if(!inTeam&&SPACE!=="mine")await setSpace("mine");
+  if(S.view!=="list"&&S.view!=="board")S.view="list";
+  openJob(id);
+}
+let urlJobDone=false;
+function openFromUrl(){
+  if(urlJobDone)return;const id=new URLSearchParams(location.search).get("job");if(!id){urlJobDone=true;return}
+  if(!S.all.some(x=>x.id===id))return;urlJobDone=true;
+  try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}
+  setTimeout(()=>openJobAny(id),0)}
+if(navigator.serviceWorker)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.openJob)openJobAny(e.data.openJob)});
+
+/* ---------- Thông báo đẩy lên điện thoại (Firebase Cloud Messaging) ---------- */
+const PUSH_VAPID="BDjnLQYfQlgYjKmNbQuWvJDTPkMbaDsZCtSg9RuxcAEcWFJy6IuQzD_gUbWKg1jU1QjFVatUImRx1CLgYCLY0RM"; // khoá công khai Web Push trong Firebase Console → Cloud Messaging
+const PUSH_URL="https://script.google.com/macros/s/AKfycbybwZjSrdEh0xrt0MFKtbwh6dEfCCJuldpqVrQSAgP4e14RwZZs04FB_fPUZ7vKRFP2XQ/exec"; // Apps Script "So Job - Thong bao" (tools/thong-bao-chat.gs)
+let PUSH_ON=false;
+const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent),isStandalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+function bellPaint(){const b=$("#btnBell");if(!b)return;b.hidden=!team();
+  const on=!!(window.Notification&&Notification.permission==="granted");b.textContent=on?"🔔":"🔕";
+  b.title=on?(PUSH_ON?"Đã bật thông báo trên máy này (kể cả khi tắt app)":"Đã bật thông báo khi app đang mở"):"Bật thông báo tin nhắn trên máy này";b.classList.toggle("on",on)}
+const loadSdk=src=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`))return res();const sc=document.createElement("script");sc.src=src;sc.onload=res;sc.onerror=()=>rej(new Error("Không tải được "+src));document.head.appendChild(sc)});
+async function pushSetup(){
+  if(!PUSH_VAPID||!window.firebase||!navigator.serviceWorker||!db||!me())return false;
+  const reg=await navigator.serviceWorker.register("sw.js");await navigator.serviceWorker.ready;
+  await loadSdk("https://www.gstatic.com/firebasejs/"+firebase.SDK_VERSION+"/firebase-messaging-compat.js");
+  const tok=await firebase.messaging().getToken({vapidKey:PUSH_VAPID,serviceWorkerRegistration:reg});
+  if(!tok)return false;
+  if(localStorage.getItem("sojob.pushTok")!==tok){await db.collection("push").doc(me()).set({tokens:firebase.firestore.FieldValue.arrayUnion(tok),at:Date.now()},{merge:true});try{localStorage.setItem("sojob.pushTok",tok)}catch(e){}}
+  PUSH_ON=true;bellPaint();return true}
+async function bellClick(){
+  if(!window.Notification){toast(isIOS&&!isStandalone?"Trên iPhone: bấm nút Chia sẻ (ô vuông có mũi tên) → “Thêm vào MH chính”, rồi mở Sổ Job từ biểu tượng ngoài màn hình và bấm 🔕 lần nữa.":"Trình duyệt này không hỗ trợ thông báo.");return}
+  if(Notification.permission==="denied"){toast("Thông báo đang bị chặn. Mở cài đặt trang web của trình duyệt, cho phép Thông báo rồi bấm lại.");return}
+  if(Notification.permission!=="granted"&&await Notification.requestPermission()!=="granted"){bellPaint();return}
+  bellPaint();
+  try{const ok=await pushSetup();toast(ok?"Đã bật thông báo trên máy này. Có tin nhắn mới là máy báo, kể cả khi tắt app.":"Đã bật thông báo khi app đang mở.")}
+  catch(e){toast("Đã bật thông báo khi app đang mở. Chưa đăng ký được thông báo khi tắt app: "+(e.message||e))}
+}
+function pushPing(j){if(!PUSH_URL||(boss()&&isMine(j)))return;try{fetch(PUSH_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({job:j.id})}).catch(()=>{})}catch(e){}}
+$("#btnBell")?.addEventListener("click",bellClick);
+setTimeout(()=>{bellPaint();if(team()&&window.Notification&&Notification.permission==="granted")pushSetup().catch(()=>{})},1500);
 
 /* ---------- nguồn gốc: thêm ảnh, tệp, link OneDrive / Drive ---------- */
 const extOf=n=>((/\.([a-z0-9]{1,5})$/i.exec(n||"")||[])[1]||"tệp").toUpperCase();
