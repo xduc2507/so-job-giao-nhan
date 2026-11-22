@@ -1978,9 +1978,10 @@ function bellPaint(){const b=$("#btnBell");if(!b)return;b.hidden=!team();
   b.title=on?(PUSH_ON?"Đã bật thông báo trên máy này (kể cả khi tắt app)":"Đã bật thông báo khi app đang mở"):"Bật thông báo tin nhắn trên máy này";b.classList.toggle("on",on)}
 const loadSdk=src=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`))return res();const sc=document.createElement("script");sc.src=src;sc.onload=res;sc.onerror=()=>rej(new Error("Không tải được "+src));document.head.appendChild(sc)});
 async function pushSetup(){
-  if(!PUSH_VAPID||!window.firebase||!navigator.serviceWorker||!db||!me())return false;
+  if(!PUSH_VAPID||!window.firebase||!navigator.serviceWorker||!db||!me()){pushDiag("precheck",[!PUSH_VAPID&&"vapid",!window.firebase&&"firebase",!navigator.serviceWorker&&"sw",!db&&"db",!me()&&"me"].filter(Boolean).join(","));return false}
   const reg=await navigator.serviceWorker.register("sw.js");await navigator.serviceWorker.ready;
   await loadSdk("https://www.gstatic.com/firebasejs/"+firebase.SDK_VERSION+"/firebase-messaging-compat.js");
+  if(firebase.messaging.isSupported&&!(await firebase.messaging.isSupported())){pushDiag("fcm-unsupported");return false}
   const tok=await firebase.messaging().getToken({vapidKey:PUSH_VAPID,serviceWorkerRegistration:reg});
   if(!tok)return false;
   if(localStorage.getItem("sojob.pushTok")!==tok){await db.collection("push").doc(me()).set({tokens:firebase.firestore.FieldValue.arrayUnion(tok),at:Date.now()},{merge:true});try{localStorage.setItem("sojob.pushTok",tok)}catch(e){}}
@@ -1995,18 +1996,28 @@ async function bellClick(){
 }
 function pushPing(j){if(!PUSH_URL||(boss()&&isMine(j)))return;try{fetch(PUSH_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({job:j.id})}).catch(()=>{})}catch(e){}}
 // Thông báo luôn bật: trình duyệt chỉ cho hỏi quyền khi người dùng chạm / bấm, nên hỏi ở lần chạm đầu tiên sau khi mở sổ
-let autoAsked=false;
-async function autoNotify(){
-  if(autoAsked||!team()||!S.loaded)return;autoAsked=true;
-  if(!window.Notification){
-    try{if(isIOS&&!isStandalone&&!sessionStorage.getItem("sojob.iosHint")){sessionStorage.setItem("sojob.iosHint","1");toast("Để nhận thông báo trên iPhone: bấm Chia sẻ → “Thêm vào MH chính”, rồi mở Sổ Job từ biểu tượng ngoài màn hình.")}}catch(e){}
-    return}
-  if(Notification.permission==="denied"){try{if(!sessionStorage.getItem("sojob.denyHint")){sessionStorage.setItem("sojob.denyHint","1");toast("Thông báo đang bị chặn trên máy này. Vào cài đặt trang web của trình duyệt (hoặc Cài đặt → Thông báo → Sổ Job), cho phép Thông báo.")}}catch(e){}return}
-  if(Notification.permission!=="granted"&&await Notification.requestPermission()!=="granted")return;
-  pushSetup().catch(e=>console.warn("push",e));
+let notifyBusy=false;const diagSent=new Set();
+function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
+  if(!db||!me()||diagSent.has(stage))return;diagSent.add(stage);
+  const d={stage,err:String((err&&(err.code||err.message))||err||"").slice(0,200),perm:window.Notification?Notification.permission:"none",
+    sw:!!navigator.serviceWorker,standalone:isStandalone,ua:navigator.userAgent.slice(0,160),at:Date.now()};
+  try{db.collection("push").doc(me()).set({diag:d},{merge:true}).catch(()=>{})}catch(e){}
 }
-["pointerdown","keydown","touchend"].forEach(ev=>document.addEventListener(ev,()=>{autoNotify()},{capture:true,passive:true}));
-setTimeout(()=>{if(team()&&window.Notification&&Notification.permission==="granted"){autoAsked=true;pushSetup().catch(()=>{})}},1500);
+function notifyHint(t,k){try{if(!sessionStorage.getItem(k)){sessionStorage.setItem(k,"1");toast(t)}}catch(e){}}
+function pushGo(){return pushSetup().then(ok=>{if(ok)pushDiag("ok");else pushDiag("no-token")}).catch(e=>{pushDiag("setup",e);toast("Chưa bật được thông báo trên máy này: "+(e.message||e.code||e))})}
+// Thông báo luôn bật: trình duyệt (nhất là Safari iPhone) chỉ cho hỏi quyền trong lúc người dùng BẤM, nên hỏi ở lần bấm đầu tiên
+function autoNotify(){
+  if(notifyBusy||PUSH_ON||!team()||!S.loaded)return;
+  if(!window.Notification||!navigator.serviceWorker){notifyBusy=true;pushDiag("unsupported");
+    if(isIOS&&!isStandalone)notifyHint("Để nhận thông báo trên iPhone: bấm Chia sẻ → “Thêm vào MH chính”, rồi mở Sổ Job từ biểu tượng ngoài màn hình.","sojob.iosHint");return}
+  if(Notification.permission==="denied"){notifyBusy=true;pushDiag("denied");notifyHint("Thông báo đang bị chặn trên máy này. Vào Cài đặt → Thông báo → Sổ Job (hoặc cài đặt trang web của trình duyệt), cho phép Thông báo.","sojob.denyHint");return}
+  notifyBusy=true;
+  if(Notification.permission==="granted"){pushGo();return}
+  let req;try{req=Notification.requestPermission()}catch(e){notifyBusy=false;pushDiag("ask-throw",e);return}
+  Promise.resolve(req).then(p=>{if(p==="granted")pushGo();else{notifyBusy=false;pushDiag("ask:"+p)}});
+}
+["click","touchend","keydown"].forEach(ev=>document.addEventListener(ev,autoNotify,{capture:true,passive:true}));
+setTimeout(()=>{if(team()&&window.Notification&&Notification.permission==="granted"&&!notifyBusy){notifyBusy=true;pushGo()}},1500);
 
 /* ---------- nguồn gốc: thêm ảnh, tệp, link OneDrive / Drive ---------- */
 const extOf=n=>((/\.([a-z0-9]{1,5})$/i.exec(n||"")||[])[1]||"tệp").toUpperCase();
