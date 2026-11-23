@@ -711,6 +711,33 @@ input::placeholder,textarea::placeholder{color:#aaa}
 .chat .m.tagme{background:#fff6d6!important;box-shadow:inset 3px 0 0 #f0b400}
 .tagme-l{color:#b07a00}
 .np-i.tag .np-t b{color:var(--primary)}
+/* báo giá: chọn phí có sẵn + chi hộ */
+.qpre{background:var(--accent-soft);border:1px solid #c9dff0;padding:8px 10px;margin:0 0 8px;display:flex;flex-direction:column;gap:6px}
+.qpre.ch{background:#fff6e5;border-color:#f0d9a8}
+.qpre>b{font-size:12px}.qpre-l{display:flex;flex-wrap:wrap;gap:6px}
+.qpre-l button{border-radius:14px!important;background:#fff!important;font-size:12.5px;min-height:30px;padding:3px 11px}
+.qpre-l button.on{opacity:.55}.qpre-l button.blank{border-style:dashed!important;color:var(--muted)}
+.sec h3 button.on{background:rgba(255,255,255,.32)!important}
+table.q tr.chhead td{background:#fff6e5;font-weight:700;font-size:12px;color:#8a5a00;padding:5px 6px;border-bottom:1px solid #f0d9a8}
+table.q tr.chhead td span{font-weight:400;color:var(--muted)}
+table.q tr.chrow td:first-child{box-shadow:inset 3px 0 0 #f0b400}.chtag{display:none!important}
+.chtag{flex:0 0 auto;font-size:10px;font-weight:700;color:#8a5a00;background:#fff0cc;border-radius:3px;padding:1px 5px}
+.tot .chsum{color:#8a5a00}
+@media (max-width:780px){.qpre-l button{min-height:40px;font-size:13.5px}}
+/* nút chọn (dịch vụ, hàng, tuỳ chọn, luồng…): chọn rồi thì tô nền xanh, chữ trắng */
+.chips2 button.on,.chips2 button.on:hover{background:var(--primary)!important;border-color:var(--primary)!important;color:#fff!important;font-weight:700}
+.chips2 button.on .fa{color:#fff}
+/* menu xổ xuống chọn phí / chi hộ */
+.sec{position:relative}
+.qpre{position:absolute;right:10px;top:34px;z-index:40;width:min(320px,calc(100% - 20px));max-height:min(60vh,420px);overflow:auto;margin:0;padding:6px;background:#fff!important;border:1px solid var(--line)!important;box-shadow:0 4px 14px rgba(0,0,0,.18)!important}
+.qpre>b{padding:4px 8px 6px;color:var(--muted);font-weight:600}
+.qpre.ch>b{color:#8a5a00}
+.qpre-l{flex-direction:column;gap:0}
+.qpre-l button{border:0!important;border-radius:2px!important;text-align:left;justify-content:flex-start;min-height:36px;padding:6px 10px;font-size:13px;background:none!important}
+.qpre-l button:hover:not(:disabled){background:var(--accent-soft)!important}
+.qpre.ch .qpre-l button:hover:not(:disabled){background:#fff3d6!important}
+.qpre-l button.blank{border-top:1px solid var(--line)!important;border-style:solid!important;margin-top:4px}
+@media (max-width:780px){.qpre{left:10px;right:10px;width:auto}.qpre-l button{min-height:44px;font-size:14px}}
 </style>
 
 <header class="top">
@@ -973,7 +1000,8 @@ let VAT_OPEN=false;
 document.addEventListener("click",e=>{const b=e.target.closest("[data-vat]");if(!b)return;e.preventDefault();e.stopPropagation();const j=cur();if(!j)return;
   if(b.dataset.vat==="open")VAT_OPEN=true;else{VAT_OPEN=false;j.vat=+b.dataset.vat;queueSave(j)}renderDetail(true)},true);
 const vatRate=j=>num(j.vat)===10?10:8; // mặc định 8%, chọn được 10%
-function totals(j){const t={};(j.quote||[]).forEach(q=>{const c=q.currency||"VND";t[c]=(t[c]||0)+num(q.qty)*num(q.price)});return t}
+function totals(j){const t={};(j.quote||[]).filter(q=>!q.ch).forEach(q=>{const c=q.currency||"VND";t[c]=(t[c]||0)+num(q.qty)*num(q.price)});return t}
+function chTotals(j){const t={};(j.quote||[]).filter(q=>q.ch).forEach(q=>{const c=q.currency||"VND";t[c]=(t[c]||0)+num(q.qty)*num(q.price)});return t}
 function logH(j,o){(j.history=j.history||[]).push(Object.assign({at:Date.now(),by:window.SOJOB_USER||""},o));if(j.history.length>200)j.history=j.history.slice(-200)}
 function setStatus(j,st,kind="move",note=""){
   const from=j.status;
@@ -1378,7 +1406,7 @@ function renderDetail(force){
       <label class="fld"><span>Công ty / chủ hàng</span><input id="f-company" data-f="company" list="names" value="${esc(j.company)}"></label>
     </div>
     <datalist id="names">${knownNames.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
-    <datalist id="items">${itemNames.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
+    <datalist id="items">${[...new Set(FEE_PRESET().map(x=>x[0]).concat(itemNames.filter(n=>!CH_PRESET.some(c=>c[0]===n))))].map(n=>`<option value="${esc(n)}">`).join("")}</datalist><datalist id="chitems">${CH_PRESET.map(c=>`<option value="${esc(c[0])}">`).join("")}</datalist>
   </div>
   ${dlRow(j)}
   ${odBox(j)}
@@ -1389,10 +1417,12 @@ function renderDetail(force){
     <div class="acts">${missing?`<button class="sm" data-act="applyTpl">Thêm ${missing} bước mẫu “${esc(j.type)}”</button>`:""}${tasks.length?`<button class="ghost sm" data-act="saveTpl">Lưu checklist này làm mẫu “${esc(j.type)}”</button>`:""}</div>
   </div>`}
   ${lotSec(j)}
-  <div class="sec"><h3>Báo giá <span class="acts"><button class="ghost sm ai" data-act="aiQuote" title="Claude lập báo giá từ yêu cầu và giá đã báo trước đây">✦ Claude soạn</button><button class="ghost sm" data-act="fillPrices">Điền giá lần trước</button><button class="ghost sm" data-act="qadd">+ Thêm dòng</button></span></h3>
+  <div class="sec"><h3>Báo giá <span class="acts"><button class="ghost sm ai" data-act="aiQuote" title="Claude lập báo giá từ yêu cầu và giá đã báo trước đây">✦ Claude soạn</button><button class="ghost sm" data-act="fillPrices">Điền giá lần trước</button><button class="ghost sm${QADD==="fee"?" on":""}" data-act="qadd" aria-expanded="${QADD==="fee"}">+ Thêm phí ▾</button><button class="ghost sm${QADD==="ch"?" on":""}" data-act="qaddch" aria-expanded="${QADD==="ch"}">+ Chi hộ ▾</button></span></h3>
+    ${qPresetBox(j)}
     ${(j.quote||[]).length?`<div class="qwrap"><table class="q"><thead><tr><th style="width:24%">Hạng mục</th><th class="num" style="width:6%">SL</th><th style="width:8%">ĐVT</th><th class="num" style="width:13%">Đơn giá</th><th class="num" style="width:13%">Thành tiền</th><th class="num net" style="width:13%" title="Giá vốn / giá nhập hệ thống công ty – không gửi khách">Giá NET</th><th class="num net" style="width:13%">Thành tiền NET</th><th>Giá lần trước</th><th></th></tr></thead><tbody>
-    ${j.quote.map((q,i)=>`<tr><td><input id="q-${i}-name" data-q="${i}:name" list="items" value="${esc(q.name)}"></td><td><input class="num mono" id="q-${i}-qty" data-q="${i}:qty" value="${esc(q.qty)}" inputmode="decimal"></td><td><input id="q-${i}-unit" data-q="${i}:unit" value="${esc(q.unit)}"></td><td><input class="num mono" id="q-${i}-price" data-q="${i}:price" value="${esc(q.price)}" inputmode="decimal"></td><td class="num mono" data-amt="${i}">${fmt(num(q.qty)*num(q.price),q.currency)}</td><td><input class="num mono net" id="q-${i}-net" data-q="${i}:net" value="${esc(q.net||"")}" inputmode="decimal" placeholder="NET"></td><td class="num mono netamt" data-namt="${i}">${num(q.net)?fmt(num(q.qty)*num(q.net),q.currency):""}</td><td data-hint="${i}">${hintHtml(q,j,i)}</td><td><button class="x" data-act="qdel" data-i="${i}" aria-label="Xoá dòng">✕</button></td></tr>`).join("")}
-    </tbody></table></div><span style="font-size:11.5px;color:var(--muted)">Giá lần trước lấy từ cùng FWD; dấu * là giá báo cho FWD khác.</span>`:`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có hạng mục. Bấm “+ Thêm dòng”.</p>`}
+    ${(()=>{const R=(q,i)=>`<tr class="${q.ch?"chrow":""}"><td>${q.ch?'<span class="chtag">Chi hộ</span>':""}<input id="q-${i}-name" data-q="${i}:name" list="${q.ch?"chitems":"items"}" placeholder="Chọn hoặc gõ" value="${esc(q.name)}"></td><td><input class="num mono" id="q-${i}-qty" data-q="${i}:qty" value="${esc(q.qty)}" inputmode="decimal"></td><td><input id="q-${i}-unit" data-q="${i}:unit" value="${esc(q.unit)}"></td><td><input class="num mono" id="q-${i}-price" data-q="${i}:price" value="${esc(q.price)}" inputmode="decimal"></td><td class="num mono" data-amt="${i}">${fmt(num(q.qty)*num(q.price),q.currency)}</td><td><input class="num mono net" id="q-${i}-net" data-q="${i}:net" value="${esc(q.net||"")}" inputmode="decimal" placeholder="NET"></td><td class="num mono netamt" data-namt="${i}">${num(q.net)?fmt(num(q.qty)*num(q.net),q.currency):""}</td><td data-hint="${i}">${hintHtml(q,j,i)}</td><td><button class="x" data-act="qdel" data-i="${i}" aria-label="Xoá dòng">✕</button></td></tr>`;const A=[],B=[];j.quote.forEach((q,i)=>(q.ch?B:A).push(R(q,i)));
+      return A.join("")+(B.length?`<tr class="chhead"><td colspan="9">Chi hộ <span>– thu theo hoá đơn thực tế, không cộng VAT dịch vụ</span></td></tr>`+B.join(""):"")})()}
+    </tbody></table></div><span style="font-size:11.5px;color:var(--muted)">Giá lần trước lấy từ cùng FWD; dấu * là giá báo cho FWD khác.</span>`:`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có hạng mục. Bấm “+ Thêm phí” hoặc “+ Chi hộ”.</p>`}
     <div class="grid2"><div class="vatbox"><span>VAT</span><div class="chips2">${VAT_OPEN?[8,10].map(v=>`<button type="button" class="${vatRate(j)===v?"on":""}" data-vat="${v}">${v}%</button>`).join(""):`<button type="button" class="on" data-vat="open" title="Bấm để đổi VAT">${vatRate(j)}% ▾</button>`}</div></div><div class="tot" id="qtot"></div></div>
     <label class="fld"><span>Ghi chú báo giá</span><textarea id="f-quoteNote" data-f="quoteNote" rows="2" placeholder="VD: Giá chưa gồm local charge, kiểm hoá, lưu kho…">${esc(j.quoteNote)}</textarea></label>
     <div class="acts"><button data-act="copyQuote" class="primary">${ic("copy")}Copy báo giá</button>${dbOn(j)?`<button data-act="draftDebit" class="debitbtn">${ic("doc")}${j.debit?"Mở debit":"Soạn debit"}</button>${boss()&&j.debitDate&&!j.paidDate?`<button data-act="debitPaid" class="ghost">✅ Đã thu tiền</button>`:""}`:""}<button data-act="copyBrief">${ic("copy")}Copy tóm tắt job</button>${j.quoteSentAt?`<span style="font-size:12px;color:var(--muted)">Đã gửi báo giá ${dmy(j.quoteSentAt)}</span>`:""}</div>
@@ -1408,15 +1438,16 @@ function renderDetail(force){
     ${!(j.images||[]).length&&!(j.files||[]).length&&!(j.links||[]).length?`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có ảnh hay tài liệu. Bấm “+ Ảnh / tệp” (hoặc dán ảnh Ctrl+V khi đang mở job), hoặc “+ Link OneDrive” để gắn thư mục / tệp trên OneDrive, Google Drive.</p>`:""}
     ${j.docCheck?`<div class="dchk"><span class="vd ${/^khớp/i.test(j.docCheck.verdict)?"vd-ok":/lệch/i.test(j.docCheck.verdict)?"vd-bad":"vd-warn"}">✦ ${esc(j.docCheck.verdict)}</span><span style="color:var(--muted)">${(j.docCheck.issues||[]).length} điểm cần xem · ${new Date(j.docCheck.at).toLocaleDateString("vi-VN")}</span><button class="ghost sm" data-act="aiDocsView">Xem kết quả</button></div>`:""}
     ${j.raw?`<textarea id="f-raw" data-f="raw" rows="3">${esc(j.raw)}</textarea>`:""}${sizeBar(j)}</div>
-  <div class="sec"><div class="acts" style="justify-content:space-between"><span style="color:var(--muted);font-size:12px">Tạo ${new Date(j.createdAt||Date.now()).toLocaleString("vi-VN")}${j.createdByName?" · bởi "+esc(j.createdByName):""}</span>${boss()?'<button class="danger" data-act="del">${ic("del")}Xoá job</button>':""}</div></div>
+  <div class="sec"><div class="acts" style="justify-content:space-between"><span style="color:var(--muted);font-size:12px">Tạo ${new Date(j.createdAt||Date.now()).toLocaleString("vi-VN")}${j.createdByName?" · bởi "+esc(j.createdByName):""}</span>${boss()?`<button class="danger" data-act="del">${ic("del")}Xoá job</button>`:""}</div></div>
   </div>`;
   renderTotals(j);
 }
 function renderTotals(j){
   const t=totals(j),vat=vatRate(j),el=$("#qtot");if(!el)return;
-  const ks=Object.keys(t);if(!ks.length){el.innerHTML="";return}
-  const nt={};(j.quote||[]).forEach(q=>{if(num(q.net)>0){const c=q.currency||"VND";nt[c]=(nt[c]||0)+num(q.qty)*num(q.net)}});
-  el.innerHTML=ks.map(c=>`<span>Cộng ${c}: <span class="mono">${fmt(t[c],c)}</span></span>${vat?`<span>VAT ${vat}%: <span class="mono">${fmt(vatOf(t[c],vat,c),c)}</span></span>`:""}<span>Tổng ${c}: <b>${fmt(grandOf(t[c],vat,c),c)}</b></span>${nt[c]?`<span class="netsum">NET ${c}: <span class="mono">${fmt(nt[c],c)}</span> · Chênh lệch: <b class="mono">${fmt(t[c]-nt[c],c)}</b></span>`:""}`).join("");
+  const ks=Object.keys(t);if(!ks.length&&!Object.keys(chTotals(j)).length){el.innerHTML="";return}
+  const nt={};(j.quote||[]).forEach(q=>{const n=q.ch?(num(q.net)||num(q.price)):num(q.net);if(n>0){const c=q.currency||"VND";nt[c]=(nt[c]||0)+num(q.qty)*n}});
+  const ct=chTotals(j);
+  el.innerHTML=ks.concat(Object.keys(ct).filter(c=>!t[c])).map(c=>{t[c]=t[c]||0;const chs=ct[c]||0;return chs?`<span>Phí dịch vụ ${c}: <span class="mono">${fmt(t[c],c)}</span></span>${vat&&t[c]?`<span>VAT ${vat}%: <span class="mono">${fmt(vatOf(t[c],vat,c),c)}</span></span>`:""}<span class="chsum">Chi hộ: <span class="mono">${fmt(chs,c)}</span></span><span>Tổng thanh toán ${c}: <b>${fmt(grandOf(t[c],vat,c)+chs,c)}</b></span>${nt[c]?`<span class="netsum">NET ${c}: <span class="mono">${fmt(nt[c],c)}</span> · Chênh lệch: <b class="mono">${fmt(t[c]+chs-nt[c],c)}</b></span>`:""}`:`<span>Cộng ${c}: <span class="mono">${fmt(t[c],c)}</span></span>${vat?`<span>VAT ${vat}%: <span class="mono">${fmt(vatOf(t[c],vat,c),c)}</span></span>`:""}<span>Tổng ${c}: <b>${fmt(grandOf(t[c],vat,c),c)}</b></span>${nt[c]?`<span class="netsum">NET ${c}: <span class="mono">${fmt(nt[c],c)}</span> · Chênh lệch: <b class="mono">${fmt(t[c]-nt[c],c)}</b></span>`:""}`}).join("");
 }
 function lateBox(j){
   let st=lateState(j);if(!st)return "";const a=j.lateAck||{},nx=nextStage(j)||"bước sau";const editing=S.lateEdit===j.id&&st==="pend";if(editing)st="none";
@@ -1481,9 +1512,14 @@ function quoteText(j){
   const to=j.fwd||j.company;if(to)L.push(`Kính gửi: ${to}${j.contact?" (Attn: "+j.contact+")":""}`);
   const route=[j.pol||j.pod?`${j.pol||"?"} → ${j.pod||"?"}`:"",j.mode,j.incoterm].filter(Boolean).join(" | ");if(route)L.push(`Tuyến: ${route}`);
   if(j.cargo)L.push(`Hàng: ${j.cargo}`);L.push("");
-  (j.quote||[]).forEach((q,i)=>L.push(`${i+1}. ${q.name}: ${fmt(q.qty)} ${q.unit||""} × ${fmt(q.price,q.currency)} = ${fmt(num(q.qty)*num(q.price),q.currency)} ${q.currency||"VND"}`));
-  const t=totals(j),vat=vatRate(j);L.push("");
-  Object.keys(t).forEach(c=>{L.push(`Cộng: ${fmt(t[c],c)} ${c}`);if(vat){L.push(`VAT ${vat}%: ${fmt(vatOf(t[c],vat,c),c)} ${c}`);L.push(`Tổng cộng: ${fmt(grandOf(t[c],vat,c),c)} ${c}`)}});
+  const ln=(q,i)=>`${i+1}. ${q.name}: ${fmt(q.qty)} ${q.unit||""} × ${fmt(q.price,q.currency)} = ${fmt(num(q.qty)*num(q.price),q.currency)} ${q.currency||"VND"}`;
+  const QA=(j.quote||[]).filter(q=>!q.ch),QB=(j.quote||[]).filter(q=>q.ch);
+  if(QB.length&&QA.length)L.push("PHÍ DỊCH VỤ");
+  QA.forEach((q,i)=>L.push(ln(q,i)));
+  const t=totals(j),ct=chTotals(j),vat=vatRate(j);L.push("");
+  Object.keys(t).forEach(c=>{L.push(`Cộng${QB.length?" phí dịch vụ":""}: ${fmt(t[c],c)} ${c}`);if(vat){L.push(`VAT ${vat}%: ${fmt(vatOf(t[c],vat,c),c)} ${c}`);L.push(`Tổng${QB.length?" phí dịch vụ":" cộng"}: ${fmt(grandOf(t[c],vat,c),c)} ${c}`)}});
+  if(QB.length){L.push("","CHI HỘ (thu theo hoá đơn thực tế)");QB.forEach((q,i)=>L.push(ln(q,i)));
+    Object.keys(ct).forEach(c=>{L.push(`Cộng chi hộ: ${fmt(ct[c],c)} ${c}`);L.push(`TỔNG THANH TOÁN: ${fmt(grandOf(t[c]||0,vat,c)+ct[c],c)} ${c}`)})}
   if(j.quoteNote)L.push("","Ghi chú: "+j.quoteNote);
   return L.join("\n").replace(/\n{3,}/g,"\n\n").trim();
 }
@@ -1706,7 +1742,8 @@ D.addEventListener("click",e=>{
   if(a==="tdel"){j.tasks.splice(+b.dataset.i,1);queueSave(j);renderAll(true)}
   if(a==="applyTpl"){const have=new Set((j.tasks||[]).map(t=>normName(t.text)));const add=(S.tpl[j.type]||[]).filter(t=>!have.has(normName(t))).map(t=>({text:t,done:false}));j.tasks=add.concat(j.tasks||[]);queueSave(j);renderAll(true);toast(`Đã thêm ${add.length} bước mẫu.`)}
   if(a==="saveTpl"){S.tpl[j.type]=(j.tasks||[]).map(t=>t.text).filter(Boolean);saveTpl();renderAll(true);toast(`Đã lưu ${S.tpl[j.type].length} bước làm mẫu “${j.type}”.`)}
-  if(a==="qadd"){(j.quote=j.quote||[]).push({name:"",qty:1,unit:"lô",price:0,currency:"VND"});queueSave(j);renderDetail(true);D.querySelector(`#q-${j.quote.length-1}-name`)?.focus()}
+  if(a==="qadd"||a==="qaddch"){const k=a==="qadd"?"fee":"ch";QADD=QADD===k?null:k;renderDetail(true);return}
+  if(a==="qpre"){qPresetAdd(j,b.dataset.v||"");return}
   if(a==="qdel"){j.quote.splice(+b.dataset.i,1);queueSave(j);renderDetail(true)}
   if(a==="useprice"){const q=j.quote[+b.dataset.i];const h=lastPrice(q.name,groupKey(j),j.id);if(h){q.price=h.price;q.currency=h.currency;if(!q.unit)q.unit=h.unit;queueSave(j);renderDetail(true)}}
   if(a==="fillPrices"){let n=0;(j.quote||[]).forEach(q=>{if(num(q.price)>0)return;const h=lastPrice(q.name,groupKey(j),j.id);if(h){q.price=h.price;q.currency=h.currency;if(!q.unit)q.unit=h.unit;n++}});
@@ -1863,6 +1900,17 @@ let OPT_OPEN="";
 const FEE_HQ="Phí khai báo hải quan",FEE_VC="Phí vận chuyển";
 function addFee(j,name,unit="lô",first=false){j.quote=j.quote||[];if(j.quote.some(q=>q.name===name))return;const h=lastPrice(name,groupKey(j),j.id);
   const q={name,qty:1,unit:h&&h.unit||unit,price:h?h.price:0,currency:h?h.currency:"VND"};first?j.quote.unshift(q):j.quote.push(q)}
+const FEE_PRESET=()=>[[FEE_HQ,"tờ khai"],["TTHQ","lô"],["Làm nhanh","lô"],[FEE_VC,"cont"],...CHECKS.map(c=>[c[3],"lô"]),["Phí xin C/O","bộ"],["Phí lấy lệnh D/O","lô"],["Phí xử lý chứng từ","bộ"],["Phí nâng hạ","cont"],["Phí bốc xếp","lô"],["Phí lưu kho","lô"]];
+const CH_PRESET=[["Nâng cont","cont"],["Hạ cont","cont"],["Thu bổ sung nâng cont","cont"],["Phí hạ tầng công nghệ","cont"],["Phí lưu bãi","cont"],["Phí cược cont","cont"],["Local charge / D/O hãng tàu","lô"],["Thuế NK, VAT hàng nhập","lô"],["Lệ phí hải quan","tờ khai"],["Phí kiểm dịch / kiểm tra (nộp cơ quan)","lô"]];
+let QADD=null; // "fee" | "ch" | null: đang mở bảng chọn phí
+function qPresetBox(j){if(!QADD)return "";const ch=QADD==="ch",L=ch?CH_PRESET:FEE_PRESET(),have=new Set((j.quote||[]).map(q=>q.name));
+  return `<div class="qpre ${ch?"ch":""}" role="menu" aria-label="${ch?"Chọn khoản chi hộ":"Chọn loại phí"}"><b>${ch?"Chọn khoản chi hộ":"Chọn loại phí"}</b><div class="qpre-l">${L.map(([n,u])=>`<button type="button" class="${have.has(n)?"on":""}" data-act="qpre" data-v="${esc(n)}|${esc(u)}"${have.has(n)?' disabled title="Đã có trong báo giá"':""}>${have.has(n)?"✓ ":"+ "}${esc(n)}</button>`).join("")}<button type="button" class="blank" data-act="qpre" data-v="|lô">+ Dòng trống</button></div></div>`}
+function qPresetAdd(j,v){const [n,u]=v.split("|"),ch=QADD==="ch";QADD=null;j.quote=j.quote||[];
+  if(n){if(j.quote.some(q=>q.name===n)){renderDetail(true);return}const h=lastPrice(n,groupKey(j),j.id);j.quote.push({name:n,qty:1,unit:h&&h.unit||u||"lô",price:h?h.price:0,currency:h?h.currency:"VND",...(ch?{ch:true}:{})})}
+  else j.quote.push({name:"",qty:1,unit:u||"lô",price:0,currency:"VND",...(ch?{ch:true}:{})});
+  queueSave(j);renderDetail(true);const i=j.quote.length-1;setTimeout(()=>{const el=document.querySelector(n?`#q-${i}-price`:`#q-${i}-name`);el?.focus();el?.select?.()},30)}
+document.addEventListener("click",e=>{if(!QADD||e.target.closest(".qpre,[data-act=qadd],[data-act=qaddch]"))return;QADD=null;const b=document.querySelector(".qpre");if(b){b.remove();document.querySelectorAll("[data-act=qadd],[data-act=qaddch]").forEach(x=>{x.classList.remove("on");x.setAttribute("aria-expanded","false")})}},true);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&QADD){QADD=null;document.querySelector(".qpre")?.remove();document.querySelectorAll("[data-act=qadd],[data-act=qaddch]").forEach(x=>x.classList.remove("on"))}});
 const dropFee=(j,name)=>{if(j.quote)j.quote=j.quote.filter(q=>q.name!==name)};
 const CO_FORMS=["E","D","AK","AJ","VJ","RCEP","CPTPP","EUR.1","B","Khác"];
 const LF=(f,label,val,ph="",cls="",type="text")=>`<label class="fld ${cls}"><span>${label}</span><input id="f-${f}" data-f="${f}" type="${type}" value="${esc(val||"")}" placeholder="${esc(ph)}"></label>`;
@@ -2411,7 +2459,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-23k";
+const APP_VER="2026-11-23l";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
@@ -2825,7 +2873,7 @@ function dbInit(j){
   const prev=S.all.filter(x=>x.id!==j.id&&x.debit&&x.debit.cust&&x.company&&x.company===j.company).sort((a,b)=>(b.debit.at||0)-(a.debit.at||0))[0];
   const cust=prev?{...prev.debit.cust}:{name:j.company||"",addr:"",mst:j.mst||"",email:""};
   if(!cust.mst&&j.mst)cust.mst=j.mst;
-  const lines=(j.quote||[]).filter(q=>q.name).map((q,i)=>({src:q.name,sec:"A",name:dbName(j,q),unit:q.unit||"lô",price:num(q.price),qty:num(q.qty)||1,vat:"8",inv:i===0?"FDI":""}));
+  const lines=(j.quote||[]).filter(q=>q.name).map((q,i)=>({src:q.name,sec:q.ch?"B":"A",name:dbName(j,q),unit:q.unit||"lô",price:num(q.price),qty:num(q.qty)||1,vat:"8",inv:i===0?"FDI":""}));
   return {cust,info:{tk:j.tkNo||"",bl:j.bl||"",veh:j.vehicle||"",qty:dbQty(j),cargo:j.cargo||"",conts:dbConts(j)},lines,at:0}}
 // Debit luôn theo Báo giá: dòng nào có trong báo giá thì có trong debit (giá, SL, ĐVT lấy từ báo giá),
 // giữ lại mục A/B, thuế, số HĐ đã chọn; dòng báo giá đã xoá thì bỏ; dòng chi hộ / dòng tự thêm trong debit giữ nguyên.
@@ -2837,8 +2885,8 @@ function dbSync(j,d){
     let l;
     if(k>=0){used.add(k);l=d.lines[k];l.src=q.name;
       if(!l.numEdited){l.price=num(q.price);l.qty=num(q.qty)||1;l.unit=q.unit||l.unit}
-      if(!l.nameEdited)l.name=dbName(j,q)}
-    else l={src:q.name,sec:"A",name:dbName(j,q),unit:q.unit||"lô",price:num(q.price),qty:num(q.qty)||1,vat:"8",inv:""};
+      if(!l.nameEdited)l.name=dbName(j,q);if(q.ch)l.sec="B"}
+    else l={src:q.name,sec:q.ch?"B":"A",name:dbName(j,q),unit:q.unit||"lô",price:num(q.price),qty:num(q.qty)||1,vat:"8",inv:""};
     out.push(l)});
   d.lines.forEach((x,i)=>{if(!used.has(i)&&!x.src)out.push(x)});
   if(out.length&&!out.some(l=>l.inv==="FDI")){const a=out.find(l=>l.sec!=="B");if(a&&!a.inv)a.inv="FDI"}
