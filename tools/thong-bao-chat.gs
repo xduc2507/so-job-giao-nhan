@@ -9,7 +9,7 @@
  * "webapp": {"executeAs":"USER_DEPLOYING","access":"ANYONE_ANONYMOUS"}. Triển khai: Ứng dụng web.
  */
 var PID = "so-job-giao-nhan";
-var APP = "https://xduc2507.github.io/so-job-giao-nhan/";
+var APP = "https://opsdad.net/";
 var FS = "https://firestore.googleapis.com/v1/projects/" + PID + "/databases/(default)/documents";
 
 function doPost(e) {

@@ -29,4 +29,7 @@ $page = '<!doctype html><html lang="vi"><head><meta charset="utf-8">'
 file_put_contents($out . '/index.html', $page);
 copy($root . '/static-shim.js', $out . '/static-shim.js');
 file_put_contents($out . '/.nojekyll', '');
+// Tên miền riêng cho GitHub Pages: luôn giữ docs/CNAME (dựng lại không được làm mất)
+file_put_contents($out . '/CNAME', "opsdad.net
+");
 echo "Đã dựng docs/index.html (shim v=$ver)\n";
