@@ -511,6 +511,29 @@ button.sm .ic{width:14px;height:14px;margin-right:4px}
 .col{border-radius:var(--r-lg)}
 .kc{padding:10px 11px 9px;gap:6px}
 .kc .t{font-size:13.5px}
+/* chuông thông báo + số tin chưa đọc + khung quá hạn */
+.nbell{position:relative;display:inline-flex;align-items:center;justify-content:center;width:40px;height:36px;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm,6px);color:var(--ink)}
+.nbell .nb-ic{width:20px;height:20px}
+.nbell .nb{position:absolute;top:-7px;right:-7px;min-width:20px;height:20px;padding:0 5px;border-radius:7px;background:#D93025;color:#fff;font-size:12px;font-weight:700;line-height:20px;text-align:center;box-shadow:0 0 0 2px var(--surface)}
+.npanel{position:fixed;top:58px;right:16px;z-index:80;width:min(380px,calc(100vw - 32px));max-height:min(70vh,560px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg,12px);box-shadow:0 16px 40px rgba(10,16,22,.18);padding:6px}
+.np-h{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}.np-h b{font-size:15px}
+.np-i{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;background:none;padding:9px 8px;border-radius:var(--r-sm,6px)}
+.np-i:hover{background:var(--surface-2)}.np-i.bad .np-t b{color:var(--bad)}
+.np-ic{flex:0 0 22px;font-size:16px;line-height:20px;text-align:center}.np-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.np-t b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.np-t small{font-size:12.5px;color:var(--muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.np-empty{padding:18px 10px;color:var(--muted);font-size:13.5px;text-align:center}
+.cbadge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#D93025;color:#fff;font-size:12px;font-weight:700;line-height:1}
+.kc span.cbadge{background:#D93025!important;color:#fff!important;border:0!important;border-radius:10px!important;min-width:20px;height:20px;padding:0 6px!important;font-weight:700}
+.pill.odmiss{background:var(--bad-soft);color:var(--bad);border-color:transparent;font-weight:600}
+.kc .odm{background:var(--bad-soft);color:var(--bad);font-weight:600;border-radius:4px;padding:0 5px}
+.odbox{border-radius:var(--r-md,10px);padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.odbox.none{background:var(--bad-soft);border:1.5px solid var(--bad);color:var(--ink)}.odbox.none>b{color:var(--bad)}
+.odbox.pend{background:var(--warn-soft);border:1px solid var(--warn)}.odbox.ok{background:var(--accent-soft);font-size:13px;padding:8px 12px}
+.odbox .odchips{display:flex;flex-wrap:wrap;gap:6px}.odbox .odchips button{border-radius:999px;background:var(--surface)}.odbox .odchips button.on{border-color:var(--bad);background:var(--surface);font-weight:600}
+.odrow{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}.odrow #odTxt{flex:1 1 220px;min-height:40px;padding:6px 10px;border:1px solid var(--line);background:var(--surface)}
+.oddate{display:flex;flex-direction:column;font-size:12px;color:var(--muted)}.oddate input{min-height:40px;padding:4px 8px;border:1px solid var(--line);background:var(--surface)}
+.odbox .lrow{display:flex;gap:8px;flex-wrap:wrap}.odbox .muted{color:var(--muted)}
+.sec.odsec{padding-top:0}
 /* ===== Lớp giao diện thống nhất (tham khảo design-taste-frontend: hover layer, system) =====
    Một thang bo góc, một kiểu nút chính / phụ, một kiểu thẻ; phản hồi rê chuột / bấm nhẹ; focus rõ; điện thoại nút ≥ 44px. */
 :root{--r-sm:6px;--r-md:10px;--r-lg:12px;--m-in:150ms;--m-out:120ms;--m-press:90ms;--ease:cubic-bezier(.2,.8,.2,1)}
@@ -577,6 +600,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
   <div id="space" class="space" role="tablist" aria-label="Chọn sổ" hidden></div>
   <input id="q" type="search" placeholder="Tìm job, FWD, công ty, số B/L…" aria-label="Tìm job">
   <button id="btnManual" class="primary" title="Tạo job: gõ tay, hoặc dán ảnh / email để tự điền">+ Tạo job</button>
+  <button id="nbell" class="nbell" aria-label="Thông báo" aria-expanded="false" hidden><svg class="nb-ic" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.268 21a2 2 0 0 0 3.464 0m-10.47-5.674A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg><span class="nb" id="nbN" hidden></span></button>
   <button id="btnNew" class="primary" title="Dán ảnh chụp email / Zalo để Claude tạo job" hidden>+ Từ ảnh</button>
 </header>
 
@@ -853,6 +877,7 @@ async function moveJob(j,target){
       fields:[{id:"r",label:"Lý do",type:"select",options:FAIL_REASONS,required:true},{id:"n",label:"Ghi chú thêm (không bắt buộc)"}]});
     if(!v)return false;j.failReason=v.r;j.failNote=v.n;setStatus(j,FAIL,"fail",[v.r,v.n].filter(Boolean).join(": "));return true}
   if(!isOpen(from)){setStatus(j,target,"reopen");return true}
+  if(ti>fi&&odState(j)==="none"){toast("Lô quá hạn: ghi lý do (hoặc gia hạn) ở khung đỏ trong phiếu job trước khi chuyển tiếp.");if(cur()?.id!==j.id)openJob(j.id);setTimeout(()=>$("#odTxt")?.focus(),150);return false}
   if(ti<fi){
     const v=await ask({title:`Trả về “${target}”`,text:`${j.code} đang ở “${from}”. Ghi lý do trả về (thiếu gì, sai gì) để người làm biết cần sửa gì.`,ok:"Trả về",
       fields:[{id:"n",label:"Lý do trả về",required:true}]});
@@ -991,7 +1016,7 @@ function jobRow(j){
   return `<div class="row ${S.sel===j.id?"on":""}${ll&&ll.cls!=="ok"?" late":""}" data-open="${j.id}" tabindex="0">
     <span class="code">${esc(j.code)}</span>
     <span class="t">${j.priority==="Gấp"?'<span class="urgent">GẤP · </span>':""}${esc(j.title||"(chưa có tiêu đề)")}</span>
-    <span class="right">${team()&&chatNew(j)?`<span class="cnew" title="${esc((j.chatByName||"")+": "+(j.chatLast||""))}">💬 Tin mới</span>`:""}${j.example?'<span class="ex">VÍ DỤ</span>':""}${j.coNeed==="Có"&&j.coStatus!=="Đã cấp"&&isOpen(j.status)?`<span class="pill wait">C/O ${esc(j.coStatus||"chưa xin")}</span>`:""}${j.blocker?`<span class="pill wait" title="${esc(j.blocker)}">Vướng: ${esc(j.blocker.slice(0,28))}</span>`:""}${isStalled(j)&&!isOverdue(j)&&!STRICT.includes(j.status)?`<span class="pill dl-over">Đứng yên ${stageDays(j)} ngày</span>`:""}<span class="pill svc">${svcTag(j)}</span>${dlPill(j.deadline,isOpen(j.status))}${stPill(j.status)}</span>
+    <span class="right">${cbadge(j)}${odState(j)==="none"?`<span class="pill odmiss">⚠ Quá hạn – thiếu lý do</span>`:odState(j)==="pend"?`<span class="pill wait">Lý do quá hạn chờ duyệt</span>`:""}${j.example?'<span class="ex">VÍ DỤ</span>':""}${j.coNeed==="Có"&&j.coStatus!=="Đã cấp"&&isOpen(j.status)?`<span class="pill wait">C/O ${esc(j.coStatus||"chưa xin")}</span>`:""}${j.blocker?`<span class="pill wait" title="${esc(j.blocker)}">Vướng: ${esc(j.blocker.slice(0,28))}</span>`:""}${isStalled(j)&&!isOverdue(j)&&!STRICT.includes(j.status)?`<span class="pill dl-over">Đứng yên ${stageDays(j)} ngày</span>`:""}<span class="pill svc">${svcTag(j)}</span>${dlPill(j.deadline,isOpen(j.status))}${stPill(j.status)}</span>
     <span class="meta">${who.map((w,i)=>`<span class="pill ${i===0?"fwd":""}">${esc(w)}</span>`).join("")}<span>${esc(j.type)}</span>${j.mode?`<span>· ${esc(j.mode)}</span>`:""}${j.pol||j.pod?`<span>· ${esc(j.pol||"?")} → ${esc(j.pod||"?")}</span>`:""}${all&&!team()?`<span>· việc ${done}/${all}</span>`:""}<span class="cd" title="${esc(cDateFull(j))}">· tạo ${cDate(j)}</span></span>
     ${ll?`<span class="lr ${ll.cls}" title="${esc(ll.text)}">${ll.cls?"":"<b>"}${esc(ll.text)}${ll.cls?"":"</b>"}</span>`:""}
   </div>`;
@@ -1014,7 +1039,7 @@ function timeTag(j){
 function kanbanCard(j){
   const done=(j.tasks||[]).filter(t=>t.done).length,all=(j.tasks||[]).length,who=groupKey(j),svc=svcOf(j);
   const desc=j.pol||j.pod?`${j.pol||"?"} → ${j.pod||"?"}`:""; // chỉ giữ tuyến: thẻ gọn, xem được nhiều job
-  const tags=[team()&&chatNew(j)?`<span class="cnew" title="${esc((j.chatByName||"")+": "+(j.chatLast||""))}">💬 Mới</span>`:"",`<span class="sv sv-${svc==="HQ"?"hq":svc==="VC"?"vc":"both"}">${svcTag(j)}</span>`,j.priority==="Gấp"?'<span class="u">GẤP</span>':"",
+  const tags=[cbadge(j),odState(j)==="none"?'<span class="odm">Thiếu lý do</span>':"",`<span class="sv sv-${svc==="HQ"?"hq":svc==="VC"?"vc":"both"}">${svcTag(j)}</span>`,j.priority==="Gấp"?'<span class="u">GẤP</span>':"",
     j.bl?`<span title="Số B/L">${esc(j.bl)}</span>`:"",hasVC(j)&&isTruck(j)?'<span>Xe tải</span>':"",hasVC(j)&&isTruck(j)&&j.cbm?`<span title="Số khối">${esc(j.cbm)} m³</span>`:"",hasVC(j)&&!isTruck(j)&&j.yard?`<span title="Bãi hạ cont">Hạ: ${esc(j.yard)}</span>`:"",j.cont?`<span title="${isTruck(j)?"Xe / tải trọng":"Số cont"}">${esc(j.cont)}</span>`:"",
     j.lane?`<span class="ln ln-${j.lane==="Xanh"?"g":j.lane==="Vàng"?"y":"r"}">Luồng ${esc(j.lane)}</span>`:"",
     depositPending(j)?'<span class="w">Chưa hoàn cược</span>':"",j.coNeed==="Có"&&j.coStatus!=="Đã cấp"&&isOpen(j.status)?`<span class="w" title="C/O form ${esc(j.coForm||"?")}">C/O ${esc(j.coStatus||"chưa xin")}</span>`:"",
@@ -1238,6 +1263,7 @@ function renderDetail(force){
     <datalist id="items">${itemNames.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
   </div>
   ${dlRow(j)}
+  ${odBox(j)}
   ${team()?chatSec(j):`<div class="sec"><h3>Việc cần làm <span class="mono">${done}/${tasks.length}</span></h3>
     ${tasks.length?`<div class="prog"><i style="width:${done/tasks.length*100}%"></i></div>`:""}
     ${tasks.map((t,i)=>`<div class="task ${t.done?"done":""}"><input type="checkbox" id="t-c-${i}" data-tdone="${i}" ${t.done?"checked":""} aria-label="Xong"><input type="text" id="t-${i}" data-t="${i}" value="${esc(t.text)}"><button class="x" data-act="tdel" data-i="${i}" aria-label="Xoá việc">✕</button></div>`).join("")}
@@ -1329,7 +1355,7 @@ function lateNotify(){
   toast(fresh.length===1?`⚠ ${fresh[0].code} vừa ${lateState(fresh[0])==="pend"?"có lý do chờ duyệt":"quá hạn ở “"+fresh[0].status+"”"}.`:`⚠ ${fresh.length} job vừa quá hạn / chờ duyệt.`);
 }
 setInterval(()=>{if(S.loaded){renderAll(false)}},5*60*1000); // cập nhật đồng hồ quá hạn
-function renderAll(forceDetail){renderLateBar();lateNotify();chatNotify();renderSide();renderMain();renderDetail(forceDetail)}
+function renderAll(forceDetail){renderLateBar();lateNotify();chatNotify();renderSide();renderMain();renderDetail(forceDetail);nbellPaint()}
 
 /* ---------- text exports ---------- */
 function quoteText(j){
@@ -1572,6 +1598,10 @@ D.addEventListener("click",e=>{
   if(a==="chatSend"){chatSend(j);return}
   if(a==="lateChip"){const t=$("#lateTxt");if(t){t.value=b.dataset.r;t.focus()}b.parentElement.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));return}
   if(a==="lateSend"){lateSend(j,($("#lateTxt")||{}).value);return}
+  if(a==="odChip"){const t=$("#odTxt");if(t){t.value=b.dataset.r==="Khác"?"":b.dataset.r;t.focus()}b.parentElement.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));return}
+  if(a==="odSend"){odSend(j);return}
+  if(a==="odOk"){odDecide(j,true);return}
+  if(a==="odNo"){odDecide(j,false);return}
   if(a==="lateEdit"){S.lateEdit=j.id;renderDetail(true);setTimeout(()=>$("#lateTxt")&&$("#lateTxt").select(),0);return}
   if(a==="lateOk"){if(!boss()||!j.lateAck)return;Object.assign(j.lateAck,{approved:true,approvedAt:Date.now(),approvedByName:window.SOJOB_USER||me()||"chủ sổ"});
     logH(j,{kind:"note",note:"Duyệt lý do: "+j.lateAck.reason});queueSave(j);renderAll(true);toast("Đã duyệt, hết cảnh báo tới 00:00 hôm sau.");return}
@@ -1888,7 +1918,7 @@ function chatPaint(id){
   el.innerHTML=chatMsgs(id);el.scrollTop=el.scrollHeight;
   const h=el.closest(".sec")?.querySelector("h3 .mono");if(h)h.textContent=(S.chat[id]||[]).length||"";
 }
-function chatMarkSeen(j){if(!j||!chatSeen)return;const t=Math.max(j.chatAt||0,Date.now());if((chatSeen[j.id]||0)<t){chatSeen[j.id]=t;chatSeenSave()}}
+function chatMarkSeen(j){if(!j||!chatSeen)return;if(seenN[j.id]!==(j.chatN||0)){seenN[j.id]=j.chatN||0;seenNSave()}const t=Math.max(j.chatAt||0,Date.now());if((chatSeen[j.id]||0)<t){chatSeen[j.id]=t;chatSeenSave()}}
 function chatWatch(j){
   if(chatSub.id===j.id){setTimeout(()=>{chatPaint(j.id);chatMarkSeen(j)},0);return}
   if(chatSub.off)try{chatSub.off()}catch(e){}
@@ -1909,7 +1939,7 @@ async function chatSend(j){
   (S.chat[j.id]=S.chat[j.id]||[]).push(Object.assign({id:"tmp"+msg.at},msg));chatPaint(j.id);
   try{await db.collection("jobs/"+j.id+"/chat").add(msg)}
   catch(e){toast("Chưa gửi được: "+(e?.message||e?.code));S.chat[j.id]=S.chat[j.id].filter(m=>m.id!=="tmp"+msg.at);chatPaint(j.id);t.value=text;return}
-  j.chatAt=msg.at;j.chatBy=me();j.chatByName=msg.byName;j.chatLast=text.slice(0,80);queueSave(j);chatMarkSeen(j);setTimeout(()=>pushPing(j),1500);teamMirror(j,msg);
+  j.chatAt=msg.at;j.chatBy=me();j.chatByName=msg.byName;j.chatLast=text.slice(0,80);j.chatN=(j.chatN||0)+1;queueSave(j);chatMarkSeen(j);setTimeout(()=>pushPing(j),1500);teamMirror(j,msg);
 }
 const chatToasted=new Map();
 const chatMuted=j=>false; // thông báo luôn bật, không cho tắt
@@ -1985,7 +2015,7 @@ function teamPop(m,n){
   box.prepend(c);setTimeout(()=>c.remove(),15000);
   if(document.hidden&&!PUSH_ON&&window.Notification&&Notification.permission==="granted")try{const no=new Notification(`💬 ${fake.chatByName} · Chat chung`,{body:m.text||"",tag:"teamchat",icon:"icon-192.png"});no.onclick=()=>{window.focus();S.view="team";renderMain();no.close()}}catch(e){}
 }
-function teamBadge(){const b=$("#teamBadge"),t=document.querySelector('.tabs [data-view="team"]');if(t)t.hidden=!teamOn();if(!b)return;const n=teamUnread();b.hidden=!n;b.textContent=n>99?"99+":n}
+function teamBadge(){try{nbellPaint()}catch(e){}const b=$("#teamBadge"),t=document.querySelector('.tabs [data-view="team"]');if(t)t.hidden=!teamOn();if(!b)return;const n=teamUnread();b.hidden=!n;b.textContent=n>99?"99+":n}
 const tmTime=at=>{const d=new Date(at||0),t=new Date();const hm=d.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});return d.toDateString()===t.toDateString()?hm:hm+" "+d.toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"})};
 function teamMsgs(){
   if(S.teamErr&&!S.team.length)return `<div class="none">Chưa đọc được Chat chung: ${esc(S.teamErr)}</div>`;
@@ -2038,7 +2068,7 @@ async function teamSend(){
   try{await db.collection("teamchat").add(doc)}catch(e){toast("Chưa gửi được: "+(e?.message||e?.code));t.value=text;return}
   if(j){
     try{await db.collection("jobs/"+j.id+"/chat").add(Object.assign({fromTeam:true},msg));
-      j.chatAt=msg.at;j.chatBy=me();j.chatByName=msg.byName;j.chatLast=text.slice(0,80);queueSave(j);chatMarkSeen(j);setTimeout(()=>pushPing(j),1500)}
+      j.chatAt=msg.at;j.chatBy=me();j.chatByName=msg.byName;j.chatLast=text.slice(0,80);j.chatN=(j.chatN||0)+1;queueSave(j);chatMarkSeen(j);setTimeout(()=>pushPing(j),1500)}
     catch(e){toast("Đã gửi ở Chat chung nhưng chưa lưu được vào job: "+(e?.message||e?.code))}
   }else setTimeout(()=>pushPingTeam(),800);
   teamPaint(true);
@@ -2065,6 +2095,83 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("keydown",e=>{if(e.target.id==="tmTxt"&&e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();teamSend()}if((e.target.id==="tmTxt"||e.target.id==="tmSugQ")&&e.key==="Escape"){teamSug(null)}});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)teamPaint()});
+/* ---------- Quá hạn: bắt buộc ghi lý do (hoặc gia hạn), chủ sổ duyệt ---------- */
+const OD_REASONS=["Khách chưa gửi đủ chứng từ","Chờ hãng tàu / lệnh D/O","Hải quan kiểm tra / yêu cầu bổ sung","Chờ khách thanh toán / nộp thuế","Chờ xe / cảng / bãi","Khác"];
+function odState(j){const a=j.odAck;
+  if(a&&!a.approved&&!a.rejected)return "pend";
+  if(!isOverdue(j))return null;
+  if(a&&a.approved&&!a.rejected&&a.deadline===j.deadline)return "ok";
+  return "none"}
+const odDays=j=>Math.max(1,-(dayDiff(j.deadline)||0));
+function odBox(j){const st=odState(j);if(!st)return "";const a=j.odAck||{};
+  if(st==="ok")return `<div class="odbox ok">✅ Quá hạn ${odDays(j)} ngày · lý do đã duyệt: <b>${esc(a.reason)}</b> (${esc(a.byName||"")})</div>`;
+  if(st==="pend")return `<div class="odbox pend"><b>⏳ Lý do quá hạn chờ duyệt</b><div>Lý do: <b>${esc(a.reason)}</b>${a.newDeadline?` · gia hạn tới <b>${dmy(a.newDeadline)}</b>`:""} · ${esc(a.byName||"")} ghi ${hm(a.at)}</div>
+    <div class="lrow">${boss()?`<button class="primary" data-act="odOk">Duyệt</button><button class="ghost danger" data-act="odNo">Không duyệt</button>`:`<span class="muted">Chủ sổ duyệt xong là hết cảnh báo.</span>`}</div></div>`;
+  return `<div class="odbox none"><b>⚠ Quá hạn ${odDays(j)} ngày (hạn ${dmy(j.deadline)}) – ghi lý do để tiếp tục</b>
+    ${a.rejected&&a.deadline===j.deadline?`<div>Lý do “${esc(a.reason)}” bị trả về${a.rejectNote?": <b>"+esc(a.rejectNote)+"</b>":""}.</div>`:""}
+    <div class="chips odchips">${OD_REASONS.map(r=>`<button type="button" class="sm" data-act="odChip" data-r="${esc(r)}">${esc(r)}</button>`).join("")}</div>
+    <div class="odrow"><input id="odTxt" placeholder="Lý do quá hạn (bắt buộc)" aria-label="Lý do quá hạn">
+      <label class="oddate"><span>Gia hạn đến</span><input id="odDate" type="date" min="${TODAY()}"></label>
+      <button class="primary" data-act="odSend">Gửi lý do</button></div>
+    <small class="muted">Chưa ghi lý do thì không chuyển tiếp được. Lý do được ghi vào lịch sử và khung Trao đổi.</small></div>`}
+async function postJobMsg(j,text){ // đăng 1 tin vào Trao đổi của job (dùng cho lý do quá hạn)
+  if(!db||!team())return;const msg={text,by:me(),byName:window.SOJOB_USER||me(),at:Date.now()};
+  try{await db.collection("jobs/"+j.id+"/chat").add(msg)}catch(e){return}
+  j.chatAt=msg.at;j.chatBy=me();j.chatByName=msg.byName;j.chatLast=text.slice(0,80);j.chatN=(j.chatN||0)+1;queueSave(j);chatMarkSeen(j);
+  teamMirror(j,msg);setTimeout(()=>pushPing(j),1500)}
+function odSend(j){
+  const reason=(($("#odTxt")||{}).value||"").trim(),nd=(($("#odDate")||{}).value||"").trim();
+  if(!reason){toast("Ghi lý do quá hạn trước (chọn nhanh ở trên hoặc gõ).");$("#odTxt")?.focus();return}
+  if(nd&&nd<=TODAY()){toast("Ngày gia hạn phải sau hôm nay.");return}
+  const who=window.SOJOB_USER||me()||"",now=Date.now(),old=j.deadline;
+  j.odAck={deadline:old,reason,newDeadline:nd,at:now,by:me(),byName:who,approved:boss(),approvedAt:boss()?now:0,approvedByName:boss()?who:""};
+  if(nd)j.deadline=nd;
+  logH(j,{kind:"note",note:`Quá hạn (hạn ${dmy(old)}): ${reason}${nd?" · gia hạn tới "+dmy(nd):""}${boss()?"":" · chờ duyệt"}`});
+  queueSave(j);postJobMsg(j,`⚠ Quá hạn ${dmy(old)}: ${reason}${nd?` · gia hạn tới ${dmy(nd)}`:""}`);
+  renderAll(true);toast(boss()?"Đã lưu lý do quá hạn.":"Đã gửi lý do, chờ chủ sổ duyệt.")}
+function odDecide(j,ok){const a=j.odAck;if(!boss()||!a)return;
+  if(ok){Object.assign(a,{approved:true,approvedAt:Date.now(),approvedByName:window.SOJOB_USER||me()||"chủ sổ"});logH(j,{kind:"note",note:"Duyệt lý do quá hạn: "+a.reason});queueSave(j);renderAll(true);toast("Đã duyệt.");return}
+  ask({title:"Không duyệt lý do quá hạn",text:"Lý do: "+a.reason+(a.newDeadline?" · gia hạn tới "+dmy(a.newDeadline):""),ok:"Trả về",fields:[{id:"n",label:"Ghi chú cho nhân viên (không bắt buộc)"}]}).then(v=>{
+    if(!v||!j.odAck)return;Object.assign(j.odAck,{rejected:true,rejectNote:(v.n||"").trim()});
+    if(a.newDeadline&&j.deadline===a.newDeadline)j.deadline=a.deadline; // trả về thì bỏ gia hạn
+    logH(j,{kind:"note",note:"Không duyệt lý do quá hạn: "+a.reason+(v.n?" · "+v.n:"")});queueSave(j);renderAll(true)})}
+
+/* ---------- Số tin chưa đọc từng job ---------- */
+const SEEN_N_LS="sojob.chatSeenN";
+let seenN=(()=>{try{return JSON.parse(localStorage.getItem(SEEN_N_LS)||"{}")}catch(e){return {}}})();
+const seenNSave=()=>{try{localStorage.setItem(SEEN_N_LS,JSON.stringify(seenN))}catch(e){}};
+function chatUnread(j){if(!team()||!chatNew(j))return 0;const n=j.chatN||0,s=seenN[j.id];return s==null||!n?1:Math.max(1,n-s)}
+const cbadge=j=>{const n=chatUnread(j);return n?`<span class="cbadge" title="${esc((j.chatByName||"")+": "+(j.chatLast||""))}" aria-label="${n} tin nhắn mới">${n>99?"99+":n}</span>`:""};
+
+/* ---------- Chuông thông báo trên thanh trên cùng ---------- */
+function notifItems(){
+  if(!team()||!S.loaded)return [];
+  const pool=S.all.filter(j=>!(boss()&&isMine(j))),out=[];
+  const tu=typeof teamUnread==="function"?teamUnread():0;
+  if(tu)out.push({k:"team",ic:"💬",t:"Chat chung",s:`${tu} tin mới`,go:()=>{S.view="team";if(SPACE==="mine")setSpace("team").then(renderMain);else renderMain()}});
+  pool.filter(j=>chatUnread(j)&&j.id!==cur()?.id).sort((a,b)=>(b.chatAt||0)-(a.chatAt||0)).forEach(j=>out.push({k:"c"+j.id,ic:"💬",t:`${j.code} · ${j.title||""}`,s:`${chatUnread(j)} tin mới · ${j.chatByName||j.chatBy||""}: ${j.chatLast||""}`,id:j.id}));
+  pool.filter(j=>odState(j)==="none").forEach(j=>out.push({k:"o"+j.id,ic:"⚠",cls:"bad",t:`${j.code} · ${j.title||""}`,s:`Quá hạn ${odDays(j)} ngày – chưa ghi lý do`,id:j.id}));
+  pool.filter(j=>lateState(j)==="none").forEach(j=>out.push({k:"l"+j.id,ic:"🔴",cls:"bad",t:`${j.code} · ${j.title||""}`,s:`Trễ ${lateDays(j)} ngày ở “${j.status}” – chưa ghi lý do`,id:j.id}));
+  if(boss()){
+    pool.filter(j=>odState(j)==="pend").forEach(j=>out.push({k:"op"+j.id,ic:"✅",t:`${j.code} · ${j.title||""}`,s:`Lý do quá hạn chờ duyệt: ${j.odAck.reason}`,id:j.id}));
+    pool.filter(j=>lateState(j)==="pend").forEach(j=>out.push({k:"lp"+j.id,ic:"✅",t:`${j.code} · ${j.title||""}`,s:`Lý do trễ bước chờ duyệt: ${j.lateAck.reason}`,id:j.id}));
+  }
+  return out}
+let nOpen=false;
+function nbellPaint(){
+  const b=$("#nbell");if(!b)return;b.hidden=!team();const items=notifItems(),n=items.length,c=$("#nbN");
+  if(c){c.hidden=!n;c.textContent=n>99?"99+":n}
+  b.setAttribute("aria-label",n?`Thông báo: ${n} việc cần xem`:"Thông báo: không có gì mới");
+  if(nOpen)nPanelPaint(items)}
+function nPanelPaint(items){
+  let p=$("#npanel");if(!p){p=document.createElement("div");p.id="npanel";p.className="npanel";p.setAttribute("role","dialog");p.setAttribute("aria-label","Thông báo");document.body.appendChild(p)}
+  p.innerHTML=`<div class="np-h"><b>Thông báo</b><button class="ghost sm" data-nclose aria-label="Đóng">✕</button></div>`+
+    (items.length?items.map((it,i)=>`<button class="np-i ${it.cls||""}" data-ni="${i}"><span class="np-ic">${it.ic}</span><span class="np-t"><b>${esc(it.t)}</b><small>${esc(it.s)}</small></span></button>`).join("")
+      :`<div class="np-empty">Không có gì mới. Tin nhắn mới, job quá hạn và lý do chờ duyệt sẽ hiện ở đây.</div>`);
+  p.onclick=e=>{if(e.target.closest("[data-nclose]")){nToggle(false);return}const x=e.target.closest("[data-ni]");if(!x)return;const it=items[+x.dataset.ni];nToggle(false);if(it.go)it.go();else if(it.id)openJobAny(it.id)}}
+function nToggle(o){nOpen=o;$("#nbell")?.setAttribute("aria-expanded",o?"true":"false");if(o)nPanelPaint(notifItems());else $("#npanel")?.remove()}
+document.addEventListener("click",e=>{if(e.target.closest("#nbell")){nToggle(!nOpen);return}if(nOpen&&!e.target.closest("#npanel"))nToggle(false)});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&nOpen)nToggle(false)});
 /* ---------- Thông báo đẩy lên điện thoại (Firebase Cloud Messaging) ---------- */
 const PUSH_VAPID="BDjnLQYfQlgYjKmNbQuWvJDTPkMbaDsZCtSg9RuxcAEcWFJy6IuQzD_gUbWKg1jU1QjFVatUImRx1CLgYCLY0RM"; // khoá công khai Web Push trong Firebase Console → Cloud Messaging
 const PUSH_URL="https://script.google.com/macros/s/AKfycbybwZjSrdEh0xrt0MFKtbwh6dEfCCJuldpqVrQSAgP4e14RwZZs04FB_fPUZ7vKRFP2XQ/exec"; // Apps Script "So Job - Thong bao" (tools/thong-bao-chat.gs)
@@ -2097,7 +2204,7 @@ function pushPing(j){if(!PUSH_URL||(boss()&&isMine(j)))return;try{fetch(PUSH_URL
 /* Icon (bộ icon trong skill design-taste-frontend: lucide ISC, vscode-icons MIT) */
 const ICONS={"copy": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/></g></svg>", "print": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\"/><rect width=\"12\" height=\"8\" x=\"6\" y=\"14\" rx=\"1\"/></g></svg>", "xlsx": "<svg class=\"ic ic-color\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\"><defs><linearGradient id=\"SVGxUjO6TbQ\" x1=\"4.494\" x2=\"13.832\" y1=\"-2092.086\" y2=\"-2075.914\" gradientTransform=\"translate(0 2100)\" gradientUnits=\"userSpaceOnUse\"><stop offset=\"0\" stop-color=\"#18884f\"/><stop offset=\".5\" stop-color=\"#117e43\"/><stop offset=\"1\" stop-color=\"#0b6631\"/></linearGradient></defs><path fill=\"#185c37\" d=\"M19.581 15.35L8.512 13.4v14.409A1.19 1.19 0 0 0 9.705 29h19.1A1.19 1.19 0 0 0 30 27.809V22.5Z\"/><path fill=\"#21a366\" d=\"M19.581 3H9.705a1.19 1.19 0 0 0-1.193 1.191V9.5L19.581 16l5.861 1.95L30 16V9.5Z\"/><path fill=\"#107c41\" d=\"M8.512 9.5h11.069V16H8.512Z\"/><path d=\"M16.434 8.2H8.512v16.25h7.922a1.2 1.2 0 0 0 1.194-1.191V9.391A1.2 1.2 0 0 0 16.434 8.2\" opacity=\".1\"/><path d=\"M15.783 8.85H8.512V25.1h7.271a1.2 1.2 0 0 0 1.194-1.191V10.041a1.2 1.2 0 0 0-1.194-1.191\" opacity=\".2\"/><path d=\"M15.783 8.85H8.512V23.8h7.271a1.2 1.2 0 0 0 1.194-1.191V10.041a1.2 1.2 0 0 0-1.194-1.191\" opacity=\".2\"/><path d=\"M15.132 8.85h-6.62V23.8h6.62a1.2 1.2 0 0 0 1.194-1.191V10.041a1.2 1.2 0 0 0-1.194-1.191\" opacity=\".2\"/><path fill=\"url(#SVGxUjO6TbQ)\" d=\"M3.194 8.85h11.938a1.193 1.193 0 0 1 1.194 1.191v11.918a1.193 1.193 0 0 1-1.194 1.191H3.194A1.19 1.19 0 0 1 2 21.959V10.041A1.19 1.19 0 0 1 3.194 8.85\"/><path fill=\"#fff\" d=\"m5.7 19.873l2.511-3.884l-2.3-3.862h1.847L9.013 14.6c.116.234.2.408.238.524h.017q.123-.281.26-.546l1.342-2.447h1.7l-2.359 3.84l2.419 3.905h-1.809l-1.45-2.711A2.4 2.4 0 0 1 9.2 16.8h-.024a1.7 1.7 0 0 1-.168.351l-1.493 2.722Z\"/><path fill=\"#33c481\" d=\"M28.806 3h-9.225v6.5H30V4.191A1.19 1.19 0 0 0 28.806 3\"/><path fill=\"#107c41\" d=\"M19.581 16H30v6.5H19.581Z\"/></svg>", "up": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 3v12m5-7l-5-5l-5 5m14 7v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/></svg>", "down": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M12 15V3m9 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"m7 10l5 5l5-5\"/></g></svg>", "doc": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z\"/><path d=\"M14 2v5a1 1 0 0 0 1 1h5M10 9H8m8 4H8m8 4H8\"/></g></svg>"};
 const ic=n=>ICONS[n]||"";
-const APP_VER="2026-11-23d";
+const APP_VER="2026-11-23e";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
