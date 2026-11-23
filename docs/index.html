@@ -7,7 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sổ Job">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <style>
 /* Layout: bàn điều phối 3 cột — nhóm FWD | danh sách / bảng quy trình / kế hoạch | phiếu job */
 :root{
@@ -593,14 +594,102 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
   .kc:hover,.row:hover,button:hover,button:active,.kc:active{transform:none!important}
   button:active:not(:disabled){filter:brightness(.94)}
 }
+/* ===== Phong cách kiểu ePort (chỉ đổi màu, chữ, nút, icon; giữ nguyên cấu trúc) =====
+   Open Sans 13px, nền #f3f7fa, menu trên #015198, header mục #1c84c6, nút 2px, ô nhập 5px viền #cfdadd, icon Font Awesome 4.7 */
+:root{--nav:#015198;--primary:#1c84c6;--teal:#1dc5a3;--step-on:#059494;--step-off:#c0c0c0;--row-sel:#00a8ff;
+  --bg:#f3f7fa;--surface:#ffffff;--surface-2:#f4f6f8;--ink:#333333;--muted:#676a6c;--line:#e7eaec;
+  --accent:#1c84c6;--accent-ink:#ffffff;--accent-soft:#e3f0fa;
+  --ok:#1ab394;--ok-soft:#e1f5f1;--warn:#b9741c;--warn-soft:#fdf2e3;--bad:#ed5565;--bad-soft:#fde8ea;--info:#1c84c6;--info-soft:#e3f0fa;
+  --violet:#059494;--violet-soft:#dff2f2;
+  --f-body:"Open Sans","Helvetica Neue",Helvetica,Arial,sans-serif;--r:3px;--r-sm:2px;--r-md:3px;--r-lg:4px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1720;--surface:#16202b;--surface-2:#1c2833;--ink:#e3e8ee;--muted:#9aa7b4;--line:#2a3846;
+  --accent:#3a9be0;--accent-ink:#ffffff;--accent-soft:#16324a;--primary:#3a9be0;--nav:#0b3d73;
+  --ok:#2cc9a5;--ok-soft:#13332c;--bad:#f07a87;--bad-soft:#3a1d22;--info:#5fb0ea;--info-soft:#16324a;--violet:#2ab7b7;--violet-soft:#123536}}
+:root[data-theme="dark"]{--bg:#0f1720;--surface:#16202b;--surface-2:#1c2833;--ink:#e3e8ee;--muted:#9aa7b4;--line:#2a3846;
+  --accent:#3a9be0;--accent-soft:#16324a;--primary:#3a9be0;--nav:#0b3d73;--ok:#2cc9a5;--ok-soft:#13332c;--bad:#f07a87;--bad-soft:#3a1d22}
+body{font-family:var(--f-body);font-size:13px;background:var(--bg);color:var(--ink)}
+/* icon Font Awesome: 12–13px, trước nhãn, cách 5px */
+.fa.ic-fa{font-size:13px;margin-right:5px;width:auto}.fa.ic-after{margin:0 0 0 6px}
+.ic-add{color:#1ab394}.ic-edit{color:#f8ac59}.ic-del{color:#ed5565}.ic-blue{color:#1c84c6}
+button.primary .fa,button.debitbtn .fa,button.tkbtn .fa,button.go .fa,#btnManual .fa{color:#fff}
+/* thanh menu trên: xanh đậm, chữ trắng */
+.top{background:var(--nav)!important;border-bottom:0!important;box-shadow:none!important;color:#fff}
+.top .brand,.top .brand b,.top a{color:#fff}
+.top .brand svg,.top .brand img{filter:brightness(0) invert(1)}
+.top button:not(.primary){background:transparent;border-color:rgba(255,255,255,.35);color:#fff}
+.top button:not(.primary):hover{background:rgba(255,255,255,.12)!important;border-color:rgba(255,255,255,.6)!important}
+.top #btnManual{background:var(--teal);border-color:var(--teal)}
+.top input{background:#fff;color:#333;border-color:#fff}
+.top .space{border-color:rgba(255,255,255,.45);background:transparent}
+.top .space{background:rgba(255,255,255,.08)!important}.top .space button{background:transparent!important;color:#fff!important;border:0!important}.top .space button.on{background:#fff!important;color:var(--nav)!important;font-weight:600}.top .space button .fa{color:inherit}
+.nbell{background:transparent!important;border-color:rgba(255,255,255,.35)!important;color:#fff!important}
+.nbell .nb{box-shadow:0 0 0 2px var(--nav)}
+/* nút: cao ~26px, bo 2px, chữ 12px; phụ nền #f4f4f4 viền #ddd */
+button{border-radius:2px;font-size:12px;padding:4px 10px;min-height:26px}
+button:not(.primary):not(.ghost):not(.x):not(.cpop-x):not(.kb-fab):not(.side-btn):not(.np-i):not(.g){background:#f4f4f4;border-color:#dddddd;color:#333}
+button.back{background:var(--nav)!important;border-color:var(--nav)!important;color:#fff!important;font-weight:700;border-radius:2px!important}
+.kb-fab{background:var(--teal)!important;border-color:var(--teal)!important;color:#fff!important;border-radius:50%!important}
+button:not(.primary):not(.ghost):not(.x):not(.cpop-x):hover:not(:disabled){background:#e9e9e9!important;border-color:#cfcfcf!important}
+button.primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+button.primary:hover:not(:disabled){background:#1a76b1!important;border-color:#1a76b1!important}
+button.debitbtn,button.go{background:var(--teal)!important;border-color:var(--teal)!important;color:#fff!important}
+button.tkbtn{background:var(--primary)!important;border-color:var(--primary)!important}
+button.primary.bad,button.danger:not(.ghost){background:#ef6776!important;border-color:#ef6776!important;color:#fff!important}
+button.ghost.danger{color:#ed5565}
+button.sm{font-size:11.5px;padding:3px 8px;min-height:22px}
+/* ô nhập: cao 28px, bo 5px, viền #cfdadd */
+input,select,textarea{border:1px solid #cfdadd;border-radius:5px;font-size:12.5px;background:var(--surface)}
+input:not([type=checkbox]):not([type=radio]),select{min-height:28px;padding:3px 8px}
+input::placeholder,textarea::placeholder{color:#aaa}
+.lot .fld input,.lot .fld select,.lot .fld textarea{font-size:13.5px;min-height:32px}
+.fld>span{font-size:12px;font-weight:600;color:#676a6c;opacity:1}
+/* header mục: dải xanh #1c84c6, chữ trắng đậm 12px, cao 32px */
+.sec h3{background:var(--primary);color:#fff;font-size:12px;font-weight:700;letter-spacing:0;text-transform:none;margin:-14px -16px 4px;padding:0 12px;min-height:32px}
+.sec h3 .mono{color:#fff;opacity:.85}
+.sec h3 button{background:rgba(255,255,255,.14)!important;border-color:rgba(255,255,255,.4)!important;color:#fff!important;min-height:22px;font-size:11.5px}
+.sec h3 button .fa{color:#fff}
+.review summary{background:var(--primary);color:#fff}.review summary .mono{color:#fff}
+/* thẻ, khung: góc vuông vức, viền nhạt */
+.card,.col,.sec.lot,.teamchat,.review,.kc,.stat,.odbox,.cpop{border-radius:3px}
+.list,.card{border-color:var(--line)}
+/* dòng đang chọn: nền xanh nhạt, vạch trái #00a8ff */
+.row.on{background:#e6f6ff!important;box-shadow:inset 3px 0 0 var(--row-sel)}
+.kc.on{outline-color:var(--row-sel)}
+/* tab */
+.tabs{background:var(--surface);border:1px solid var(--line);border-radius:3px}
+.tabs button{border-radius:2px;font-size:12.5px;min-height:28px;background:transparent!important;border:0!important;color:var(--muted)!important}
+.tabs button.on{background:var(--primary)!important;color:#fff!important}
+/* tiến trình: mũi tên chevron, bước hiện tại #059494, chưa tới #c0c0c0, chữ trắng 11px */
+.stages{gap:2px}
+.stages button{border-radius:0!important;font-size:11px;color:#fff!important;background:var(--step-off)!important;padding:4px 8px 4px 13px;min-height:24px;
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%,8px 50%)}
+.stages button:first-child{clip-path:polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%);padding-left:10px}
+.stages button.past{background:#5cb8b8!important}
+.stages button.now{background:var(--step-on)!important;font-weight:700}
+/* bảng quy trình */
+.col{background:#eef2f5;border-top-width:3px}
+.kc{border-color:var(--line)}
+/* menu thả xuống: nền trắng, bóng mảnh, không bo góc */
+.kmenu,.npanel,.tm-sug,#chatPops .cpop,.dbbox .sheet,.modal .sheet{border-radius:0!important;box-shadow:0 0 3px rgba(86,96,117,.3)!important}
+.npanel .np-i{border-radius:0}
+/* nhãn nhỏ */
+.pill{border-radius:3px}
+.cbadge,.nbell .nb{background:#ed5565}
+/* trạng thái đạt: xanh #1ab394 */
+.dltag.late,.st8,.st9{color:#ed5565}
+@media (max-width:780px){
+  button{font-size:13px}
+  .sec h3{margin:-12px -14px 4px}
+}
 </style>
 
 <header class="top">
   <div class="brand"><i aria-hidden="true"></i><b>Sổ Job Giao Nhận</b></div>
   <div id="space" class="space" role="tablist" aria-label="Chọn sổ" hidden></div>
   <input id="q" type="search" placeholder="Tìm job, FWD, công ty, số B/L…" aria-label="Tìm job">
-  <button id="btnManual" class="primary" title="Tạo job: gõ tay, hoặc dán ảnh / email để tự điền">+ Tạo job</button>
-  <button id="nbell" class="nbell" aria-label="Thông báo" aria-expanded="false" hidden><svg class="nb-ic" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.268 21a2 2 0 0 0 3.464 0m-10.47-5.674A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg><span class="nb" id="nbN" hidden></span></button>
+  <button id="btnManual" class="primary" title="Tạo job: gõ tay, hoặc dán ảnh / email để tự điền"><i class="fa fa-plus ic-fa" aria-hidden="true"></i>Tạo job</button>
+  <button id="nbell" class="nbell" aria-label="Thông báo" aria-expanded="false" hidden><i class="fa fa-bell" aria-hidden="true" style="font-size:16px"></i><span class="nb" id="nbN" hidden></span></button>
   <button id="btnNew" class="primary" title="Dán ảnh chụp email / Zalo để Claude tạo job" hidden>+ Từ ảnh</button>
 </header>
 
@@ -612,9 +701,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
     <div id="latebar"></div>
     <div class="bar">
       <div class="tabs" role="tablist">
-        <button data-view="team" hidden>💬 Chat chung<span class="tbadge" id="teamBadge" hidden></span></button>
-        <button data-view="board">Quy trình</button>
-        <button data-view="list" class="on">Danh sách</button>
+        <button data-view="team" hidden><i class="fa fa-comments ic-fa" aria-hidden="true"></i>Chat chung<span class="tbadge" id="teamBadge" hidden></span></button>
+        <button data-view="board"><i class="fa fa-columns ic-fa" aria-hidden="true"></i>Quy trình</button>
+        <button data-view="list" class="on"><i class="fa fa-list ic-fa" aria-hidden="true"></i>Danh sách</button>
       </div>
       <span class="sp"></span>
       <select id="fStatus" aria-label="Lọc trạng thái">
@@ -786,7 +875,7 @@ function renderSpace(){
   const el=$("#space");if(!el)return;el.hidden=!spaceOn();if(!spaceOn())return;
   const alert=v=>S.all.filter(j=>(v==="mine")===isMine(j)&&((lateState(j)&&lateState(j)!=="ok")||chatNew(j))).length;
   const b=(v,t)=>{const n=SPACE===v?0:alert(v);return `<button role="tab" aria-selected="${SPACE===v}" class="${SPACE===v?"on":""}" data-space="${v}">${t}${n?`<span class="n" title="Có ${n} job cần xem">${n}</span>`:""}</button>`};
-  el.innerHTML=b("team","🏢 Sổ chung")+b("mine","🔒 Việc riêng");
+  el.innerHTML=b("team",ic("team")+"Sổ chung")+b("mine",ic("lock")+"Việc riêng");
 }
 const dirty=new Set(),timers={},chains={};
 
@@ -1249,7 +1338,7 @@ function renderDetail(force){
   const tpl=S.tpl[j.type]||[],have=new Set(tasks.map(t=>normName(t.text))),missing=tpl.filter(t=>!have.has(normName(t))).length;
   el.innerHTML=`<div class="d">
   <div class="d-head">
-    <div class="l1"><button class="back" data-act="close">← Danh sách</button><span class="acts">${isOpen(j.status)?`${nextStage(j)?`<button class="primary go" data-st="${esc(nextStage(j))}">Chuyển tiếp →</button>`:""}<button class="ghost sm danger" data-st="${FAIL}">Thất bại</button>`:`<button class="sm" data-st="${esc(STAGES[0])}">Mở lại</button>`}</span></div>
+    <div class="l1"><button class="back" data-act="close">← Danh sách</button><span class="acts">${isOpen(j.status)?`${nextStage(j)?`<button class="primary go" data-st="${esc(nextStage(j))}">Chuyển tiếp${ic("next").replace("ic-fa","ic-fa ic-after")}</button>`:""}<button class="ghost sm danger" data-st="${FAIL}">${ic("fail")}Thất bại</button>`:`<button class="sm" data-st="${esc(STAGES[0])}">Mở lại</button>`}</span></div>
     <div class="l2"><span class="mono jcode">${esc(j.code)}${j.example?' <span class="ex">VÍ DỤ</span>':""}</span><button class="ghost sm urg${j.priority==="Gấp"?" on":""}" data-act="urgent" title="Bật / tắt job gấp">⚡ Gấp</button>${spaceOn()&&isMine(j)?`<button class="ghost sm shr" data-act="share" title="Đưa job này sang Sổ chung: nhân viên thấy và làm cùng">→ Chuyển sang Sổ chung</button>`:""}</div>
     <div id="stagebar">${stagesHtml(j)}</div>
     ${lateBox(j)}
@@ -1292,7 +1381,7 @@ function renderDetail(force){
     ${!(j.images||[]).length&&!(j.files||[]).length&&!(j.links||[]).length?`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có ảnh hay tài liệu. Bấm “+ Ảnh / tệp” (hoặc dán ảnh Ctrl+V khi đang mở job), hoặc “+ Link OneDrive” để gắn thư mục / tệp trên OneDrive, Google Drive.</p>`:""}
     ${j.docCheck?`<div class="dchk"><span class="vd ${/^khớp/i.test(j.docCheck.verdict)?"vd-ok":/lệch/i.test(j.docCheck.verdict)?"vd-bad":"vd-warn"}">✦ ${esc(j.docCheck.verdict)}</span><span style="color:var(--muted)">${(j.docCheck.issues||[]).length} điểm cần xem · ${new Date(j.docCheck.at).toLocaleDateString("vi-VN")}</span><button class="ghost sm" data-act="aiDocsView">Xem kết quả</button></div>`:""}
     ${j.raw?`<textarea id="f-raw" data-f="raw" rows="3">${esc(j.raw)}</textarea>`:""}${sizeBar(j)}</div>
-  <div class="sec"><div class="acts" style="justify-content:space-between"><span style="color:var(--muted);font-size:12px">Tạo ${new Date(j.createdAt||Date.now()).toLocaleString("vi-VN")}${j.createdByName?" · bởi "+esc(j.createdByName):""}</span>${boss()?'<button class="danger" data-act="del">Xoá job</button>':""}</div></div>
+  <div class="sec"><div class="acts" style="justify-content:space-between"><span style="color:var(--muted);font-size:12px">Tạo ${new Date(j.createdAt||Date.now()).toLocaleString("vi-VN")}${j.createdByName?" · bởi "+esc(j.createdByName):""}</span>${boss()?'<button class="danger" data-act="del">${ic("del")}Xoá job</button>':""}</div></div>
   </div>`;
   renderTotals(j);
 }
@@ -1913,7 +2002,7 @@ function chatSec(j){
   chatWatch(j);
   return `<div class="sec"><h3>Trao đổi <span class="mono">${(S.chat[j.id]||[]).length||""}</span></h3>
     <div class="chat" id="chatList">${chatMsgs(j.id)}</div>
-    <div class="chatin"><textarea id="chatTxt" rows="1" placeholder="Nhắn cho nhóm…" title="Enter để gửi, Shift+Enter để xuống dòng">${esc(S.chatDraft[j.id]||"")}</textarea><button class="primary" data-act="chatSend">Gửi</button></div></div>`;
+    <div class="chatin"><textarea id="chatTxt" rows="1" placeholder="Nhắn cho nhóm…" title="Enter để gửi, Shift+Enter để xuống dòng">${esc(S.chatDraft[j.id]||"")}</textarea><button class="primary" data-act="chatSend">${ic("send")}Gửi</button></div></div>`;
 }
 function chatPaint(id){
   const el=$("#chatList");if(!el||cur()?.id!==id)return;
@@ -2035,7 +2124,7 @@ function renderTeam(el){
     el.innerHTML=`<div class="teamchat"><div class="tm-h"><b>💬 Chat chung</b><span class="muted tm-note">Cả nhóm trao đổi. Tin nhắn trong job ở Sổ chung cũng hiện ở đây, bấm 📁 để mở job.</span></div>
       <div class="chat tm-list" id="tmList"></div>
       <div class="tm-in"><div id="tmJob"></div><div id="tmSug" class="tm-sug" hidden></div>
-        <div class="chatin"><button class="ghost" id="tmPick" title="Gắn job vào tin nhắn">📎</button><textarea id="tmTxt" rows="2" placeholder="Nhắn cho cả nhóm… (gõ # để gắn job)">${esc(S.teamDraft)}</textarea><button class="primary" id="tmSend">Gửi</button></div></div></div>`;
+        <div class="chatin"><button class="ghost" id="tmPick" title="Gắn job vào tin nhắn">📎</button><textarea id="tmTxt" rows="2" placeholder="Nhắn cho cả nhóm… (gõ # để gắn job)">${esc(S.teamDraft)}</textarea><button class="primary" id="tmSend">${ic("send")}Gửi</button></div></div></div>`;
   }
   teamPaint(true);
 }
@@ -2205,9 +2294,11 @@ async function bellClick(){
 function pushPing(j){if(!PUSH_URL||(boss()&&isMine(j)))return;pushBeacon({job:j.id})}
 // Thông báo luôn bật: trình duyệt chỉ cho hỏi quyền khi người dùng chạm / bấm, nên hỏi ở lần chạm đầu tiên sau khi mở sổ
 /* Icon (bộ icon trong skill design-taste-frontend: lucide ISC, vscode-icons MIT) */
-const ICONS={"copy": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/></g></svg>", "print": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\"/><rect width=\"12\" height=\"8\" x=\"6\" y=\"14\" rx=\"1\"/></g></svg>", "xlsx": "<svg class=\"ic ic-color\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\"><defs><linearGradient id=\"SVGxUjO6TbQ\" x1=\"4.494\" x2=\"13.832\" y1=\"-2092.086\" y2=\"-2075.914\" gradientTransform=\"translate(0 2100)\" gradientUnits=\"userSpaceOnUse\"><stop offset=\"0\" stop-color=\"#18884f\"/><stop offset=\".5\" stop-color=\"#117e43\"/><stop offset=\"1\" stop-color=\"#0b6631\"/></linearGradient></defs><path fill=\"#185c37\" d=\"M19.581 15.35L8.512 13.4v14.409A1.19 1.19 0 0 0 9.705 29h19.1A1.19 1.19 0 0 0 30 27.809V22.5Z\"/><path fill=\"#21a366\" d=\"M19.581 3H9.705a1.19 1.19 0 0 0-1.193 1.191V9.5L19.581 16l5.861 1.95L30 16V9.5Z\"/><path fill=\"#107c41\" d=\"M8.512 9.5h11.069V16H8.512Z\"/><path d=\"M16.434 8.2H8.512v16.25h7.922a1.2 1.2 0 0 0 1.194-1.191V9.391A1.2 1.2 0 0 0 16.434 8.2\" opacity=\".1\"/><path d=\"M15.783 8.85H8.512V25.1h7.271a1.2 1.2 0 0 0 1.194-1.191V10.041a1.2 1.2 0 0 0-1.194-1.191\" opacity=\".2\"/><path d=\"M15.783 8.85H8.512V23.8h7.271a1.2 1.2 0 0 0 1.194-1.191V10.041a1.2 1.2 0 0 0-1.194-1.191\" opacity=\".2\"/><path d=\"M15.132 8.85h-6.62V23.8h6.62a1.2 1.2 0 0 0 1.194-1.191V10.041a1.2 1.2 0 0 0-1.194-1.191\" opacity=\".2\"/><path fill=\"url(#SVGxUjO6TbQ)\" d=\"M3.194 8.85h11.938a1.193 1.193 0 0 1 1.194 1.191v11.918a1.193 1.193 0 0 1-1.194 1.191H3.194A1.19 1.19 0 0 1 2 21.959V10.041A1.19 1.19 0 0 1 3.194 8.85\"/><path fill=\"#fff\" d=\"m5.7 19.873l2.511-3.884l-2.3-3.862h1.847L9.013 14.6c.116.234.2.408.238.524h.017q.123-.281.26-.546l1.342-2.447h1.7l-2.359 3.84l2.419 3.905h-1.809l-1.45-2.711A2.4 2.4 0 0 1 9.2 16.8h-.024a1.7 1.7 0 0 1-.168.351l-1.493 2.722Z\"/><path fill=\"#33c481\" d=\"M28.806 3h-9.225v6.5H30V4.191A1.19 1.19 0 0 0 28.806 3\"/><path fill=\"#107c41\" d=\"M19.581 16H30v6.5H19.581Z\"/></svg>", "up": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 3v12m5-7l-5-5l-5 5m14 7v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/></svg>", "down": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M12 15V3m9 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"m7 10l5 5l5-5\"/></g></svg>", "doc": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z\"/><path d=\"M14 2v5a1 1 0 0 0 1 1h5M10 9H8m8 4H8m8 4H8\"/></g></svg>"};
-const ic=n=>ICONS[n]||"";
-const APP_VER="2026-11-23f";
+const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-add",print:"fa-print ic-blue",up:"fa-upload ic-blue",down:"fa-download ic-blue",
+  add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
+  chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
+const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
+const APP_VER="2026-11-23g";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
@@ -2578,8 +2669,8 @@ function tkCheckRow(j){const c=j.tkCheck,busy=TK_BUSY===j.id;
   const line=!c?"":c.ok?`<span class="tkst ok">${/thông quan/i.test(c.status)?"✅":"📦"} <b>${esc(c.status||"Đã có mã vạch")}</b>${c.lane?` · ${c.lane==="Xanh"?"🟢":c.lane==="Vàng"?"🟡":c.lane==="Đỏ"?"🔴":""} Luồng ${esc(c.lane)}`:""}${c.kind?` · ${esc(c.kind)}`:""}</span>`
     :`<span class="tkst bad">${/chưa được cấp phép/i.test(c.msg||"")?"⏳":"❌"} ${esc(c.msg||"Chưa có kết quả")}</span>`;
   const when=c?`<small>Kiểm tra lúc ${new Date(c.at).toLocaleString("vi-VN",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"})}${c.tkNo&&c.tkNo!==j.tkNo?` · TK ${esc(c.tkNo)}`:""}</small>`:`<small>Tờ khai đã sửa thì ghi số TK bản sửa mới nhất (số cuối 0, 1, 2…).</small>`;
-  return `<div class="mvrow"><button type="button" class="mvbtn tkbtn" data-tkcheck="${esc(j.id)}"${busy?" disabled":""}>${busy?"⏳ Đang kiểm tra…":"🔍 Kiểm tra trạng thái tờ khai"}</button>
-    ${c&&c.ok&&c.url?`<button type="button" class="primary mvbtn" data-mvopen="${esc(j.id)}">${MV_OPEN===j.id?"✕ Đóng MV":"📄 Lấy MV"}</button>`:""}
+  return `<div class="mvrow"><button type="button" class="mvbtn tkbtn" data-tkcheck="${esc(j.id)}"${busy?" disabled":""}>${busy?"⏳ Đang kiểm tra…":ic("search")+"Kiểm tra trạng thái tờ khai"}</button>
+    ${c&&c.ok&&c.url?`<button type="button" class="primary mvbtn" data-mvopen="${esc(j.id)}">${MV_OPEN===j.id?ic("close")+"Đóng MV":ic("barcode")+"Lấy MV"}</button>`:""}
     <div class="tkinfo">${line}${when}</div></div>
     ${MV_OPEN===j.id&&c&&c.url?`<div class="mvframe"><iframe src="${esc(c.url)}" title="Bản kê mã vạch"></iframe></div>`:""}`}
 function tkInputs(j){const g=f=>{const el=document.getElementById("f-"+f);return String((el&&el.value)||j[f]||"").trim()};
