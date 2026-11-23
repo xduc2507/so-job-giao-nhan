@@ -13,15 +13,16 @@ var APP = "https://xduc2507.github.io/so-job-giao-nhan/";
 var FS = "https://firestore.googleapis.com/v1/projects/" + PID + "/databases/(default)/documents";
 
 function doPost(e) {
-  var out = { ok: false };
+  var out = { ok: false }, body = null;
   try {
-    var body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
+    body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
     out = body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
   } catch (err) { out = { ok: false, msg: String(err) }; }
   console.log(JSON.stringify(out));
+  try { var P = PropertiesService.getScriptProperties(), L = JSON.parse(P.getProperty("log") || "[]"); L.unshift({ t: new Date().toISOString(), job: (body && body.job) || (body && body.team ? "team" : ""), out: out }); P.setProperty("log", JSON.stringify(L.slice(0, 10))); } catch (x) {}
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
-function doGet() { return ContentService.createTextOutput("ok"); }
+function doGet(e) { if (e && e.parameter && e.parameter.log === "1") return ContentService.createTextOutput(PropertiesService.getScriptProperties().getProperty("log") || "[]").setMimeType(ContentService.MimeType.JSON); return ContentService.createTextOutput("ok"); }
 
 function goi(url, opt) {
   opt = opt || {};
@@ -79,10 +80,11 @@ function guiThongBao(jobId) {
 
   var title = "💬 " + (msg.byName || msg.by) + " · " + (job.code || "");
   var body = (job.title ? String(job.title).slice(0, 60) + "\n" : "") + String(msg.text).slice(0, 160);
-  var sent = 0, loi = [];
+  var sent = 0, loi = [], det = [];
   nguoi.forEach(function (mail) {
     var p = docFs("push/" + mail);
     var toks = (p && p.tokens) || [], bad = [];
+    det.push(mail.slice(0, 3) + "…:" + toks.length);
     toks.forEach(function (t) {
       var r = goi("https://fcm.googleapis.com/v1/projects/" + PID + "/messages:send", { method: "post", payload: { message: {
         token: t,
@@ -97,7 +99,7 @@ function guiThongBao(jobId) {
     if (bad.length) goi(FS + "/push/" + encodeURIComponent(mail) + "?updateMask.fieldPaths=tokens", { method: "patch", payload: { fields: { tokens: { arrayValue: { values:
       toks.filter(function (t) { return bad.indexOf(t) < 0; }).map(function (t) { return { stringValue: t }; }) } } } } });
   });
-  return { ok: true, sent: sent, to: nguoi.length, loi: loi };
+  return { ok: true, sent: sent, to: nguoi.length, loi: loi, det: det };
 }
 
 /** Chạy thử bằng tay trong trình soạn Apps Script để cấp quyền lần đầu. */
@@ -133,9 +135,10 @@ function guiChatChung() {
   var m = goi(FS + "/members?pageSize=200");
   ((m.json && m.json.documents) || []).forEach(function (d) { nguoi.push(decodeURIComponent(d.name.split("/").pop()).toLowerCase()); });
   nguoi = nguoi.filter(function (x, i, a) { return x && a.indexOf(x) === i && x !== msg.by; });
-  var sent = 0, loi = [];
+  var sent = 0, loi = [], det = [];
   nguoi.forEach(function (mail) {
     var p = docFs("push/" + mail);
+    det.push(mail.slice(0, 3) + "…:" + ((p && p.tokens) || []).length);
     if (!p) return;
     (p.tokens || []).forEach(function (t) {
       var r = goi("https://fcm.googleapis.com/v1/projects/" + PID + "/messages:send", { method: "post", payload: { message: { token: t,
@@ -145,7 +148,7 @@ function guiChatChung() {
       if (r.code === 200) sent++; else loi.push(r.code);
     });
   });
-  return { ok: true, sent: sent, to: nguoi.length, loi: loi };
+  return { ok: true, sent: sent, to: nguoi.length, loi: loi, det: det };
 }
 
 /** Kiểm tra: ai đã đăng ký máy nhận thông báo (chọn hàm này rồi bấm Chạy). */
