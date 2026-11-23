@@ -1613,10 +1613,11 @@ const LF=(f,label,val,ph="",cls="",type="text")=>`<label class="fld ${cls}"><spa
 const MORE=["pol","pod","incoterm","refs","contact","summary","questions"];
 function lotSec(j){
   const head=`<h3>Thông tin lô hàng<button class="ghost sm" data-act="lotFill" style="margin-left:auto">📋 Dán chữ / ảnh để tự điền</button></h3>`;
-  const filled=MORE.filter(f=>String(j[f]||"").trim()).length;
+  const vcOn=svcOf(j)!=="HQ";
+  const filled=MORE.filter(f=>!(vcOn&&(f==="pol"||f==="pod"))&&String(j[f]||"").trim()).length;
   const more=`<details ${S.lotMore?"open":""} id="lotMore"><summary>Thêm chi tiết${filled?` (${filled} ô đã điền)`:" (cảng, incoterm, liên hệ…)"}</summary>
     <div class="g2">${LF("incoterm","Incoterm",j.incoterm,"FOB, CIF…")}
-      ${LF("pol","Nơi đi (POL)",j.pol,"Ningbo, Shanghai…")}${LF("pod","Nơi đến (POD)",j.pod,"Cát Lái, Hải Phòng…")}
+      ${vcOn?"":LF("pol","Nơi đi (POL)",j.pol,"Ningbo, Shanghai…")+LF("pod","Nơi đến (POD)",j.pod,"Cát Lái, Hải Phòng…")}
       ${LF("refs","Số booking / invoice",j.refs)}${LF("contact","Người liên hệ",j.contact,"Tên, số điện thoại")}
       <label class="fld full"><span>Tóm tắt yêu cầu</span><textarea id="f-summary" data-f="summary" rows="2">${esc(j.summary||"")}</textarea></label>
       <label class="fld full"><span>Cần hỏi lại khách</span><textarea id="f-questions" data-f="questions" rows="2">${esc(j.questions||"")}</textarea></label>
@@ -1642,6 +1643,7 @@ function lotSec(j){
   const vcBlk=`${hq?`<div class="sub">Vận chuyển</div>`:""}
     <div class="row1"><b>Loại xe</b>${chips2("vehicle",VEHICLES,j.vehicle||"Xe cont")}</div>
     <div class="g2">${hq?"":LF("cont",truck?"Số xe / tải trọng":"Số cont",j.cont,truck?"VD: 1 xe 8 tấn":"VD: 2x40HC")}
+      ${LF("pol","Nơi đi (lấy hàng)",j.pol,"VD: Cảng Tiên Sa")}${LF("pod","Nơi đến (giao hàng)",j.pod,"VD: KCN Hoà Khánh")}
       ${LF("truck","Nhà xe – biển số",j.truck,"VD: Tân Cảng 51C-123.45")}
       ${truck?LF("cbm","Số khối (m³)",j.cbm,"VD: 12,5"):LF("yard","Bãi hạ cont",j.yard,"VD: Phước Long")}</div>
     ${truck?"":`<div class="row1"><b>Hoàn cược</b>${chips2("deposit",["Chưa hoàn","Đã hoàn","Không có cược"],j.deposit||"",["Chưa hoàn","Đã hoàn","Không cược"])}</div>`}`;
@@ -1999,7 +2001,7 @@ async function bellClick(){
 }
 function pushPing(j){if(!PUSH_URL||(boss()&&isMine(j)))return;try{fetch(PUSH_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({job:j.id})}).catch(()=>{})}catch(e){}}
 // Thông báo luôn bật: trình duyệt chỉ cho hỏi quyền khi người dùng chạm / bấm, nên hỏi ở lần chạm đầu tiên sau khi mở sổ
-const APP_VER="2026-11-22d";
+const APP_VER="2026-11-23a";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
