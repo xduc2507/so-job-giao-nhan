@@ -409,7 +409,7 @@
       if (!d) { d = overlay(""); d.id = "sj-login"; }
       const sheet = d.querySelector(".sheet");
       sheet.style.maxWidth = "420px"; sheet.style.marginTop = "14vh";
-      sheet.innerHTML = `<h2>Đăng nhập Sổ Job</h2>
+      sheet.innerHTML = `<h2>Đăng nhập · Theo dõi làm hàng</h2>
         <p>Dữ liệu lưu online. Đăng nhập cùng tài khoản Google trên điện thoại và máy tính để thấy chung một sổ.</p>
         ${err ? `<div class="banner">${esc(err)}</div>` : ""}
         <div id="sj-gsi" style="display:flex;justify-content:center;min-height:46px;margin:12px 0 4px"></div>

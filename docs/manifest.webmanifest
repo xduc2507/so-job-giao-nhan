@@ -1,6 +1,6 @@
 {
-  "name": "Sổ Job Giao Nhận",
-  "short_name": "Sổ Job",
+  "name": "Theo dõi làm hàng · FDI",
+  "short_name": "Làm hàng FDI",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

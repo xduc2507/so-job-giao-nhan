@@ -1,4 +1,4 @@
-<title>Sổ Job Giao Nhận</title>
+<title>Theo dõi làm hàng · FDI</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1E6B45">
@@ -738,10 +738,16 @@ table.q tr.chrow td:first-child{box-shadow:inset 3px 0 0 #f0b400}.chtag{display:
 .qpre.ch .qpre-l button:hover:not(:disabled){background:#fff3d6!important}
 .qpre-l button.blank{border-top:1px solid var(--line)!important;border-style:solid!important;margin-top:4px}
 @media (max-width:780px){.qpre{left:10px;right:10px;width:auto}.qpre-l button{min-height:44px;font-size:14px}}
+/* Thương hiệu FDI trên thanh trên */
+.brand .blogo{display:inline-flex;align-items:center;background:#fff;border-radius:4px;padding:3px 6px;line-height:0}
+.brand .blogo img{height:34px;width:auto;display:block;filter:none!important}
+.brand b{letter-spacing:.02em}
+@media (max-width:780px){.brand .blogo img{height:28px}.brand b{font-size:14px}}
+@media (max-width:420px){.brand b{display:none}}
 </style>
 
 <header class="top">
-  <div class="brand"><i aria-hidden="true"></i><b>Sổ Job Giao Nhận</b></div>
+  <div class="brand"><span class="blogo"><img src="fdi-mark.png" alt="FDI Co., Ltd" width="94" height="24"></span><b>THEO DÕI LÀM HÀNG</b></div>
   <div id="space" class="space" role="tablist" aria-label="Chọn sổ" hidden></div>
   <input id="q" type="search" placeholder="Tìm job, FWD, công ty, số B/L…" aria-label="Tìm job">
   <button id="btnManual" class="primary" title="Tạo job: gõ tay, hoặc dán ảnh / email để tự điền"><i class="fa fa-plus ic-fa" aria-hidden="true"></i>Tạo job</button>
@@ -2445,7 +2451,7 @@ async function pushSetup(){
   if(localStorage.getItem("sojob.pushTok")!==tok||!diagSent.has("saved")){diagSent.add("saved");await db.collection("push").doc(me()).set({tokens:firebase.firestore.FieldValue.arrayUnion(tok),at:Date.now()},{merge:true});try{localStorage.setItem("sojob.pushTok",tok)}catch(e){}}
   PUSH_ON=true;bellPaint();return true}
 async function bellClick(){
-  if(!window.Notification){toast(isIOS&&!isStandalone?"Trên iPhone: bấm nút Chia sẻ (ô vuông có mũi tên) → “Thêm vào MH chính”, rồi mở Sổ Job từ biểu tượng ngoài màn hình và bấm 🔕 lần nữa.":"Trình duyệt này không hỗ trợ thông báo.");return}
+  if(!window.Notification){toast(isIOS&&!isStandalone?"Trên iPhone: bấm nút Chia sẻ (ô vuông có mũi tên) → “Thêm vào MH chính”, rồi mở app Làm hàng FDI từ biểu tượng ngoài màn hình và bấm 🔕 lần nữa.":"Trình duyệt này không hỗ trợ thông báo.");return}
   if(Notification.permission==="denied"){toast("Thông báo đang bị chặn. Mở cài đặt trang web của trình duyệt, cho phép Thông báo rồi bấm lại.");return}
   if(Notification.permission!=="granted"&&await Notification.requestPermission()!=="granted"){bellPaint();return}
   bellPaint();
@@ -2459,7 +2465,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-23l";
+const APP_VER="2026-11-23m";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
@@ -2474,8 +2480,8 @@ function pushGo(){return pushSetup().then(ok=>{if(ok)pushDiag("ok");else pushDia
 function autoNotify(){
   if(notifyBusy||PUSH_ON||!team()||!S.loaded)return;
   if(!window.Notification||!navigator.serviceWorker){notifyBusy=true;pushDiag("unsupported");
-    if(isIOS&&!isStandalone)notifyHint("Để nhận thông báo trên iPhone: bấm Chia sẻ → “Thêm vào MH chính”, rồi mở Sổ Job từ biểu tượng ngoài màn hình.","sojob.iosHint");return}
-  if(Notification.permission==="denied"){notifyBusy=true;pushDiag("denied");notifyHint("Thông báo đang bị chặn trên máy này. Vào Cài đặt → Thông báo → Sổ Job (hoặc cài đặt trang web của trình duyệt), cho phép Thông báo.","sojob.denyHint");return}
+    if(isIOS&&!isStandalone)notifyHint("Để nhận thông báo trên iPhone: bấm Chia sẻ → “Thêm vào MH chính”, rồi mở app Làm hàng FDI từ biểu tượng ngoài màn hình.","sojob.iosHint");return}
+  if(Notification.permission==="denied"){notifyBusy=true;pushDiag("denied");notifyHint("Thông báo đang bị chặn trên máy này. Vào Cài đặt → Thông báo → Làm hàng FDI (hoặc cài đặt trang web của trình duyệt), cho phép Thông báo.","sojob.denyHint");return}
   notifyBusy=true;
   if(Notification.permission==="granted"){pushGo();return}
   pushDiag("ask");let req;try{req=Notification.requestPermission()}catch(e){notifyBusy=false;pushDiag("ask-throw",e);return}
