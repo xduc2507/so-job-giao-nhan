@@ -2001,7 +2001,7 @@ async function bellClick(){
 }
 function pushPing(j){if(!PUSH_URL||(boss()&&isMine(j)))return;try{fetch(PUSH_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({job:j.id})}).catch(()=>{})}catch(e){}}
 // Thông báo luôn bật: trình duyệt chỉ cho hỏi quyền khi người dùng chạm / bấm, nên hỏi ở lần chạm đầu tiên sau khi mở sổ
-const APP_VER="2026-11-23a";
+const APP_VER="2026-11-23b";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
@@ -2415,8 +2415,27 @@ function dbInit(j){
   const prev=S.all.filter(x=>x.id!==j.id&&x.debit&&x.debit.cust&&x.company&&x.company===j.company).sort((a,b)=>(b.debit.at||0)-(a.debit.at||0))[0];
   const cust=prev?{...prev.debit.cust}:{name:j.company||"",addr:"",mst:j.mst||"",email:""};
   if(!cust.mst&&j.mst)cust.mst=j.mst;
-  const lines=(j.quote||[]).filter(q=>q.name).map((q,i)=>({sec:"A",name:dbName(j,q),unit:q.unit||"lô",price:num(q.price),qty:num(q.qty)||1,vat:"8",inv:i===0?"FDI":""}));
+  const lines=(j.quote||[]).filter(q=>q.name).map((q,i)=>({src:q.name,sec:"A",name:dbName(j,q),unit:q.unit||"lô",price:num(q.price),qty:num(q.qty)||1,vat:"8",inv:i===0?"FDI":""}));
   return {cust,info:{tk:j.tkNo||"",bl:j.bl||"",veh:j.vehicle||"",qty:dbQty(j),cargo:j.cargo||"",conts:dbConts(j)},lines,at:0}}
+// Debit luôn theo Báo giá: dòng nào có trong báo giá thì có trong debit (giá, SL, ĐVT lấy từ báo giá),
+// giữ lại mục A/B, thuế, số HĐ đã chọn; dòng báo giá đã xoá thì bỏ; dòng chi hộ / dòng tự thêm trong debit giữ nguyên.
+function dbSync(j,d){
+  const qs=(j.quote||[]).filter(q=>q.name),used=new Set(),out=[];
+  qs.forEach(q=>{
+    let k=d.lines.findIndex((x,i)=>!used.has(i)&&x.src===q.name);
+    if(k<0)k=d.lines.findIndex((x,i)=>!used.has(i)&&!x.src&&(x.name===dbName(j,q)||x.name===q.name));
+    let l;
+    if(k>=0){used.add(k);l=d.lines[k];l.src=q.name;
+      if(!l.numEdited){l.price=num(q.price);l.qty=num(q.qty)||1;l.unit=q.unit||l.unit}
+      if(!l.nameEdited)l.name=dbName(j,q)}
+    else l={src:q.name,sec:"A",name:dbName(j,q),unit:q.unit||"lô",price:num(q.price),qty:num(q.qty)||1,vat:"8",inv:""};
+    out.push(l)});
+  d.lines.forEach((x,i)=>{if(!used.has(i)&&!x.src)out.push(x)});
+  if(out.length&&!out.some(l=>l.inv==="FDI")){const a=out.find(l=>l.sec!=="B");if(a&&!a.inv)a.inv="FDI"}
+  d.lines=out;
+  const inf={tk:j.tkNo||"",bl:j.bl||"",veh:j.vehicle||"",qty:dbQty(j),cargo:j.cargo||"",conts:dbConts(j)};
+  d.info=d.info||{};Object.keys(inf).forEach(k=>{if(!String(d.info[k]||"").trim()&&inf[k])d.info[k]=inf[k]});
+  return d}
 const dbRate=v=>v==="KCT"?0:num(v)/100;
 function dbCalc(d){const r={A:[],B:[],sumA:0,vatA:0,sumB:0};
   d.lines.forEach((l,i)=>{const amt=Math.round(num(l.price)*num(l.qty));
@@ -2425,7 +2444,7 @@ function dbCalc(d){const r={A:[],B:[],sumA:0,vatA:0,sumB:0};
 
 function debitOpen(j){
   if(!dbOn(j))return toast("Việc riêng không dùng mẫu debit FDI.");
-  const d=JSON.parse(JSON.stringify(dbInit(j)));
+  const d=dbSync(j,JSON.parse(JSON.stringify(dbInit(j))));
   const box=document.createElement("div");box.className="modal ask dbbox";
   const save=()=>{d.at=Date.now();j.debit=JSON.parse(JSON.stringify(d));queueSave(j)};
   const esck=e=>{if(e.key==="Escape"){e.stopPropagation();close()}};
@@ -2453,6 +2472,7 @@ function debitOpen(j){
     if(t.dataset.db){const[a,b]=t.dataset.db.split(".");d[a][b]=t.value;save();return}
     if(t.dataset.dl){const[i,f]=t.dataset.dl.split(":"),l=d.lines[+i];
       l[f]=f==="price"?num(String(t.value).replace(/[.,\s]/g,"")):f==="qty"?String(t.value).replace(/[^\d.,]/g,"").replace(",","."):t.value;
+      if(l.src&&(f==="price"||f==="qty"||f==="unit"))l.numEdited=true;if(l.src&&f==="name")l.nameEdited=true;
       const a=box.querySelector(`[data-amt="${i}"]`);if(a)a.textContent=fmt(Math.round(num(l.price)*num(l.qty)),"VND");
       box.querySelector("#dbTot").innerHTML=tot();save()}});
   box.addEventListener("focusout",e=>{const t=e.target;if(t.dataset.dl&&t.dataset.dl.endsWith(":price")){const l=d.lines[+t.dataset.dl.split(":")[0]];t.value=num(l.price)?fmt(l.price,"VND"):""}});
