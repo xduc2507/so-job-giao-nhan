@@ -480,6 +480,65 @@ tr.sec-B .abtn button.on{background:#8A5A00;border-color:#8A5A00}tr.sec-B{backgr
 #tmPick{min-width:44px;font-size:18px;padding:6px 8px;flex:0 0 auto}.tmore{align-self:center}.cpop.team{border-left-color:#1F7A4D}
 .lanesel{font-weight:600}.lanesel.ln-g{background:#E3F4E8;border-color:#5FB37A}.lanesel.ln-y{background:#FFF6D6;border-color:#E0B83A}.lanesel.ln-r{background:#FDE5E2;border-color:#D9605A}.lanesel.ln-0{color:var(--muted);font-weight:400}
 .mvrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.mvrow .mvbtn{font-size:16px;padding:8px 14px;font-weight:600}.tkinfo{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px}.tkinfo small{color:var(--muted);font-size:13px}.tkst{font-size:15px}.tkst.bad{color:#B4541A}.mvframe{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0 10px;background:#fff}.mvframe iframe{width:100%;height:520px;border:0;display:block}
+/* ===== Lớp giao diện thống nhất (tham khảo design-taste-frontend: hover layer, system) =====
+   Một thang bo góc, một kiểu nút chính / phụ, một kiểu thẻ; phản hồi rê chuột / bấm nhẹ; focus rõ; điện thoại nút ≥ 44px. */
+:root{--r-sm:6px;--r-md:10px;--r-lg:12px;--m-in:150ms;--m-out:120ms;--m-press:90ms;--ease:cubic-bezier(.2,.8,.2,1)}
+/* thẻ và khung: cùng một bo góc */
+.card,.col,.sec.lot,.teamchat,.review,.dbbox .sheet,.modal .sheet{border-radius:var(--r-lg)}
+.kc{border-radius:var(--r-md)}
+.pill,.chip{border-radius:999px}
+input,select,textarea{border-radius:var(--r-sm)}
+/* nút: chính = nền xanh, phụ = viền; cùng bo góc, cùng chuyển động */
+button{border-radius:var(--r-sm);transition:background-color var(--m-out) var(--ease),border-color var(--m-out) var(--ease),color var(--m-out) var(--ease),box-shadow var(--m-out) var(--ease),transform var(--m-press) var(--ease)}
+button.primary:hover:not(:disabled){background:color-mix(in oklab,var(--accent) 86%,var(--ink));border-color:color-mix(in oklab,var(--accent) 86%,var(--ink))}
+button:not(.primary):not(.ghost):hover:not(:disabled){background:color-mix(in oklab,var(--surface) 92%,var(--ink));border-color:color-mix(in oklab,var(--line) 60%,var(--ink))}
+@media (hover:hover) and (pointer:fine){
+  button:is(.primary,.debitbtn,.tkbtn,.back,#tmSend):hover:not(:disabled),
+  .chips2 button:hover:not(:disabled),.svcpick button:hover{transform:translateY(-1px);transition-duration:var(--m-in)}
+  /* thẻ job (bảng Quy trình) và dòng job (Danh sách) nhích 2px khi rê chuột */
+  .kc{transition:transform 180ms var(--ease),box-shadow 180ms var(--ease),border-color 180ms var(--ease)}
+  .kc:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(10,16,22,.10)}
+  .row{transition:background-color var(--m-out) var(--ease),transform 180ms var(--ease),box-shadow 180ms var(--ease)}
+  .row:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(10,16,22,.08);position:relative;z-index:1}
+  .rv{transition:background-color var(--m-out) var(--ease)}
+}
+/* bấm: lún xuống 1px và nhỏ lại một chút */
+button:active:not(:disabled){transform:translateY(1px) scale(.985);transition-duration:var(--m-press)}
+.stages button:active,.tabs button:active,.space button:active{transform:scale(.985)}
+.kc:active{transform:translateY(0) scale(.995)}
+/* link: gạch chân chạy ra từ trái sang phải */
+.sec a:not([class]),.chat a:not([class]),.src a:not([class]),a.link{color:var(--accent);text-decoration:none;
+  background:linear-gradient(currentColor,currentColor) left 100%/0% 1px no-repeat,linear-gradient(color-mix(in oklab,currentColor 30%,transparent),color-mix(in oklab,currentColor 30%,transparent)) left 100%/100% 1px no-repeat;
+  transition:background-size var(--m-out) var(--ease)}
+.sec a:not([class]):is(:hover,:focus-visible),.chat a:not([class]):is(:hover,:focus-visible),.src a:not([class]):is(:hover,:focus-visible),a.link:is(:hover,:focus-visible){background-size:100% 1px,100% 1px;transition-duration:var(--m-in)}
+/* focus: vòng 2px màu chính, cách 2px, hiện ngay; ô nhập: viền màu chính + quầng 3px */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;transition:none}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in oklab,var(--accent) 22%,transparent);transition:box-shadow 140ms var(--ease),border-color 140ms var(--ease)}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
+/* nhãn ô nhập luôn hiện, chữ rõ hơn */
+.fld>span{color:var(--ink);opacity:.82;font-weight:500}
+/* lỗi nằm ngay dưới ô */
+.fld .field__error{display:block;margin-top:4px;color:var(--bad);font-size:13px}
+.fld input[aria-invalid="true"]{border-color:var(--bad)}
+/* điện thoại: nút và link đủ lớn để bấm (≥ 44px); tiêu đề job xuống dòng riêng, không bị cắt cụt */
+@media (max-width:780px){
+  button:not(.x):not(.cpop-x):not(.sm):not(.mvbtn-sm),.tabs button,.space button,.top a{min-height:44px}
+  button.sm{min-height:36px}
+  .chips2 button,.svcpick button{min-height:44px}
+  .row{padding:12px 14px}
+  .row .t{font-size:15px}
+}
+/* dòng job: tên job một dòng riêng (tối đa 2 dòng), nhãn ở dưới, không bị cắt cụt khi cột hẹp */
+.row{grid-template-columns:auto minmax(0,1fr)}
+.row .t{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.row .right{grid-column:2/3;justify-content:flex-start}
+.row .meta{grid-column:2/3}
+/* giảm chuyển động: vẫn đổi màu, không nhích / lún */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-property:background-color,border-color,color,opacity!important}
+  .kc:hover,.row:hover,button:hover,button:active,.kc:active{transform:none!important}
+  button:active:not(:disabled){filter:brightness(.94)}
+}
 </style>
 
 <header class="top">
@@ -1999,7 +2058,7 @@ async function bellClick(){
 }
 function pushPing(j){if(!PUSH_URL||(boss()&&isMine(j)))return;try{fetch(PUSH_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({job:j.id})}).catch(()=>{})}catch(e){}}
 // Thông báo luôn bật: trình duyệt chỉ cho hỏi quyền khi người dùng chạm / bấm, nên hỏi ở lần chạm đầu tiên sau khi mở sổ
-const APP_VER="2026-11-23b";
+const APP_VER="2026-11-23c";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
