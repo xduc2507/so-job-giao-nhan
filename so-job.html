@@ -480,6 +480,37 @@ tr.sec-B .abtn button.on{background:#8A5A00;border-color:#8A5A00}tr.sec-B{backgr
 #tmPick{min-width:44px;font-size:18px;padding:6px 8px;flex:0 0 auto}.tmore{align-self:center}.cpop.team{border-left-color:#1F7A4D}
 .lanesel{font-weight:600}.lanesel.ln-g{background:#E3F4E8;border-color:#5FB37A}.lanesel.ln-y{background:#FFF6D6;border-color:#E0B83A}.lanesel.ln-r{background:#FDE5E2;border-color:#D9605A}.lanesel.ln-0{color:var(--muted);font-weight:400}
 .mvrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.mvrow .mvbtn{font-size:16px;padding:8px 14px;font-weight:600}.tkinfo{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px}.tkinfo small{color:var(--muted);font-size:13px}.tkst{font-size:15px}.tkst.bad{color:#B4541A}.mvframe{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0 10px;background:#fff}.mvframe iframe{width:100%;height:520px;border:0;display:block}
+.ic{width:16px;height:16px;flex:0 0 auto;vertical-align:-3px;margin-right:6px}.ic-line{stroke-width:2}
+button:has(>.ic){display:inline-flex;align-items:center;justify-content:center}
+button.sm .ic{width:14px;height:14px;margin-right:4px}
+/* điện thoại: chọn FWD bằng một nút, mở danh sách toàn màn hình */
+.side-btn{display:none}.side-x{display:none}
+@media (max-width:780px){
+  .side-btn{display:flex;align-items:center;gap:8px;width:100%;min-height:48px;padding:8px 14px;margin:2px 0 4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);text-align:left;grid-column:1/-1}
+  .side-btn .sb-l{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .side-btn b{flex:1;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .side-btn .sb-c{color:var(--muted)}
+  body.view-team .side-btn,body.view-board .side-btn{display:none}
+  #side{display:none}
+  body.side-open #side{display:flex;position:fixed;inset:0;z-index:70;flex-direction:column;gap:6px;overflow:auto;max-height:none;background:var(--bg);padding:12px 16px 24px}
+  body.side-open .side-h{display:flex;align-items:center;justify-content:space-between;font-size:13px;padding:6px 2px 10px;position:sticky;top:-12px;background:var(--bg)}
+  body.side-open .side-x{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;font-size:18px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-sm)}
+  body.side-open #side .g{width:100%;min-height:52px;font-size:16px;padding:10px 14px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-md);display:flex;justify-content:space-between;align-items:center}
+  body.side-open #side .g.on{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+  /* nút chính giãn hết chiều ngang */
+  .acts{display:grid;grid-template-columns:1fr;gap:8px}.acts>button{width:100%;min-height:48px}
+  .ai-acts{display:grid;grid-template-columns:1fr;gap:8px}.ai-acts>button{width:100%}
+  .mrow{flex-direction:column;align-items:stretch}.mrow>button{width:100%}
+  .modal .sheet .acts,.modal form .acts{display:grid}
+}
+/* mục 3: ô số (công nợ, đã thu…) – nhãn nhỏ, số to, cùng một kiểu thẻ */
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;gap:4px}
+.stat span{font-size:13px;font-weight:500;color:var(--muted)}
+.stat b{font-family:inherit;font-size:22px;line-height:1.2;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+/* mục 3: bảng Quy trình – đầu cột rõ, số job trong một viên, thẻ thoáng hơn */
+.col{border-radius:var(--r-lg)}
+.kc{padding:10px 11px 9px;gap:6px}
+.kc .t{font-size:13.5px}
 /* ===== Lớp giao diện thống nhất (tham khảo design-taste-frontend: hover layer, system) =====
    Một thang bo góc, một kiểu nút chính / phụ, một kiểu thẻ; phản hồi rê chuột / bấm nhẹ; focus rõ; điện thoại nút ≥ 44px. */
 :root{--r-sm:6px;--r-md:10px;--r-lg:12px;--m-in:150ms;--m-out:120ms;--m-press:90ms;--ease:cubic-bezier(.2,.8,.2,1)}
@@ -550,6 +581,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 </header>
 
 <div class="app">
+  <button id="sideBtn" class="side-btn" aria-haspopup="true" aria-expanded="false" aria-controls="side"></button>
   <aside id="side" aria-label="Nhóm theo FWD / công ty"></aside>
   <main id="main">
     <div id="banner"></div>
@@ -900,7 +932,8 @@ function renderSide(){
   S.jobs.forEach(j=>{const k=groupKey(j);const o=m.get(k)||{open:0,all:0,companies:new Set()};o.all++;if(isOpen(j.status))o.open++;if(j.company&&j.fwd)o.companies.add(j.company);m.set(k,o)});
   const keys=[...m.keys()].sort((a,b)=>a===NOGROUP?1:b===NOGROUP?-1:m.get(b).open-m.get(a).open||a.localeCompare(b,"vi"));
   if(S.group!=="__all"&&!m.has(S.group))S.group="__all";
-  $("#side").innerHTML=`<div class="side-h">FWD / Công ty</div>
+  const sb=$("#sideBtn");if(sb){const nm=S.group==="__all"?"Tất cả FWD / công ty":S.group;sb.innerHTML=`<span class="sb-l">FWD</span><b>${esc(nm)}</b><span class="sb-c">▾</span>`}
+  $("#side").innerHTML=`<div class="side-h">FWD / Công ty<button class="side-x" data-sidex aria-label="Đóng">✕</button></div>
     <button class="g ${S.group==="__all"?"on":""}" data-g="__all"><span>Tất cả</span><span class="n">${S.jobs.filter(j=>isOpen(j.status)).length}</span></button>`+
     keys.map(k=>`<button class="g ${S.group===k?"on":""}" data-g="${esc(k)}" title="${esc([...m.get(k).companies].join(", "))}"><span>${esc(k)}</span><span class="n">${m.get(k).open}</span></button>`).join("");
 }
@@ -929,7 +962,7 @@ function renderProfile(force){
     <div class="prof-h"><h2>${esc(key)}</h2><span>${jobs.length} job · lần gần nhất ${last?new Date(last).toLocaleDateString("vi-VN"):"—"}</span></div>
     <div class="stats">
       <div class="stat"><span>Job đang mở</span><b>${open}</b></div>
-      <div class="stat debt"><span>Công nợ chờ thu</span><b>${money(debt)}</b></div>
+      <div class="stat${Object.keys(debt).length?" debt":""}"><span>Công nợ chờ thu</span><b>${money(debt)}</b></div>
       <div class="stat"><span>Đã thu năm ${yr}</span><b>${money(paid)}</b></div>
       <div class="stat"><span>Báo giá đã gửi</span><b>${quotes}</b></div>
     </div>
@@ -1218,7 +1251,7 @@ function renderDetail(force){
     </tbody></table></div><span style="font-size:11.5px;color:var(--muted)">Giá lần trước lấy từ cùng FWD; dấu * là giá báo cho FWD khác.</span>`:`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có hạng mục. Bấm “+ Thêm dòng”.</p>`}
     <div class="grid2"><div class="vatbox"><span>VAT</span><div class="chips2">${VAT_OPEN?[8,10].map(v=>`<button type="button" class="${vatRate(j)===v?"on":""}" data-vat="${v}">${v}%</button>`).join(""):`<button type="button" class="on" data-vat="open" title="Bấm để đổi VAT">${vatRate(j)}% ▾</button>`}</div></div><div class="tot" id="qtot"></div></div>
     <label class="fld"><span>Ghi chú báo giá</span><textarea id="f-quoteNote" data-f="quoteNote" rows="2" placeholder="VD: Giá chưa gồm local charge, kiểm hoá, lưu kho…">${esc(j.quoteNote)}</textarea></label>
-    <div class="acts"><button data-act="copyQuote" class="primary">Copy báo giá</button>${dbOn(j)?`<button data-act="draftDebit" class="debitbtn">🧾 ${j.debit?"Mở debit":"Soạn debit"}</button>${boss()&&j.debitDate&&!j.paidDate?`<button data-act="debitPaid" class="ghost">✅ Đã thu tiền</button>`:""}`:""}<button data-act="copyBrief">Copy tóm tắt job</button>${j.quoteSentAt?`<span style="font-size:12px;color:var(--muted)">Đã gửi báo giá ${dmy(j.quoteSentAt)}</span>`:""}</div>
+    <div class="acts"><button data-act="copyQuote" class="primary">${ic("copy")}Copy báo giá</button>${dbOn(j)?`<button data-act="draftDebit" class="debitbtn">${ic("doc")}${j.debit?"Mở debit":"Soạn debit"}</button>${boss()&&j.debitDate&&!j.paidDate?`<button data-act="debitPaid" class="ghost">✅ Đã thu tiền</button>`:""}`:""}<button data-act="copyBrief">${ic("copy")}Copy tóm tắt job</button>${j.quoteSentAt?`<span style="font-size:12px;color:var(--muted)">Đã gửi báo giá ${dmy(j.quoteSentAt)}</span>`:""}</div>
     ${j.debitDate&&dbOn(j)?`<p class="dbstat">🧾 Debit <b>${fmt(j.debitAmount,"VND")}</b> đ · gửi ${dmy(j.debitDate)}${j.paidDate?` · <span class="ok">✅ đã thu ${dmy(j.paidDate)}</span>`:` · <span class="wait">chờ thu tiền</span>`}</p>`:""}
     <div id="copyFallback"></div>
   </div>
@@ -1271,7 +1304,7 @@ function mineSummary(){
   const inM=S.jobs.filter(j=>jobDate(j).startsWith(ym)),lai=inM.reduce((a,j)=>a+num(j.debitAmount)-num(j.cost),0),nT=inM.filter(j=>j.doer==="Tuấn").length;
   return `<div class="msum"><span>🔒 Việc riêng · đang chạy <b>${run}</b> job</span><span>Công nợ chưa thu: ${show(owe)}</span><span>Đã thu tháng ${ym.slice(5)}: ${show(paid)}</span>
     <span>Lãi tháng ${ym.slice(5)}: <b>${fmt(lai,"VND")}</b> VND</span>${nT?`<span>Trả Tuấn: ${nT} tk × 50k = <b>${fmt(nT*FEE_TUAN,"VND")}</b></span>`:""}
-    <span style="margin-left:auto;display:flex;gap:6px"><button class="sm" data-xl="in">📥 Nhập từ Excel</button><button class="sm" data-xl="out">📤 Xuất Excel</button></span></div>`;
+    <span style="margin-left:auto;display:flex;gap:6px"><button class="sm" data-xl="in">${ic("xlsx")}Nhập từ Excel</button><button class="sm" data-xl="out">${ic("xlsx")}Xuất Excel</button></span></div>`;
 }
 function renderLateBar(){
   const el=$("#latebar");if(!el)return;
@@ -1339,7 +1372,10 @@ $("#latebar").addEventListener("click",e=>{const x=e.target.closest("[data-xl]")
 $("#q").addEventListener("input",e=>{S.q=e.target.value;renderMain()});
 $("#fStatus").addEventListener("change",e=>{S.fStatus=e.target.value;renderMain()});
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{S.view=b.dataset.view;renderMain()}));
-$("#side").addEventListener("click",e=>{const g=e.target.closest("[data-g]");if(!g)return;S.group=g.dataset.g;renderSide();renderProfile(true);renderMain()});
+const sideOpen=o=>{document.body.classList.toggle("side-open",o);$("#sideBtn")?.setAttribute("aria-expanded",o?"true":"false")};
+$("#sideBtn")?.addEventListener("click",()=>sideOpen(!document.body.classList.contains("side-open")));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.body.classList.contains("side-open"))sideOpen(false)});
+$("#side").addEventListener("click",e=>{if(e.target.closest("[data-sidex]")){sideOpen(false);return}const g=e.target.closest("[data-g]");if(!g)return;sideOpen(false);S.group=g.dataset.g;renderSide();renderProfile(true);renderMain()});
 function openJob(id){S.sel=id;renderMain();renderDetail(true);if(window.matchMedia("(min-width:781px)").matches)$("#detail").scrollTop=0}
 function onOpenClick(e){
   if(e.target.closest("button,input,select,textarea,label"))return;
@@ -2058,7 +2094,10 @@ async function bellClick(){
 }
 function pushPing(j){if(!PUSH_URL||(boss()&&isMine(j)))return;try{fetch(PUSH_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({job:j.id})}).catch(()=>{})}catch(e){}}
 // Thông báo luôn bật: trình duyệt chỉ cho hỏi quyền khi người dùng chạm / bấm, nên hỏi ở lần chạm đầu tiên sau khi mở sổ
-const APP_VER="2026-11-23c";
+/* Icon (bộ icon trong skill design-taste-frontend: lucide ISC, vscode-icons MIT) */
+const ICONS={"copy": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/></g></svg>", "print": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\"/><rect width=\"12\" height=\"8\" x=\"6\" y=\"14\" rx=\"1\"/></g></svg>", "xlsx": "<svg class=\"ic ic-color\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\"><defs><linearGradient id=\"SVGxUjO6TbQ\" x1=\"4.494\" x2=\"13.832\" y1=\"-2092.086\" y2=\"-2075.914\" gradientTransform=\"translate(0 2100)\" gradientUnits=\"userSpaceOnUse\"><stop offset=\"0\" stop-color=\"#18884f\"/><stop offset=\".5\" stop-color=\"#117e43\"/><stop offset=\"1\" stop-color=\"#0b6631\"/></linearGradient></defs><path fill=\"#185c37\" d=\"M19.581 15.35L8.512 13.4v14.409A1.19 1.19 0 0 0 9.705 29h19.1A1.19 1.19 0 0 0 30 27.809V22.5Z\"/><path fill=\"#21a366\" d=\"M19.581 3H9.705a1.19 1.19 0 0 0-1.193 1.191V9.5L19.581 16l5.861 1.95L30 16V9.5Z\"/><path fill=\"#107c41\" d=\"M8.512 9.5h11.069V16H8.512Z\"/><path d=\"M16.434 8.2H8.512v16.25h7.922a1.2 1.2 0 0 0 1.194-1.191V9.391A1.2 1.2 0 0 0 16.434 8.2\" opacity=\".1\"/><path d=\"M15.783 8.85H8.512V25.1h7.271a1.2 1.2 0 0 0 1.194-1.191V10.041a1.2 1.2 0 0 0-1.194-1.191\" opacity=\".2\"/><path d=\"M15.783 8.85H8.512V23.8h7.271a1.2 1.2 0 0 0 1.194-1.191V10.041a1.2 1.2 0 0 0-1.194-1.191\" opacity=\".2\"/><path d=\"M15.132 8.85h-6.62V23.8h6.62a1.2 1.2 0 0 0 1.194-1.191V10.041a1.2 1.2 0 0 0-1.194-1.191\" opacity=\".2\"/><path fill=\"url(#SVGxUjO6TbQ)\" d=\"M3.194 8.85h11.938a1.193 1.193 0 0 1 1.194 1.191v11.918a1.193 1.193 0 0 1-1.194 1.191H3.194A1.19 1.19 0 0 1 2 21.959V10.041A1.19 1.19 0 0 1 3.194 8.85\"/><path fill=\"#fff\" d=\"m5.7 19.873l2.511-3.884l-2.3-3.862h1.847L9.013 14.6c.116.234.2.408.238.524h.017q.123-.281.26-.546l1.342-2.447h1.7l-2.359 3.84l2.419 3.905h-1.809l-1.45-2.711A2.4 2.4 0 0 1 9.2 16.8h-.024a1.7 1.7 0 0 1-.168.351l-1.493 2.722Z\"/><path fill=\"#33c481\" d=\"M28.806 3h-9.225v6.5H30V4.191A1.19 1.19 0 0 0 28.806 3\"/><path fill=\"#107c41\" d=\"M19.581 16H30v6.5H19.581Z\"/></svg>", "up": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 3v12m5-7l-5-5l-5 5m14 7v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/></svg>", "down": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M12 15V3m9 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"m7 10l5 5l5-5\"/></g></svg>", "doc": "<svg class=\"ic ic-line\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z\"/><path d=\"M14 2v5a1 1 0 0 0 1 1h5M10 9H8m8 4H8m8 4H8\"/></g></svg>"};
+const ic=n=>ICONS[n]||"";
+const APP_VER="2026-11-23d";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
@@ -2523,7 +2562,7 @@ function debitOpen(j){
       <tbody>${d.lines.map(row).join("")||`<tr><td colspan="9" class="muted">Chưa có dòng. Thêm dòng A hoặc bấm các mục chi hộ bên dưới.</td></tr>`}</tbody></table></div>
       <div class="dbadd"><button type="button" class="ghost sm" data-dbadd="A">+ Dòng A</button><span class="muted">Chi hộ (B):</span>${DB_BQ.map(([n,u])=>`<button type="button" class="ghost sm" data-dbq="${esc(n)}|${u}">+ ${esc(n)}</button>`).join("")}<button type="button" class="ghost sm" data-dbadd="B">+ Dòng B khác</button></div>
       <div id="dbTot">${tot()}</div>
-      <div class="ai-acts"><button class="primary" data-dbx="xlsx">📥 Tải Excel</button><button data-dbx="print">🖨 In / Lưu PDF</button><button data-dbx="close">Đóng</button></div></div>`};
+      <div class="ai-acts"><button class="primary" data-dbx="xlsx">${ic("xlsx")}Tải Excel</button><button data-dbx="print">${ic("print")}In / Lưu PDF</button><button data-dbx="close">Đóng</button></div></div>`};
   draw();
   box.addEventListener("input",e=>{const t=e.target;
     if(t.dataset.db){const[a,b]=t.dataset.db.split(".");d[a][b]=t.value;save();return}
