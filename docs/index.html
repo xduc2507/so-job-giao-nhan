@@ -1575,6 +1575,7 @@ async function manualJob(status){
       ${hq?`<div class="row1"><b>Hàng</b>${chips2("hang",["Nhập khẩu","Xuất khẩu"],st.hang)}</div>`:""}
       ${vc?`<div class="row1"><b>Loại xe</b>${chips2("vehicle",VEHICLES,st.vehicle)}</div>`:""}`};
   chips();dmWire(d);
+  {const ti=f.querySelector("[name=title]");ti.value=dmShow(TODAY())+" - ";setTimeout(()=>{ti.focus();ti.setSelectionRange(ti.value.length,ti.value.length)},30)}
   d.querySelector("#mj-chips").addEventListener("click",e=>{const b=e.target.closest("[data-set]");if(!b)return;e.preventDefault();e.stopPropagation();
     const k=b.dataset.set,v=b.dataset.v;st[k]=k==="service"&&st[k]===v?"":v;chips()});
   return new Promise(res=>{
@@ -1589,7 +1590,7 @@ async function manualJob(status){
     d.querySelector('[data-mj="text"]').onclick=()=>toImg(null,true);
     d.addEventListener("paste",e=>{const fs=[...(e.clipboardData?.items||[])].filter(i=>i.kind==="file").map(i=>i.getAsFile()).filter(Boolean);if(fs.length){e.preventDefault();e.stopPropagation();toImg(fs)}});d.addEventListener("click",e=>{if(e.target===d)done()});
     f.onsubmit=async e=>{e.preventDefault();const v={};new FormData(f).forEach((x,k)=>v[k]=String(x).trim());
-      if(!v.title){d.querySelector("[data-e]").textContent="Chưa điền tiêu đề.";f.querySelector("[name=title]").focus();return}
+      if(!v.title.replace(/^\d{1,2}\/\d{1,2}\s*-?\s*/,"").trim()){d.querySelector("[data-e]").textContent="Chưa điền tiêu đề.";f.querySelector("[name=title]").focus();return}
       {const dl=dmParse(v.deadline);if(dl===null){d.querySelector("[data-e]").textContent="Hạn xử lý ghi dạng ngày/tháng, VD 25/11.";f.querySelector("[name=deadline]").focus();return}v.deadline=dl}
       const sv=st.service,type=!sv?"Khác":sv==="VC"?"Vận chuyển":st.hang==="Xuất khẩu"?"Khai HQ xuất":"Khai HQ nhập";
       const data={title:v.title,fwd:v.fwd,company:v.company,type,source:"Điện thoại",tasks:sv?tplTasks(type):[],
@@ -2330,7 +2331,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-23i";
+const APP_VER="2026-11-23j";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
