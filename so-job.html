@@ -682,6 +682,24 @@ input::placeholder,textarea::placeholder{color:#aaa}
   button{font-size:13px}
   .sec h3{margin:-12px -14px 4px}
 }
+/* Quy trình gọn: cột hẹp hơn, thẻ dày hơn để thấy nhiều cột / nhiều job cùng lúc */
+.kb{gap:6px}
+.col{flex:0 0 196px;border-width:1px;border-top-width:3px}
+.col-h{padding:5px 8px 5px;gap:0}
+.col-h .nm{font-size:12px;gap:4px}
+.col-h .nm .n{font-size:11px;padding:0 6px}
+.col-h .add{font-size:15px;min-height:20px;padding:0 4px}
+.col-h .sub{font-size:10.5px}
+.col-b{padding:5px;gap:5px}
+.kc{padding:5px 7px 4px;gap:3px}
+.kc .t{font-size:12px;line-height:1.25;padding-right:18px}
+.kc .ds{font-size:11px}
+.kc .tg{gap:3px}
+.kc .tg span{font-size:10.5px;padding:0 4px;line-height:16px}
+@media (max-width:780px){.col{flex-basis:72vw}}
+.dmbox{display:flex;gap:4px;position:relative}.dmbox input[name]{flex:1;min-width:0;font-variant-numeric:tabular-nums}
+.dmbox .dmcal{flex:0 0 40px;padding:0;display:inline-flex;align-items:center;justify-content:center}.dmbox .dmcal .fa{font-size:15px;color:var(--primary)}
+.dmbox .dmpick{position:absolute;right:0;bottom:0;width:40px;height:100%;opacity:0;pointer-events:none;border:0;padding:0;min-height:0}
 </style>
 
 <header class="top">
@@ -1512,6 +1530,19 @@ $("#prof").addEventListener("click",onOpenClick);
 $("#content").addEventListener("keydown",e=>{
   if(e.key==="Enter"&&(e.target.id==="pa-text"||e.target.id==="pa-due")&&!e.isComposing){e.preventDefault();addPlanItem();return}
   if(e.key==="Enter"&&e.target.matches(".row")){openJob(e.target.dataset.open)}});
+/* Ô ngày gõ tay dạng dd/mm (2 số), năm tự lấy năm nay; có nút lịch để chọn */
+function dmParse(t){t=String(t||"").trim();if(!t)return "";
+  const m=t.match(/^(\d{1,2})\D?(\d{1,2})(?:\D?(\d{2}|\d{4}))?$/)||(/^\d{4}$/.test(t)?[t,t.slice(0,2),t.slice(2)]:null);if(!m)return null;
+  const dd=+m[1],mm=+m[2],now=new Date();let y=m[3]?(m[3].length===2?2000+ +m[3]:+m[3]):now.getFullYear();
+  if(mm<1||mm>12||dd<1||dd>new Date(y,mm,0).getDate())return null;
+  if(!m[3]&&new Date(y,mm-1,dd)<new Date(now.getFullYear(),now.getMonth()-2,now.getDate()))y++; // đã qua lâu thì hiểu là năm sau
+  return `${y}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`}
+const dmShow=v=>v?v.slice(8,10)+"/"+v.slice(5,7):"";
+function dmWire(root){root.querySelectorAll(".dmbox").forEach(b=>{const t=b.querySelector("input:not(.dmpick)"),p=b.querySelector(".dmpick");
+  t.addEventListener("input",e=>{if(e.inputType&&e.inputType.startsWith("delete"))return;let v=t.value.replace(/[^\d/]/g,"");if(/^\d{2}$/.test(v))v+="/";if(/^\d{3}$/.test(v))v=v.slice(0,2)+"/"+v[2];t.value=v});
+  t.addEventListener("blur",()=>{const r=dmParse(t.value);if(r)t.value=dmShow(r)+(r.slice(0,4)!==String(new Date().getFullYear())?"/"+r.slice(2,4):"")});
+  b.querySelector(".dmcal").onclick=()=>{const r=dmParse(t.value);p.value=r||TODAY();try{p.showPicker()}catch(e){p.focus();p.click()}};
+  p.onchange=()=>{if(p.value){t.value=dmShow(p.value)+(p.value.slice(0,4)!==String(new Date().getFullYear())?"/"+p.value.slice(2,4):"");t.focus()}}})}
 /* Tạo job nhập tay: khi không có ảnh / email (khách gọi điện, dặn miệng…) */
 async function manualJob(status){
   const known=[...new Set(S.jobs.flatMap(x=>[x.fwd,x.company]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"vi"));
@@ -1530,7 +1561,7 @@ async function manualJob(status){
       <div id="mj-chips"></div>
       <div class="g2">${IN("bl","Số B/L / booking")}${IN("cont","Số cont / xe","VD: 2x40HC")}
         ${IN("tkNo","Số tờ khai","12 số")}${IN("mst","MST khách","10 hoặc 13 số")}
-        ${IN("deadline","Hạn xử lý","","date")}${IN("contact","Người liên hệ","Tên, số điện thoại")}
+        <label class="fld"><span>Hạn xử lý (ngày/tháng)</span><span class="dmbox"><input name="deadline" placeholder="dd/mm" inputmode="numeric" maxlength="8" autocomplete="off" aria-label="Hạn xử lý, ngày/tháng"><button type="button" class="dmcal" aria-label="Chọn ngày trên lịch"><i class="fa fa-calendar" aria-hidden="true"></i></button><input type="date" class="dmpick" tabindex="-1" aria-hidden="true"></span></label>${IN("contact","Người liên hệ","Tên, số điện thoại")}
         ${IN("cargo","Hàng hoá / số lượng","VD: Máy móc, 25 kiện","text","full")}
         <label class="fld full"><span>Ghi chú / yêu cầu của khách</span><textarea name="summary" rows="2"></textarea></label></div>
       <div class="mrow"><span class="note err" data-e></span><button type="button" data-c>Huỷ bỏ</button><button class="primary" type="submit">Tạo job</button></div></form></div>`;
@@ -1541,7 +1572,7 @@ async function manualJob(status){
     d.querySelector("#mj-chips").innerHTML=`<div class="row1"><b>Dịch vụ</b>${chips2("service",SERVICES,st.service,["🛃 HQ","🚚 VC","🛃🚚 HQ+VC"])}</div>
       ${hq?`<div class="row1"><b>Hàng</b>${chips2("hang",["Nhập khẩu","Xuất khẩu"],st.hang)}</div>`:""}
       ${vc?`<div class="row1"><b>Loại xe</b>${chips2("vehicle",VEHICLES,st.vehicle)}</div>`:""}`};
-  chips();
+  chips();dmWire(d);
   d.querySelector("#mj-chips").addEventListener("click",e=>{const b=e.target.closest("[data-set]");if(!b)return;e.preventDefault();e.stopPropagation();
     const k=b.dataset.set,v=b.dataset.v;st[k]=k==="service"&&st[k]===v?"":v;chips()});
   return new Promise(res=>{
@@ -1557,6 +1588,7 @@ async function manualJob(status){
     d.addEventListener("paste",e=>{const fs=[...(e.clipboardData?.items||[])].filter(i=>i.kind==="file").map(i=>i.getAsFile()).filter(Boolean);if(fs.length){e.preventDefault();e.stopPropagation();toImg(fs)}});d.addEventListener("click",e=>{if(e.target===d)done()});
     f.onsubmit=async e=>{e.preventDefault();const v={};new FormData(f).forEach((x,k)=>v[k]=String(x).trim());
       if(!v.title){d.querySelector("[data-e]").textContent="Chưa điền tiêu đề.";f.querySelector("[name=title]").focus();return}
+      {const dl=dmParse(v.deadline);if(dl===null){d.querySelector("[data-e]").textContent="Hạn xử lý ghi dạng ngày/tháng, VD 25/11.";f.querySelector("[name=deadline]").focus();return}v.deadline=dl}
       const sv=st.service,type=!sv?"Khác":sv==="VC"?"Vận chuyển":st.hang==="Xuất khẩu"?"Khai HQ xuất":"Khai HQ nhập";
       const data={title:v.title,fwd:v.fwd,company:v.company,type,source:"Điện thoại",tasks:sv?tplTasks(type):[],
         status:status||STAGES[0],bl:v.bl,cont:v.cont,tkNo:v.tkNo.replace(/\D/g,"").slice(0,12),mst:v.mst,deadline:v.deadline,contact:v.contact,cargo:v.cargo,summary:v.summary};
@@ -2296,7 +2328,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-23g";
+const APP_VER="2026-11-23i";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
