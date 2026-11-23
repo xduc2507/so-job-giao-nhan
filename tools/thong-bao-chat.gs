@@ -63,7 +63,7 @@ function guiThongBao(jobId) {
     from: [{ collectionId: "chat" }], orderBy: [{ field: { fieldPath: "at" }, direction: "DESCENDING" }], limit: 1 } } });
   var last = (Array.isArray(q.json) ? q.json : []).filter(function (x) { return x.document; })[0];
   if (!last) return { ok: false, msg: "Chưa có tin" };
-  var f = last.document.fields || {}, msg = { text: giaTri(f.text) || "", by: String(giaTri(f.by) || "").toLowerCase(), byName: giaTri(f.byName) || "", at: Number(giaTri(f.at) || 0) };
+  var f = last.document.fields || {}, msg = { text: giaTri(f.text) || "", by: String(giaTri(f.by) || "").toLowerCase(), byName: giaTri(f.byName) || "", at: Number(giaTri(f.at) || 0), tags: (giaTri(f.tags) || []).map(function (x) { return String(x).toLowerCase(); }), tagAll: !!giaTri(f.tagAll) };
   if (Date.now() - msg.at > 10 * 60 * 1000) return { ok: true, sent: 0, msg: "Tin cũ" };
   var props = PropertiesService.getScriptProperties(), key = "last_" + jobId;
   if (Number(props.getProperty(key) || 0) >= msg.at) return { ok: true, sent: 0, msg: "Đã gửi" };
@@ -79,6 +79,7 @@ function guiThongBao(jobId) {
   nguoi = nguoi.filter(function (x, i, a) { return x && a.indexOf(x) === i && x !== msg.by; });
 
   var title = "💬 " + (msg.byName || msg.by) + " · " + (job.code || "");
+  var titleTag = "🔔 " + (msg.byName || msg.by) + " nhắc đến bạn · " + (job.code || "");
   var body = (job.title ? String(job.title).slice(0, 60) + "\n" : "") + String(msg.text).slice(0, 160);
   var sent = 0, loi = [], det = [];
   nguoi.forEach(function (mail) {
@@ -90,7 +91,7 @@ function guiThongBao(jobId) {
         token: t,
         data: { job: jobId },
         webpush: {
-          notification: { title: title, body: body, icon: APP + "icon-192.png", badge: APP + "icon-192.png", tag: "job-" + jobId, renotify: true },
+          notification: { title: duocTag(msg, mail) ? titleTag : title, body: body, icon: APP + "icon-192.png", badge: APP + "icon-192.png", tag: "job-" + jobId, renotify: true },
           fcm_options: { link: APP + "?job=" + encodeURIComponent(jobId) }
         } } } });
       if (r.code === 200) sent++;
@@ -118,6 +119,9 @@ function thuGuiChu() {
 }
 
 /** Chat chung: báo tin mới nhất (không gắn job) cho mọi thành viên, trừ người gửi và người tắt báo Chat chung. */
+// Tin có tag người này (hoặc @Tất cả) thì tiêu đề ghi "nhắc đến bạn"
+function duocTag(msg, mail) { return !!(msg.tagAll || (msg.tags || []).indexOf(String(mail).toLowerCase()) >= 0); }
+
 function guiChatChung() {
   var owner = Session.getEffectiveUser().getEmail().toLowerCase();
   var q = goi(FS + ":runQuery", { method: "post", payload: { structuredQuery: {
@@ -126,7 +130,7 @@ function guiChatChung() {
   if (!last) return { ok: false, msg: "Chưa có tin", q: q.code };
   var f = last.document.fields || {};
   if (f.job) return { ok: true, sent: 0, msg: "Tin gắn job: đã báo theo job" };
-  var msg = { text: giaTri(f.text) || "", by: String(giaTri(f.by) || "").toLowerCase(), byName: giaTri(f.byName) || "", at: Number(giaTri(f.at) || 0) };
+  var msg = { text: giaTri(f.text) || "", by: String(giaTri(f.by) || "").toLowerCase(), byName: giaTri(f.byName) || "", at: Number(giaTri(f.at) || 0), tags: (giaTri(f.tags) || []).map(function (x) { return String(x).toLowerCase(); }), tagAll: !!giaTri(f.tagAll) };
   if (Date.now() - msg.at > 10 * 60 * 1000) return { ok: true, sent: 0, msg: "Tin cũ" };
   var props = PropertiesService.getScriptProperties();
   if (Number(props.getProperty("last_team") || 0) >= msg.at) return { ok: true, sent: 0, msg: "Đã gửi" };
@@ -143,7 +147,7 @@ function guiChatChung() {
     (p.tokens || []).forEach(function (t) {
       var r = goi("https://fcm.googleapis.com/v1/projects/" + PID + "/messages:send", { method: "post", payload: { message: { token: t,
         data: { view: "team" },
-        webpush: { notification: { title: "💬 " + (msg.byName || msg.by) + " · Chat chung", body: String(msg.text).slice(0, 200), icon: APP + "icon-192.png", badge: APP + "icon-192.png", tag: "teamchat", renotify: true },
+        webpush: { notification: { title: (duocTag(msg, mail) ? "🔔 " + (msg.byName || msg.by) + " nhắc đến bạn" : "💬 " + (msg.byName || msg.by)) + " · Chat chung", body: String(msg.text).slice(0, 200), icon: APP + "icon-192.png", badge: APP + "icon-192.png", tag: "teamchat", renotify: true },
           fcm_options: { link: APP + "?view=team" } } } } });
       if (r.code === 200) sent++; else loi.push(r.code);
     });

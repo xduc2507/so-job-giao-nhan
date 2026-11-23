@@ -700,6 +700,17 @@ input::placeholder,textarea::placeholder{color:#aaa}
 .dmbox{display:flex;gap:4px;position:relative}.dmbox input[name]{flex:1;min-width:0;font-variant-numeric:tabular-nums}
 .dmbox .dmcal{flex:0 0 40px;padding:0;display:inline-flex;align-items:center;justify-content:center}.dmbox .dmcal .fa{font-size:15px;color:var(--primary)}
 .dmbox .dmpick{position:absolute;right:0;bottom:0;width:40px;height:100%;opacity:0;pointer-events:none;border:0;padding:0;min-height:0}
+/* tag @ */
+.chatin{position:relative}
+.mn-sug{position:absolute;left:0;right:0;bottom:calc(100% + 4px);z-index:60;background:var(--surface);border:1px solid var(--line);box-shadow:0 0 3px rgba(86,96,117,.3);max-height:300px;overflow:auto;padding:4px}
+.mn-sug button{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;border:0!important;background:none!important;padding:7px 10px;min-height:44px;border-radius:2px;gap:1px}
+.mn-sug button b{font-size:14px;color:var(--primary)}.mn-sug button small{font-size:11.5px;color:var(--muted)}
+.mn-sug button.on,.mn-sug button:hover{background:var(--accent-soft)!important}
+.mn-note{font-size:12px;color:var(--muted);padding:6px 10px;border-top:1px solid var(--line)}
+.mtag{color:var(--primary);font-weight:700}
+.chat .m.tagme{background:#fff6d6!important;box-shadow:inset 3px 0 0 #f0b400}
+.tagme-l{color:#b07a00}
+.np-i.tag .np-t b{color:var(--primary)}
 </style>
 
 <header class="top">
@@ -1237,7 +1248,7 @@ function renderMain(){
   if(!S.loaded)return;
   if(!S.view0){S.view0=true;if(teamOn())S.view="team"} // mở sổ: vào Chat chung
   if(S.view==="team"&&!teamOn())S.view="list";
-  teamWatch();teamBadge();
+  teamWatch();peopleWatch();teamBadge();
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===S.view));$("#fStatus").hidden=S.view!=="list";
   document.body.classList.toggle("view-team",S.view==="team");
   if(S.view==="team"){renderTeam(el);return}
@@ -2026,7 +2037,7 @@ const chatNew=j=>!!(chatSeen&&j.chatAt&&j.chatBy&&j.chatBy!==me()&&j.chatAt>(cha
 function chatMsgs(id){
   const ms=S.chat[id];if(!ms)return `<div class="none"><span class="spin"></span> Đang tải…</div>`;
   if(!ms.length)return `<div class="none">Chưa có trao đổi nào. Gõ tin bên dưới, mọi người thấy job này đều đọc được.</div>`;
-  return ms.map(m=>`<div class="m${m.by===me()?" me":""}"><small>${m.by===me()?"":`<b>${esc(m.byName||m.by)}</b> · `}${hm(m.at)}</small>${esc(m.text)}</div>`).join("");
+  return ms.map(m=>`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}"><small>${m.by===me()?"":`<b>${esc(m.byName||m.by)}</b> · `}${hm(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}</small>${mnText(m)}</div>`).join("");
 }
 function dlRow(j){const k=dayDiff(j.deadline),open=isOpen(j.status);
   const tag=!j.deadline?`<span class="dltag none">Chưa đặt hạn</span>`:!open?"":k<0?`<span class="dltag late">⚠ Quá hạn ${-k} ngày</span>`:k===0?`<span class="dltag today">Hôm nay</span>`:`<span class="dltag ${k<=2?"soon":""}">Còn ${k} ngày</span>`;
@@ -2058,7 +2069,7 @@ function chatWatch(j){
 async function chatSend(j){
   const t=$("#chatTxt");const text=(t&&t.value||"").trim();if(!text)return;
   if(text.length>4000){toast("Tin quá dài (tối đa 4000 ký tự).");return}
-  const msg={text,by:me(),byName:window.SOJOB_USER||me(),at:Date.now()};
+  const msg=Object.assign({text,by:me(),byName:window.SOJOB_USER||me(),at:Date.now()},mnTags("chatTxt",text));mnClose();
   t.value="";S.chatDraft[j.id]="";
   (S.chat[j.id]=S.chat[j.id]||[]).push(Object.assign({id:"tmp"+msg.at},msg));chatPaint(j.id);
   try{await db.collection("jobs/"+j.id+"/chat").add(msg)}
@@ -2106,6 +2117,75 @@ function openFromUrl(){
   setTimeout(()=>openJobAny(id),0)}
 if(navigator.serviceWorker)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.openJob)openJobAny(e.data.openJob)});
 
+/* ---------- Tag người bằng @ (Trao đổi trong job + Chat chung) ---------- */
+// Danh bạ: mỗi người tự ghi tên mình vào meta/people khi mở app (nhân viên không đọc được danh sách thành viên)
+S.people={};let peopleSub=null;
+const TAG_ALL="Tất cả";
+function peopleWatch(){
+  if(!team()||!db||peopleSub)return;
+  try{peopleSub=db.doc("meta/people").onSnapshot(s=>{S.people=(s.exists&&s.data().p)||{}},()=>{})}catch(e){}
+  const nm=window.SOJOB_USER||"",ml=me();
+  if(ml&&nm)db.doc("meta/people").set({p:{[ml]:{n:nm,at:Date.now()}}},{merge:true}).catch(()=>{});
+}
+const peopleList=()=>Object.entries(S.people).filter(([m,v])=>m!==me()&&v&&v.n).map(([m,v])=>({m,n:v.n})).sort((a,b)=>a.n.localeCompare(b.n,"vi"));
+// Tag đang chọn cho từng ô gõ (id ô → [{m,n}]); lúc gửi chỉ giữ tag còn chữ @Tên trong tin
+const mnPicked={};
+function mnTags(boxId,text){
+  const L=(mnPicked[boxId]||[]).filter(t=>text.includes("@"+t.n));
+  const all=text.includes("@"+TAG_ALL);
+  const tags=[...new Set(L.filter(t=>t.m!=="*").map(t=>t.m))],names=[...new Set(L.map(t=>t.n))];
+  if(all&&!names.includes(TAG_ALL))names.push(TAG_ALL);
+  delete mnPicked[boxId];
+  const o={};if(tags.length)o.tags=tags;if(all)o.tagAll=true;if(names.length)o.tagN=names;return o}
+const mnMine=m=>m.by!==me()&&(m.tagAll||(m.tags||[]).includes(me()));
+function mnText(m){ // chữ tin nhắn đã escape, tô xanh các @Tên
+  let h=esc(m.text||"");
+  (m.tagN||[]).slice().sort((a,b)=>b.length-a.length).forEach(n=>{const k=esc("@"+n);h=h.split(k).join(`<span class="mtag">${k}</span>`)});
+  return h}
+// Khung gợi ý
+let mnState=null; // {el, start, items, i}
+function mnClose(){mnState=null;$("#mnSug")?.remove()}
+function mnOpen(el,start,q){
+  const k=noAcc(q);
+  const items=[{m:"*",n:TAG_ALL,s:"Báo cho cả nhóm"}].concat(peopleList().map(p=>({m:p.m,n:p.n,s:p.m})))
+    .filter(x=>!k||noAcc(x.n).includes(k)||x.m.startsWith(k)).slice(0,8);
+  if(!items.length){mnClose();return}
+  mnState={el,start,items,i:Math.min(mnState&&mnState.el===el?mnState.i:0,items.length-1)};
+  let box=$("#mnSug");const host=el.closest(".chatin");if(!host)return;
+  if(!box||box.parentElement!==host){box?.remove();box=document.createElement("div");box.id="mnSug";box.className="mn-sug";box.setAttribute("role","listbox");box.setAttribute("aria-label","Chọn người để tag");host.appendChild(box)}
+  box.innerHTML=items.map((x,i)=>`<button type="button" role="option" data-mn="${i}" class="${i===mnState.i?"on":""}" aria-selected="${i===mnState.i}"><b>@${esc(x.n)}</b><small>${esc(x.s)}</small></button>`).join("")+
+    (peopleList().length?"":`<div class="mn-note">Chưa có tên đồng nghiệp: mỗi người mở app bản mới một lần là hiện ở đây.</div>`);
+}
+function mnPick(i){
+  const st=mnState;if(!st)return;const x=st.items[i];if(!x)return;const el=st.el,v=el.value,pos=el.selectionStart;
+  const ins="@"+x.n+" ";el.value=v.slice(0,st.start)+ins+v.slice(pos);const c=st.start+ins.length;el.setSelectionRange(c,c);
+  (mnPicked[el.id]=mnPicked[el.id]||[]).push({m:x.m,n:x.n});
+  mnClose();el.focus();el.dispatchEvent(new Event("input",{bubbles:true}))}
+function mnCanTag(el){
+  if(!team()||!el)return false;
+  if(el.id==="tmTxt")return true;
+  if(el.id==="chatTxt"){const j=cur();return !!j&&!(boss()&&isMine(j))}
+  return false}
+document.addEventListener("input",e=>{
+  const el=e.target;if(el.id!=="chatTxt"&&el.id!=="tmTxt")return;
+  if(!mnCanTag(el)){mnClose();return}
+  const before=el.value.slice(0,el.selectionStart),m=/(?:^|\s)@([^\s@]{0,20})$/.exec(before);
+  if(!m){mnClose();return}
+  mnOpen(el,before.length-m[1].length-1,m[1]);
+});
+window.addEventListener("keydown",e=>{ // chạy trước phím Enter = gửi
+  if(!mnState||e.target!==mnState.el)return;
+  const n=mnState.items.length;
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();e.stopImmediatePropagation();mnState.i=(mnState.i+(e.key==="ArrowDown"?1:n-1))%n;
+    $("#mnSug")?.querySelectorAll("[data-mn]").forEach((b,i)=>{b.classList.toggle("on",i===mnState.i);b.setAttribute("aria-selected",i===mnState.i)});return}
+  if((e.key==="Enter"&&!e.shiftKey&&!e.isComposing)||e.key==="Tab"){e.preventDefault();e.stopImmediatePropagation();mnPick(mnState.i);return}
+  if(e.key==="Escape"){e.preventDefault();e.stopImmediatePropagation();mnClose()}
+},true);
+document.addEventListener("mousedown",e=>{const b=e.target.closest("[data-mn]");if(b){e.preventDefault();mnPick(+b.dataset.mn);return}if(mnState&&!e.target.closest("#mnSug")&&e.target!==mnState.el)mnClose()},true);
+// Chuông: tin tag mình chưa xem (lấy từ Chat chung, gồm cả tin trong job được chép sang)
+function mnUnread(){
+  if(!team())return [];
+  return (S.team||[]).filter(m=>mnMine(m)&&(m.at||0)>Math.max(teamSeen,m.job?(chatSeen&&chatSeen[m.job.id])||0:0)).sort((a,b)=>(b.at||0)-(a.at||0))}
 /* ---------- Chat chung: cả nhóm trao đổi, gắn job bấm được ---------- */
 const TEAM_PAGE=200;
 let teamSub=null,teamN=TEAM_PAGE,teamPopFrom=Date.now(),teamMuteOn=false;
@@ -2149,7 +2229,7 @@ function teamMsgs(){
     const d=new Date(m.at||0).toLocaleDateString("vi-VN",{weekday:"long",day:"2-digit",month:"2-digit"});const sep=d!==day?`<div class="tday">${esc(d)}</div>`:"";day=d;
     const j=m.job&&S.all.find(x=>x.id===m.job.id);
     const chip=m.job?`<button class="jchip" data-tmjob="${esc(m.job.id)}" title="Mở job">📁 ${esc(m.job.code||"")}${m.job.label?" · "+esc(m.job.label):""}${m.from==="job"?" · trong job":""}</button>`:"";
-    return sep+`<div class="m${m.by===me()?" me":""}"><small>${esc(m.by===me()?"Bạn":(m.byName||m.by))} · ${tmTime(m.at)}</small>${chip}${esc(m.text||"")}</div>`}).join("");
+    return sep+`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}"><small>${esc(m.by===me()?"Bạn":(m.byName||m.by))} · ${tmTime(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}</small>${chip}${mnText(m)}</div>`}).join("");
 }
 function renderTeam(el){
   if(el.dataset.v!=="team"||!$("#tmList")){
@@ -2186,7 +2266,7 @@ async function teamSend(){
   const t=$("#tmTxt");const text=(t?.value||"").trim();if(!text)return;
   if(text.length>4000)return toast("Tin quá dài (tối đa 4000 ký tự).");
   const j=S.teamJob&&S.all.find(x=>x.id===S.teamJob);
-  const msg={text,by:me(),byName:window.SOJOB_USER||me(),at:Date.now()};
+  const msg=Object.assign({text,by:me(),byName:window.SOJOB_USER||me(),at:Date.now()},mnTags("tmTxt",text));mnClose();
   const doc=j?Object.assign({job:{id:j.id,code:j.code,label:jobLabel(j)}},msg):msg;
   t.value="";S.teamDraft="";S.teamJob=null;teamSug(null);
   try{await db.collection("teamchat").add(doc)}catch(e){toast("Chưa gửi được: "+(e?.message||e?.code));t.value=text;return}
@@ -2273,6 +2353,8 @@ function notifItems(){
   if(!team()||!S.loaded)return [];
   const pool=S.all.filter(j=>!(boss()&&isMine(j))),out=[];
   const tu=typeof teamUnread==="function"?teamUnread():0;
+  mnUnread().slice(0,10).forEach(m=>out.push({k:"t"+(m.id||m.at),ic:"🔔",cls:"tag",t:`${m.byName||m.by} nhắc đến bạn${m.job?" · "+m.job.code:" · Chat chung"}`,s:m.text||"",
+    go:m.job?()=>openJobAny(m.job.id):()=>{S.view="team";if(SPACE==="mine")setSpace("team").then(renderMain);else renderMain()}}));
   if(tu)out.push({k:"team",ic:"💬",t:"Chat chung",s:`${tu} tin mới`,go:()=>{S.view="team";if(SPACE==="mine")setSpace("team").then(renderMain);else renderMain()}});
   pool.filter(j=>chatUnread(j)&&j.id!==cur()?.id).sort((a,b)=>(b.chatAt||0)-(a.chatAt||0)).forEach(j=>out.push({k:"c"+j.id,ic:"💬",t:`${j.code} · ${j.title||""}`,s:`${chatUnread(j)} tin mới · ${j.chatByName||j.chatBy||""}: ${j.chatLast||""}`,id:j.id}));
   pool.filter(j=>odState(j)==="none").forEach(j=>out.push({k:"o"+j.id,ic:"⚠",cls:"bad",t:`${j.code} · ${j.title||""}`,s:`Quá hạn ${odDays(j)} ngày – chưa ghi lý do`,id:j.id}));
@@ -2331,7 +2413,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-23j";
+const APP_VER="2026-11-23k";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
