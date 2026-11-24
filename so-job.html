@@ -755,6 +755,40 @@ table.q tr.chrow td:first-child{box-shadow:inset 3px 0 0 #f0b400}.chtag{display:
 .uipop .uic{flex:0 0 18px;font-weight:700;color:var(--accent)}
 .uipop button b{display:block;font-size:14.5px}.uipop button small{display:block;color:var(--muted);font-size:12.5px}
 .uipop .uin{color:var(--muted);font-size:12px;padding:2px 8px 4px}
+/* Thanh tiến trình: ô bằng nhau, chữ đủ và căn giữa.
+   Rộng thì 1 hàng; vừa thì 2 hàng đều nhau; hẹp (điện thoại) thì 4 ô mỗi hàng. */
+#stagebar{container-type:inline-size}
+.stages{display:grid!important;grid-template-columns:repeat(var(--h),minmax(0,1fr))!important;gap:3px!important;overflow:visible!important;flex-wrap:nowrap!important}
+@container (min-width:760px){.stages{grid-template-columns:repeat(var(--n),minmax(0,1fr))!important}}
+@container (min-width:560px){.stages.few{grid-template-columns:repeat(var(--n),minmax(0,1fr))!important}}
+@container (max-width:440px){.stages,.stages.few{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+.stages button{flex:none!important;min-width:0!important;width:100%;display:flex;align-items:center;justify-content:center;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px!important;line-height:1.2;min-height:34px!important}
+/* giao diện hiện tại: mũi tên đều nhau, chừa chỗ cho đầu mũi tên để chữ nằm giữa phần thân */
+html:not([data-ui="1office"]) .stages button{padding:4px 10px 4px 16px!important}
+html:not([data-ui="1office"]) .stages button:first-child{padding-left:10px!important}
+@container (max-width:440px){html:not([data-ui="1office"]) .stages button{padding:4px 4px 4px 11px!important;font-size:12px!important}html:not([data-ui="1office"]) .stages button:first-child{padding-left:6px!important}.stages button{font-size:12px!important}.stages button.now{letter-spacing:-.02em}}
+/* Chuyển tiếp: khung xổ xuống chứa các bước */
+.d-head{position:relative}
+.stpop{position:absolute;right:12px;top:52px;z-index:30;width:min(600px,calc(100% - 24px));background:var(--surface);border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 28px rgba(0,0,0,.18);padding:12px;display:flex;flex-direction:column;gap:10px}
+.stpop[hidden]{display:none}
+.stp-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.stp-h .stp-next{min-height:40px}
+.stp-h .muted{font-size:12.5px;color:var(--muted)}
+.stnow{display:inline-flex;align-items:center;min-height:24px;padding:0 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12.5px;font-weight:700}
+.stnow.bad{background:var(--bad-soft);color:var(--bad)}
+@media (max-width:780px){.stpop{left:8px;right:8px;width:auto;top:56px}}
+/* trả lời / xoá tin nhắn */
+.chat .m{position:relative}
+.chat .m .macts{display:none;gap:4px;margin-top:4px;justify-content:flex-end}
+.chat .m:hover .macts,.chat .m.act .macts,.chat .m:focus-within .macts{display:flex}
+.chat .m .macts button{min-height:28px!important;padding:2px 8px!important;font-size:12px!important}
+.mreply{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;margin:0 0 6px;padding:4px 8px!important;min-height:0!important;border:0!important;border-left:3px solid var(--accent)!important;border-radius:3px!important;background:rgba(0,0,0,.05)!important;color:var(--ink)!important;cursor:pointer}
+.mreply b{font-size:12px;color:var(--accent)}.mreply span{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.rbar{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:0 0 6px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:4px}
+.rbar>span{flex:1;min-width:0;display:flex;flex-direction:column}.rbar b{font-size:12.5px;color:var(--accent)}
+.rbar>span>span{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat .m.flash{outline:2px solid var(--accent);outline-offset:2px}
+@media (hover:none){.chat .m .macts button{min-height:36px!important}}
 </style>
 <style id="ui1o" media="not all">
 /* ===== Theo dõi làm hàng – BẢN THỬ kiểu 1office =====
@@ -836,8 +870,8 @@ input::placeholder,textarea::placeholder{color:#A0A6B0}
 .d-head input.title:focus{border-bottom-color:var(--accent)!important;box-shadow:none!important}
 
 /* Tiến trình: bước gọn, đã qua tô nhạt, hiện tại tô đậm màu nhấn */
-.stages{gap:6px!important;flex-wrap:wrap}
-.stages button{clip-path:none!important;border-radius:var(--r-sm)!important;border:1px solid var(--line)!important;min-height:32px!important;padding:4px 12px!important;font-size:13px!important;font-weight:500;background:#fff!important;color:var(--muted)!important}
+.stages{gap:4px!important}
+.stages button{clip-path:none!important;border-radius:var(--r-sm)!important;border:1px solid var(--line)!important;min-height:34px!important;padding:4px 6px!important;font-size:12.5px!important;font-weight:500;background:#fff!important;color:var(--muted)!important}
 .stages button.past{background:var(--accent-soft)!important;color:var(--accent)!important;border-color:transparent!important}
 .stages button.now{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important;font-weight:600}
 
@@ -888,8 +922,7 @@ table.q td input{min-height:36px!important;font-size:14px!important}
   input:not([type=checkbox]):not([type=radio]),select{min-height:44px;font-size:16px!important}
   .sec{padding:16px!important}
   .tabs{gap:14px;overflow-x:auto;flex-wrap:nowrap}
-  .stages{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none}
-  .stages button{flex:0 0 auto!important;white-space:nowrap;min-height:38px!important}
+  .stages button{min-height:40px!important}
   .top .brand .blogo img{height:30px!important}
 }
 
@@ -1528,7 +1561,7 @@ const SHORT={"Mới nhận":"Mới","Nhận & kiểm tra chứng từ":"Chứng 
 function stagesHtml(j){
   const r=route(j),list=r.includes(j.status)||!isOpen(j.status)?r:[...r,j.status].sort((a,b)=>stIdx(a)-stIdx(b));
   const si=stIdx(j.status),fail=j.status===FAIL;
-  return `<div class="stages" role="group" aria-label="Giai đoạn (quy trình ${svcOf(j)})">${list.map(s=>{const i=stIdx(s);
+  return `<div class="stages${list.length<=8?" few":""}" style="--n:${list.length};--h:${Math.ceil(list.length/2)}" role="group" aria-label="Giai đoạn (quy trình ${svcOf(j)})">${list.map(s=>{const i=stIdx(s);
     return `<button data-st="${esc(s)}" title="${esc(s)}" class="${fail?"":i<si?"past":i===si?"now":""}">${esc(SHORT[s]||s)}</button>`}).join("")}</div>`;
 }
 const HK={create:"Tạo job",move:"Chuyển",return:"Trả về",fail:"Thất bại",reopen:"Mở lại",auto:"Tự chuyển",blocker:"Vướng mắc"};
@@ -1551,9 +1584,9 @@ function renderDetail(force){
   const tpl=S.tpl[j.type]||[],have=new Set(tasks.map(t=>normName(t.text))),missing=tpl.filter(t=>!have.has(normName(t))).length;
   el.innerHTML=`<div class="d">
   <div class="d-head">
-    <div class="l1"><button class="back" data-act="close">← Danh sách</button><span class="acts">${isOpen(j.status)?`${nextStage(j)?`<button class="primary go" data-st="${esc(nextStage(j))}">Chuyển tiếp${ic("next").replace("ic-fa","ic-fa ic-after")}</button>`:""}<button class="ghost sm danger" data-st="${FAIL}">${ic("fail")}Thất bại</button>`:`<button class="sm" data-st="${esc(STAGES[0])}">Mở lại</button>`}</span></div>
-    <div class="l2"><span class="mono jcode">${esc(j.code)}${j.example?' <span class="ex">VÍ DỤ</span>':""}</span><button class="ghost sm urg${j.priority==="Gấp"?" on":""}" data-act="urgent" title="Bật / tắt job gấp">⚡ Gấp</button>${spaceOn()&&isMine(j)?`<button class="ghost sm shr" data-act="share" title="Đưa job này sang Sổ chung: nhân viên thấy và làm cùng">→ Chuyển sang Sổ chung</button>`:""}</div>
-    <div id="stagebar">${stagesHtml(j)}</div>
+    <div class="l1"><button class="back" data-act="close">← Danh sách</button><span class="acts">${isOpen(j.status)?`<button class="primary go" data-act="stpop" aria-haspopup="true" aria-expanded="false" aria-controls="stpop">Chuyển tiếp ▾</button>`:`<button class="sm" data-st="${esc(STAGES[0])}">Mở lại</button>`}</span></div>
+    <div class="l2"><span class="mono jcode">${esc(j.code)}${j.example?' <span class="ex">VÍ DỤ</span>':""}</span><span class="stnow${j.status===FAIL?" bad":""}" title="Bước hiện tại">${esc(SHORT[j.status]||j.status)}</span><button class="ghost sm urg${j.priority==="Gấp"?" on":""}" data-act="urgent" title="Bật / tắt job gấp">⚡ Gấp</button>${spaceOn()&&isMine(j)?`<button class="ghost sm shr" data-act="share" title="Đưa job này sang Sổ chung: nhân viên thấy và làm cùng">→ Chuyển sang Sổ chung</button>`:""}</div>
+    <div id="stpop" class="stpop" hidden role="dialog" aria-label="Chọn bước"><div class="stp-h">${nextStage(j)&&isOpen(j.status)?`<button class="primary go stp-next" data-st="${esc(nextStage(j))}">→ Sang bước tiếp: ${esc(nextStage(j))}</button>`:""}<span class="muted">hoặc chọn bước khác</span></div><div id="stagebar">${stagesHtml(j)}</div></div>
     ${lateBox(j)}
     ${j.status===FAIL?`<div class="alert bad">Thất bại: ${esc(j.failReason||"chưa ghi lý do")}${j.failNote?" · "+esc(j.failNote):""}</div>`:""}
     ${j.returnNote&&isOpen(j.status)?`<div class="alert bad">↩ Bị trả về: ${esc(j.returnNote)}</div>`:""}
@@ -1896,6 +1929,7 @@ D.addEventListener("click",e=>{
   if(st&&j){moveAndRender(j,st.dataset.st);return}
   const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
   if(a==="close"){S.sel=null;renderAll(true);return}
+  if(a==="stpop"){const p=D.querySelector("#stpop");if(p){p.hidden=!p.hidden;b.setAttribute("aria-expanded",String(!p.hidden));if(!p.hidden)p.querySelector(".stp-next,.stages button.now")?.focus()}return}
   if(!j)return;
   if(a==="tdel"){j.tasks.splice(+b.dataset.i,1);queueSave(j);renderAll(true)}
   if(a==="applyTpl"){const have=new Set((j.tasks||[]).map(t=>normName(t.text)));const add=(S.tpl[j.type]||[]).filter(t=>!have.has(normName(t))).map(t=>({text:t,done:false}));j.tasks=add.concat(j.tasks||[]);queueSave(j);renderAll(true);toast(`Đã thêm ${add.length} bước mẫu.`)}
@@ -2241,7 +2275,7 @@ const chatNew=j=>!!(chatSeen&&j.chatAt&&j.chatBy&&j.chatBy!==me()&&j.chatAt>(cha
 function chatMsgs(id){
   const ms=S.chat[id];if(!ms)return `<div class="none"><span class="spin"></span> Đang tải…</div>`;
   if(!ms.length)return `<div class="none">Chưa có trao đổi nào. Gõ tin bên dưới, mọi người thấy job này đều đọc được.</div>`;
-  return ms.map(m=>`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}"><small>${m.by===me()?"":`<b>${esc(m.byName||m.by)}</b> · `}${hm(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}</small>${mnText(m)}</div>`).join("");
+  return ms.map(m=>`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}" data-mid="${esc(m.id||"")}">${msgReply(m)}<small>${m.by===me()?"":`<b>${esc(m.byName||m.by)}</b> · `}${hm(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}</small>${mnText(m)}${msgActs(m)}</div>`).join("");
 }
 function dlRow(j){const k=dayDiff(j.deadline),open=isOpen(j.status);
   const tag=!j.deadline?`<span class="dltag none">Chưa đặt hạn</span>`:!open?"":k<0?`<span class="dltag late">⚠ Quá hạn ${-k} ngày</span>`:k===0?`<span class="dltag today">Hôm nay</span>`:`<span class="dltag ${k<=2?"soon":""}">Còn ${k} ngày</span>`;
@@ -2254,7 +2288,7 @@ function chatSec(j){
 }
 function chatPaint(id){
   const el=$("#chatList");if(!el||cur()?.id!==id)return;
-  el.innerHTML=chatMsgs(id);el.scrollTop=el.scrollHeight;
+  el.innerHTML=chatMsgs(id);el.scrollTop=el.scrollHeight;if(S.reply&&S.reply.ctx==="job"&&!document.querySelector(".rbar"))replyBar();
   const h=el.closest(".sec")?.querySelector("h3 .mono");if(h)h.textContent=(S.chat[id]||[]).length||"";
 }
 function chatMarkSeen(j){if(!j||!chatSeen)return;if(seenN[j.id]!==(j.chatN||0)){seenN[j.id]=j.chatN||0;seenNSave()}const t=Math.max(j.chatAt||0,Date.now());if((chatSeen[j.id]||0)<t){chatSeen[j.id]=t;chatSeenSave()}}
@@ -2273,7 +2307,7 @@ function chatWatch(j){
 async function chatSend(j){
   const t=$("#chatTxt");const text=(t&&t.value||"").trim();if(!text)return;
   if(text.length>4000){toast("Tin quá dài (tối đa 4000 ký tự).");return}
-  const msg=Object.assign({text,by:me(),byName:window.SOJOB_USER||me(),at:Date.now()},mnTags("chatTxt",text));mnClose();
+  const msg=Object.assign({text,by:me(),byName:window.SOJOB_USER||me(),at:Date.now()},mnTags("chatTxt",text),replyTake("job"));mnClose();
   t.value="";S.chatDraft[j.id]="";
   (S.chat[j.id]=S.chat[j.id]||[]).push(Object.assign({id:"tmp"+msg.at},msg));chatPaint(j.id);
   try{await db.collection("jobs/"+j.id+"/chat").add(msg)}
@@ -2390,6 +2424,44 @@ document.addEventListener("mousedown",e=>{const b=e.target.closest("[data-mn]");
 function mnUnread(){
   if(!team())return [];
   return (S.team||[]).filter(m=>mnMine(m)&&(m.at||0)>Math.max(teamSeen,m.job?(chatSeen&&chatSeen[m.job.id])||0:0)).sort((a,b)=>(b.at||0)-(a.at||0))}
+/* Khung chọn bước (mở từ nút Chuyển tiếp): bấm ra ngoài hoặc Esc thì đóng */
+document.addEventListener("click",e=>{const p=document.getElementById("stpop");if(!p||p.hidden)return;if(e.target.closest("#stpop,[data-act=stpop]"))return;p.hidden=true;document.querySelector("[data-act=stpop]")?.setAttribute("aria-expanded","false")});
+document.addEventListener("keydown",e=>{const p=document.getElementById("stpop");if(e.key==="Escape"&&p&&!p.hidden){p.hidden=true;document.querySelector("[data-act=stpop]")?.focus()}});
+/* ---------- Trả lời / xoá tin nhắn (Trao đổi trong job + Chat chung) ---------- */
+S.reply=null; // {ctx:"job"|"team", id, byName, text}
+function msgReply(m){const r=m.reply;if(!r)return "";
+  return `<button type="button" class="mreply" data-mgo="${esc(r.id||"")}" title="Xem tin gốc"><b>↩ ${esc(r.by===me()?"Bạn":(r.byName||""))}</b><span>${esc(r.text||"")}</span></button>`}
+function msgActs(m){if(!m.id||String(m.id).startsWith("tmp"))return "";
+  return `<span class="macts"><button type="button" class="ghost sm" data-mact="reply">↩ Trả lời</button>${boss()?`<button type="button" class="ghost sm danger" data-mact="del">Xoá</button>`:""}</span>`}
+function replyTake(ctx){const r=S.reply;if(!r||r.ctx!==ctx)return {};S.reply=null;replyBar();return {reply:{id:r.id,by:r.by,byName:r.byName,text:r.text}}}
+function replyBar(){document.querySelectorAll(".rbar").forEach(x=>x.remove());const r=S.reply;if(!r)return;
+  const box=document.querySelector(r.ctx==="job"?"#chatTxt":"#tmTxt")?.closest(".chatin");if(!box)return;
+  const d=document.createElement("div");d.className="rbar";d.innerHTML=`<span><b>↩ Trả lời ${esc(r.by===me()?"tin của bạn":r.byName)}</b><span>${esc(r.text)}</span></span><button type="button" class="x" data-mact="unreply" aria-label="Bỏ trả lời">✕</button>`;
+  box.parentElement.insertBefore(d,box)}
+const msgList=ctx=>ctx==="job"?(S.chat[cur()?.id]||[]):(S.team||[]);
+async function msgDelete(ctx,m){
+  if(!boss()||!db)return;
+  const v=await ask({title:"Xoá tin nhắn",text:`${m.byName||m.by}: ${String(m.text||"").slice(0,120)}\n\nXoá hẳn, không khôi phục được. Bản chép của tin này (ở Chat chung hoặc trong job) cũng bị xoá.`,ok:"Xoá",danger:true});
+  if(!v)return;
+  try{
+    if(ctx==="job"){const j=cur();await db.collection("jobs/"+j.id+"/chat").doc(m.id).delete();
+      const q=await db.collection("teamchat").where("at","==",m.at).get();for(const d of q.docs.filter(d=>d.data().by===m.by&&d.data().job?.id===j.id))await db.collection("teamchat").doc(d.id).delete().catch(()=>{})}
+    else{await db.collection("teamchat").doc(m.id).delete();
+      if(m.job&&m.job.id){const q=await db.collection("jobs/"+m.job.id+"/chat").where("at","==",m.at).get();for(const d of q.docs.filter(d=>d.data().by===m.by))await db.collection("jobs/"+m.job.id+"/chat").doc(d.id).delete().catch(()=>{})}}
+    toast("Đã xoá tin nhắn.")
+  }catch(e){toast("Chưa xoá được: "+(e?.message||e?.code||e))}}
+document.addEventListener("click",e=>{
+  const a=e.target.closest("[data-mact]");
+  if(a){e.preventDefault();e.stopPropagation();
+    if(a.dataset.mact==="unreply"){S.reply=null;replyBar();return}
+    const el=a.closest("[data-mid]"),ctx=a.closest("#tmList")?"team":"job",m=msgList(ctx).find(x=>x.id===el?.dataset.mid);if(!m)return;
+    if(a.dataset.mact==="reply"){S.reply={ctx,id:m.id,by:m.by,byName:m.byName||m.by,text:String(m.text||"").slice(0,120)};replyBar();document.querySelector(ctx==="job"?"#chatTxt":"#tmTxt")?.focus();return}
+    if(a.dataset.mact==="del"){msgDelete(ctx,m);return}}
+  const g=e.target.closest("[data-mgo]");
+  if(g){const t=g.closest(".chat")?.querySelector(`[data-mid="${CSS.escape(g.dataset.mgo)}"]`);if(t){t.scrollIntoView({block:"center",behavior:"smooth"});t.classList.add("flash");setTimeout(()=>t.classList.remove("flash"),1400)}else toast("Tin gốc đã bị xoá hoặc nằm ở trang cũ.");return}
+  const bub=e.target.closest(".chat .m[data-mid]");
+  if(bub&&!e.target.closest("button,a")){document.querySelectorAll(".chat .m.act").forEach(x=>x!==bub&&x.classList.remove("act"));bub.classList.toggle("act")}
+},true);
 /* ---------- Chọn giao diện: Hiện tại / Kiểu 1office (nhớ trên từng máy) ---------- */
 const UI_LS="sojob.ui",UI_LIST=[["cu","Giao diện hiện tại","Thanh xanh, chữ Open Sans"],["1office","Kiểu 1office","Nền trắng gọn, chữ Inter Tight"]];
 function uiGet(){try{return localStorage.getItem(UI_LS)||"cu"}catch(e){return "cu"}}
@@ -2449,7 +2521,7 @@ function teamMsgs(){
     const d=new Date(m.at||0).toLocaleDateString("vi-VN",{weekday:"long",day:"2-digit",month:"2-digit"});const sep=d!==day?`<div class="tday">${esc(d)}</div>`:"";day=d;
     const j=m.job&&S.all.find(x=>x.id===m.job.id);
     const chip=m.job?`<button class="jchip" data-tmjob="${esc(m.job.id)}" title="Mở job">📁 ${esc(m.job.code||"")}${m.job.label?" · "+esc(m.job.label):""}${m.from==="job"?" · trong job":""}</button>`:"";
-    return sep+`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}"><small>${esc(m.by===me()?"Bạn":(m.byName||m.by))} · ${tmTime(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}</small>${chip}${mnText(m)}</div>`}).join("");
+    return sep+`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}" data-mid="${esc(m.id||"")}">${msgReply(m)}<small>${esc(m.by===me()?"Bạn":(m.byName||m.by))} · ${tmTime(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}</small>${chip}${mnText(m)}${msgActs(m)}</div>`}).join("");
 }
 function renderTeam(el){
   if(el.dataset.v!=="team"||!$("#tmList")){
@@ -2486,7 +2558,7 @@ async function teamSend(){
   const t=$("#tmTxt");const text=(t?.value||"").trim();if(!text)return;
   if(text.length>4000)return toast("Tin quá dài (tối đa 4000 ký tự).");
   const j=S.teamJob&&S.all.find(x=>x.id===S.teamJob);
-  const msg=Object.assign({text,by:me(),byName:window.SOJOB_USER||me(),at:Date.now()},mnTags("tmTxt",text));mnClose();
+  const msg=Object.assign({text,by:me(),byName:window.SOJOB_USER||me(),at:Date.now()},mnTags("tmTxt",text),replyTake("team"));mnClose();
   const doc=j?Object.assign({job:{id:j.id,code:j.code,label:jobLabel(j)}},msg):msg;
   t.value="";S.teamDraft="";S.teamJob=null;teamSug(null);
   try{await db.collection("teamchat").add(doc)}catch(e){toast("Chưa gửi được: "+(e?.message||e?.code));t.value=text;return}
@@ -2633,7 +2705,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-24a";
+const APP_VER="2026-11-24d";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
