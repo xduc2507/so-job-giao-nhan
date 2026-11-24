@@ -326,14 +326,15 @@ function goiAI(ai, token) {
   (ai.files || []).slice(0, 8).forEach(function (f) { if (f && f.data) parts.push({ inline_data: { mime_type: f.mime || "image/jpeg", data: f.data } }); });
   var body = { contents: [{ role: "user", parts: parts }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } };
   if (ai.json) body.generationConfig.responseMimeType = "application/json";
-  var models = [P.getProperty("AI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"].filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+  var models = [P.getProperty("AI_MODEL"), "gemini-flash-lite-latest", "gemini-3.8-flash", "gemini-flash-latest"] // Lite nhanh, ít bị quá tải; lỗi thì thử bản Flash.filter(function (x, i, a) { return x && a.indexOf(x) === i; });
   var last = "";
   for (var i = 0; i < models.length; i++) {
     var r = UrlFetchApp.fetch("https://generativelanguage.googleapis.com/v1beta/models/" + models[i] + ":generateContent", { method: "post", contentType: "application/json", headers: { "x-goog-api-key": key }, payload: JSON.stringify(body), muteHttpExceptions: true });
     var c = r.getResponseCode(), j = {}; try { j = JSON.parse(r.getContentText()); } catch (e) {}
-    if (c === 404) { last = "không có mô hình " + models[i]; continue; }
+    if (c === 404 || c === 403) { last = (c === 404 ? "không có mô hình " : "không có quyền dùng ") + models[i]; continue; }
+    if (c === 503 || c === 500) { last = models[i] + " đang quá tải"; continue; }
     if (c === 429) return { ok: false, code: "rate_limited", msg: "AI miễn phí đã dùng hết lượt trong phút / ngày. Thử lại sau ít phút." };
-    if (c === 400 || c === 403) return { ok: false, code: "invalid_request", msg: "AI không nhận yêu cầu: " + ((j.error && j.error.message) || c) };
+    if (c === 400) return { ok: false, code: "invalid_request", msg: "AI không nhận yêu cầu: " + ((j.error && j.error.message) || c) };
     if (c !== 200) { last = "lỗi " + c; continue; }
     var cand = (j.candidates || [])[0] || {}, text = ((cand.content && cand.content.parts) || []).map(function (p) { return p.text || ""; }).join("");
     if (!text.trim()) return { ok: false, code: "empty_completion", msg: "AI không trả về nội dung (có thể bị chặn vì nội dung nhạy cảm)." };
@@ -351,4 +352,31 @@ function ghiTraoDoi(j, text, tagMail) {
   vaFs("jobs/" + j._id, { chatAt: msg.at, chatBy: msg.by, chatByName: msg.byName, chatLast: text.slice(0, 80), chatN: (Number(j.chatN) || 0) + 1 });
   if (j.shared) { var t = JSON.parse(JSON.stringify(msg)); t.job = { id: j._id, code: j.code || "", label: String(j.company || j.title || "").slice(0, 32) }; t.from = "job";
     var f2 = {}; for (var k2 in t) f2[k2] = veFs(t[k2]); goi(FS + "/teamchat", { method: "post", payload: { fields: f2 } }); }
+}
+
+/* Chẩn đoán AI (chạy tay trong trình soạn): ghi mã lỗi từng cách gọi, không in key */
+function chanDoanAI() {
+  var key = PropertiesService.getScriptProperties().getProperty("GEMINI_KEY") || "";
+  Logger.log("Key: " + (key ? key.length + " ký tự, bắt đầu " + key.slice(0, 3) : "chưa có"));
+  var base = "https://generativelanguage.googleapis.com/v1beta/models";
+  var t = function (nm, url, opt) { var r = UrlFetchApp.fetch(url, Object.assign({ muteHttpExceptions: true }, opt || {})); Logger.log(nm + ": " + r.getResponseCode() + " " + r.getContentText().slice(0, 220).replace(/\s+/g, " ")); };
+  t("models header", base, { headers: { "x-goog-api-key": key } });
+  t("models ?key", base + "?key=" + encodeURIComponent(key));
+  var body = JSON.stringify({ contents: [{ parts: [{ text: "OK" }] }] });
+  ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"].forEach(function (m) {
+    t(m + " header", base + "/" + m + ":generateContent", { method: "post", contentType: "application/json", headers: { "x-goog-api-key": key }, payload: body });
+  });
+  t("bearer", base, { headers: { Authorization: "Bearer " + key } });
+}
+
+/* Đo thời gian gọi từng mô hình Gemini (chạy tay) */
+function doTocDoAI() {
+  var key = PropertiesService.getScriptProperties().getProperty("GEMINI_KEY") || "";
+  var base = "https://generativelanguage.googleapis.com/v1beta/models/";
+  [["gemini-3.8-flash", {}], ["gemini-3.8-flash", { thinkingConfig: { thinkingLevel: "low" } }], ["gemini-flash-lite-latest", {}]].forEach(function (x) {
+    var t0 = Date.now();
+    var r = UrlFetchApp.fetch(base + x[0] + ":generateContent", { method: "post", contentType: "application/json", headers: { "x-goog-api-key": key }, muteHttpExceptions: true,
+      payload: JSON.stringify({ contents: [{ parts: [{ text: "Trả lời đúng chữ: OK" }] }], generationConfig: Object.assign({ maxOutputTokens: 200 }, x[1]) }) });
+    Logger.log(x[0] + " " + JSON.stringify(x[1]) + ": " + r.getResponseCode() + " sau " + (Date.now() - t0) + "ms · " + r.getContentText().slice(0, 160).replace(/\s+/g, " "));
+  });
 }

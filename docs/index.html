@@ -856,6 +856,18 @@ table.q td input::placeholder{color:#b3b8c0;font-weight:400}
 .td-empty{padding:40px 10px;text-align:center;font-size:16px}.td-empty small{color:var(--muted);font-size:13px}
 .tabs .cbadge{margin-left:6px;min-width:18px;height:18px;font-size:11px}
 .aisum{font-size:14.5px;line-height:1.6;white-space:normal}
+/* Quy trình: độ rộng cột chỉnh được */
+.kb .col{flex:0 0 var(--colw,196px)!important;width:var(--colw,196px);min-width:0!important;max-width:var(--colw,196px)!important;position:relative}
+.kb .col-b,.kb .kc,.kb .kc>*{min-width:0;max-width:100%}
+.kb .kc .ft{overflow:hidden}
+.col-rz{position:absolute;top:0;right:-5px;width:9px;height:100%;cursor:col-resize;z-index:3}
+.col-rz::after{content:"";position:absolute;top:8px;bottom:8px;left:4px;width:2px;border-radius:2px;background:transparent;transition:background .15s}
+.col-rz:hover::after,.kb-resizing .col-rz::after{background:var(--accent)}
+.kb-resizing{cursor:col-resize;user-select:none}
+.kbw{display:inline-flex;align-items:center;gap:4px;margin-left:auto}
+.kbw input[type=range]{width:120px;min-height:0!important;padding:0!important;border:0!important;background:none!important;accent-color:var(--accent)}
+.kbw button{min-width:32px}
+@media (max-width:780px){.kbw input[type=range]{width:90px}.kbw [data-kbw=fit]{display:none}}
 </style>
 <style id="ui1o" media="not all">
 /* ===== Theo dõi làm hàng – BẢN THỬ kiểu 1office =====
@@ -1480,12 +1492,13 @@ function renderBoard(el){
     const lt=arr.filter(isLate).length,lim=num(S.stall[st]);
     const sub=!isOpen(st)?(n>arr.length?`${arr.length} gần nhất / ${n}`:`${n} job`):`${n} job${lt?` · <span class="bad">${lt} đứng yên / quá hạn</span>`:""}${lim?` · ngưỡng ${lim} ngày`:""}`;
     return `<div class="col c${ci}" data-col="${esc(st)}"><div class="col-h"><span class="nm">${esc(COLNAME[st]||st)}<span class="nr">${isOpen(st)?`<button class="add" data-addcol="${esc(st)}" title="Tạo job ở cột “${esc(st)}”" aria-label="Tạo job ở cột ${esc(st)}">+</button>`:""}<span class="n">${n}</span></span></span><span class="sub">${sub}</span></div>
-      <div class="col-b">${arr.map(kanbanCard).join("")||'<span class="none">Kéo thẻ vào đây</span>'}</div></div>`;
+      <div class="col-b">${arr.map(kanbanCard).join("")||'<span class="none">Kéo thẻ vào đây</span>'}</div><span class="col-rz" title="Kéo để đổi độ rộng cột · bấm đúp: vừa màn hình" aria-hidden="true"></span></div>`;
   }).join("");
   el.innerHTML=`<div class="kb-bar"><select id="kbGroup" aria-label="Lọc theo FWD / công ty"><option value="__all">Tất cả FWD / cty (${S.jobs.length})</option>${groups.map(g=>`<option value="${esc(g)}" ${S.group===g?"selected":""}>${esc(g)}</option>`).join("")}</select>
     <select id="kbSvc" aria-label="Lọc theo loại dịch vụ"><option value="">Mọi dịch vụ</option>${SERVICES.map(s=>`<option value="${s}" ${S.svc===s?"selected":""}>${s} · ${SERVICE_NAME[s]}</option>`).join("")}</select>
-    <span class="sum">${open.length} job đang mở${late?` · <b>${late} đứng yên / quá hạn</b>`:""}${blk?` · ${blk} có vướng mắc`:""}</span></div>
-    <div class="kb">${cols}</div>`;
+    <span class="sum">${open.length} job đang mở${late?` · <b>${late} đứng yên / quá hạn</b>`:""}${blk?` · ${blk} có vướng mắc`:""}</span>
+    <span class="kbw" title="Độ rộng mỗi cột (kéo thanh, hoặc kéo mép phải của cột)"><button type="button" class="sm ghost" data-kbw="-" aria-label="Thu hẹp cột">−</button><input type="range" id="kbW" min="150" max="360" step="10" value="${kbColW()}" aria-label="Độ rộng cột"><button type="button" class="sm ghost" data-kbw="+" aria-label="Nới rộng cột">+</button><button type="button" class="sm" data-kbw="fit" title="Chia đều cho vừa màn hình">Vừa màn hình</button></span></div>
+    <div class="kb" style="--colw:${kbColW()}px">${cols}</div>`;
 }
 let kmenu=null;
 function closeKmenu(){if(kmenu){kmenu.remove();kmenu=null}}
@@ -2684,6 +2697,17 @@ function autoRule(j,key){
   const w=whoOf(j),n=w?whoName(w):"";
   postJobMsg(j,RULE_MSG[key]+(w?` @${n}`:""),Object.assign({auto:true},w&&w!==me()?{tags:[w],tagN:[n]}:{}));
 }
+/* ---------- Quy trình: chỉnh độ rộng cột (thanh kéo, nút +/−, kéo mép cột, vừa màn hình); nhớ trên từng máy ---------- */
+function kbColW(){try{const v=+localStorage.getItem("sojob.kbColW");return v>=150&&v<=360?v:196}catch(e){return 196}}
+function kbSetW(v,save=true){v=Math.max(150,Math.min(360,Math.round(v)));const kb=document.querySelector(".kb");if(kb)kb.style.setProperty("--colw",v+"px");const r=document.getElementById("kbW");if(r)r.value=v;if(save)try{localStorage.setItem("sojob.kbColW",String(v))}catch(e){}}
+function kbFit(){const kb=document.querySelector(".kb");if(!kb)return;const n=kb.querySelectorAll(".col").length||1,gap=parseFloat(getComputedStyle(kb).columnGap)||6;kbSetW((kb.clientWidth-gap*(n-1)-4)/n)}
+document.addEventListener("input",e=>{if(e.target.id==="kbW")kbSetW(+e.target.value)});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-kbw]");if(!b)return;const v=kbColW();if(b.dataset.kbw==="fit")kbFit();else kbSetW(v+(b.dataset.kbw==="+"?20:-20))});
+// kéo mép phải của bất kỳ cột nào để đổi độ rộng mọi cột
+document.addEventListener("pointerdown",e=>{const h=e.target.closest(".col-rz");if(!h)return;e.preventDefault();const col=h.closest(".col"),x0=e.clientX,w0=col.getBoundingClientRect().width;h.setPointerCapture?.(e.pointerId);document.body.classList.add("kb-resizing");
+  const mv=ev=>kbSetW(w0+(ev.clientX-x0),false),up=ev=>{h.removeEventListener("pointermove",mv);h.removeEventListener("pointerup",up);document.body.classList.remove("kb-resizing");kbSetW(w0+(ev.clientX-x0))};
+  h.addEventListener("pointermove",mv);h.addEventListener("pointerup",up)});
+document.addEventListener("dblclick",e=>{if(e.target.closest(".col-rz"))kbFit()});
 /* ---------- Chọn giao diện: Hiện tại / Kiểu 1office (nhớ trên từng máy) ---------- */
 const UI_LS="sojob.ui",UI_LIST=[["cu","Giao diện hiện tại","Thanh xanh, chữ Open Sans"],["1office","Kiểu 1office","Nền trắng gọn, chữ Inter Tight"]];
 function uiGet(){try{return localStorage.getItem(UI_LS)||"cu"}catch(e){return "cu"}}
@@ -2927,7 +2951,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-24g";
+const APP_VER="2026-11-24h";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
