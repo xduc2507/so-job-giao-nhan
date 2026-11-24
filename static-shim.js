@@ -483,16 +483,19 @@
         const legacyOwner = async () => { try { await fdb.doc("meta/templates").get({ source: "server" }); return true; } catch (e) { return false; } };
         const denied = () => loginScreen(`Tài khoản ${u.email} chưa được cấp quyền dùng sổ này. Gửi email này cho chủ sổ để được thêm vào (Cài đặt → Thành viên), hoặc đăng xuất để chọn tài khoản khác.`);
         // Chủ sổ: đọc được cả danh sách thành viên. Nhân viên: chỉ có hồ sơ của mình trong members/.
+        let memName = "";
         try { await fdb.collection("members").limit(1).get({ source: "server" }); ROLE = "owner"; }
         catch (e) {
           if (e && e.code === "permission-denied") {
-            try { const m = await fdb.doc("members/" + mail).get({ source: "server" }); if (m.exists) ROLE = "staff"; else if (await legacyOwner()) ROLE = "owner"; else { denied(); return; } }
+            try { const m = await fdb.doc("members/" + mail).get({ source: "server" }); if (m.exists) { ROLE = "staff"; memName = String((m.data() || {}).name || "").trim(); } else if (await legacyOwner()) ROLE = "owner"; else { denied(); return; } }
             catch (e2) { if (e2 && e2.code === "permission-denied") { if (await legacyOwner()) ROLE = "owner"; else { denied(); return; } } else ROLE = (localStorage.getItem(ROLE_LS + "." + mail) || "staff"); }
           } else ROLE = (localStorage.getItem(ROLE_LS + "." + mail) || "staff"); // mất mạng: dùng vai trò lần trước
         }
         try { localStorage.setItem(ROLE_LS + "." + mail, ROLE); } catch (e) {}
         window.SOJOB_ROLE = ROLE; window.SOJOB_EMAIL = mail;
-        window.SOJOB_USER = u.displayName || u.email || "";
+        if (memName) try { localStorage.setItem("sojob.memName." + mail, memName); } catch (e) {}
+        if (!memName && ROLE === "staff") try { memName = localStorage.getItem("sojob.memName." + mail) || ""; } catch (e) {}
+        window.SOJOB_USER = memName || u.displayName || u.email || ""; // tên chủ sổ đặt cho nhân viên được ưu tiên
         const l = document.getElementById("sj-login"); if (l) l.remove();
         userBar();
         res(fdb);

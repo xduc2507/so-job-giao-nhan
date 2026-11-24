@@ -838,7 +838,7 @@ table.rp-t tfoot td{font-weight:700;border-top:2px solid var(--line)}
 .mono,code,kbd,.num,table.q td input,.tot b{font-family:var(--f-body)!important;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 table.q td input::placeholder{color:#b3b8c0;font-weight:400}
 /* người phụ trách */
-.asgchip{display:inline-flex;align-items:center;gap:2px;font-size:11.5px;padding:0 6px;border-radius:999px;background:var(--surface-2);color:var(--muted);margin-left:6px;white-space:nowrap}
+.asgchip{display:inline-block;max-width:110px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;gap:2px;font-size:11.5px;padding:0 6px;border-radius:999px;background:var(--surface-2);color:var(--muted);margin-left:6px;white-space:nowrap}
 .asgchip.me{background:var(--accent-soft);color:var(--accent);font-weight:600}
 .asgsel{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--muted);margin-left:4px}
 .asgsel select{min-height:30px!important;padding:2px 6px!important;font-size:13px!important;max-width:160px}
@@ -877,6 +877,9 @@ table.q td input::placeholder{color:#b3b8c0;font-weight:400}
 .ksp-i:hover{background:var(--surface-2)!important}
 .ksp-i .mono{grid-row:1/4;font-size:12px;color:var(--muted);align-self:center}.ksp-i b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ksp-i small{font-size:12px;color:var(--muted)}.ksp-i .why{color:var(--bad)}
+.kb .kc .ft{display:flex;align-items:center;gap:4px;min-width:0}
+.kb .kc .ft .who{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kb .kc .ft .asgchip{flex:0 0 auto;max-width:96px;margin-left:0}
 </style>
 <style id="ui1o" media="not all">
 /* ===== Theo dõi làm hàng – BẢN THỬ kiểu 1office =====
@@ -2374,7 +2377,7 @@ const chatNew=j=>!!(chatSeen&&j.chatAt&&j.chatBy&&j.chatBy!==me()&&j.chatAt>(cha
 function chatMsgs(id){
   const ms=S.chat[id];if(!ms)return `<div class="none"><span class="spin"></span> Đang tải…</div>`;
   if(!ms.length)return `<div class="none">Chưa có trao đổi nào. Gõ tin bên dưới, mọi người thấy job này đều đọc được.</div>`;
-  return ms.map(m=>`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}" data-mid="${esc(m.id||"")}">${msgReply(m)}<small>${m.by===me()?"":`<b>${esc(m.byName||m.by)}</b> · `}${hm(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}${m.editedAt?" · đã sửa":""}</small>${mnText(m)}${msgActs(m)}</div>`).join("");
+  return ms.map(m=>`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}" data-mid="${esc(m.id||"")}">${msgReply(m)}<small>${m.by===me()?"":`<b>${esc(msgWho(m))}</b> · `}${hm(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}${m.editedAt?" · đã sửa":""}</small>${mnText(m)}${msgActs(m)}</div>`).join("");
 }
 function dlRow(j){const k=dayDiff(j.deadline),open=isOpen(j.status);
   const tag=!j.deadline?`<span class="dltag none">Chưa đặt hạn</span>`:!open?"":k<0?`<span class="dltag late">⚠ Quá hạn ${-k} ngày</span>`:k===0?`<span class="dltag today">Hôm nay</span>`:`<span class="dltag ${k<=2?"soon":""}">Còn ${k} ngày</span>`;
@@ -2463,6 +2466,7 @@ function peopleWatch(){
   try{peopleSub=db.doc("meta/people").onSnapshot(s=>{S.people=(s.exists&&s.data().p)||{}},()=>{})}catch(e){}
   const nm=window.SOJOB_USER||"",ml=me();
   if(ml&&nm)db.doc("meta/people").set({p:{[ml]:{n:nm,at:Date.now()}}},{merge:true}).catch(()=>{});
+  if(boss())db.collection("members").get().then(q=>{const p={};q.docs.forEach(d=>{const n=String((d.data()||{}).name||"").trim();if(n)p[d.id.toLowerCase()]={n,at:Date.now(),set:"owner"}});if(Object.keys(p).length)return db.doc("meta/people").set({p},{merge:true})}).catch(()=>{});
 }
 const peopleList=()=>Object.entries(S.people).filter(([m,v])=>m!==me()&&v&&v.n).map(([m,v])=>({m,n:v.n})).sort((a,b)=>a.n.localeCompare(b.n,"vi"));
 // Tag đang chọn cho từng ô gõ (id ô → [{m,n}]); lúc gửi chỉ giữ tag còn chữ @Tên trong tin
@@ -2622,10 +2626,11 @@ async function rpXlsx(r){
   const buf=await wb.xlsx.writeBuffer(),u=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
   const l=document.createElement("a");l.href=u;l.download=`bao-cao-${r.month}.xlsx`;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast("Đã xuất báo cáo tháng "+r.month.slice(5)+"/"+r.month.slice(0,4)+".")}
 /* ---------- Người phụ trách ---------- */
+const msgWho=m=>{const p=S.people&&S.people[String(m.by||"").toLowerCase()];return (p&&p.n)||m.byName||m.by||""};
 const whoOf=j=>String(j.assignee||j.createdBy||"").toLowerCase();
-function whoName(m){m=String(m||"").toLowerCase();if(!m)return "";if(m===me())return window.SOJOB_USER||"Tôi";const p=S.people&&S.people[m];return (p&&p.n)||m.split("@")[0]}
-function asgChip(j,short){if(!team()||(boss()&&isMine(j)))return "";const w=whoOf(j);if(!w)return "";const n=j.assignee?(j.assigneeName||whoName(w)):whoName(w);
-  return `<span class="asgchip${w===me()?" me":""}" title="Phụ trách: ${esc(n)}">👤 ${esc(short?String(n).split(" ").pop():n)}</span>`}
+function whoName(m){m=String(m||"").toLowerCase();if(!m)return "";const p=S.people&&S.people[m];if(p&&p.n)return p.n;if(m===me())return window.SOJOB_USER||"Tôi";return m.split("@")[0]}
+function asgChip(j,short){if(!team()||(boss()&&isMine(j)))return "";const w=whoOf(j);if(!w)return "";const n=whoName(w);
+  return `<span class="asgchip${w===me()?" me":""}" title="Phụ trách: ${esc(n)}">👤 ${esc(n)}</span>`}
 function asgSel(j){if(!team()||(boss()&&isMine(j)))return "";const w=whoOf(j),L=[[me(),window.SOJOB_USER||"Tôi"]].concat(Object.entries(S.people||{}).filter(([m,v])=>m!==me()&&v&&v.n).map(([m,v])=>[m,v.n]));
   if(w&&!L.some(x=>x[0]===w))L.push([w,j.assigneeName||whoName(w)]);
   return `<label class="asgsel" title="Người phụ trách job này">👤<select data-asg="1" aria-label="Người phụ trách"><option value="">Chưa giao</option>${L.map(([m,n])=>`<option value="${esc(m)}"${m===w?" selected":""}>${esc(n)}${m===me()?" (tôi)":""}</option>`).join("")}</select></label>`}
@@ -2656,7 +2661,7 @@ function todayData(){
 function todayBadge(){const b=document.getElementById("todayN");if(!b)return;const n=S.loaded?todayData().n:0;b.hidden=!n;b.textContent=n>99?"99+":n}
 function renderToday(el){
   const D=todayData(),T=TODAY(),dd=new Date().toLocaleDateString("vi-VN",{weekday:"long",day:"2-digit",month:"2-digit"});
-  const line=j=>`<button type="button" class="td-i" data-tdopen="${esc(j.id)}"><span class="mono">${esc(j.code)}</span><b>${esc(j.title||"(chưa có tiêu đề)")}</b><small>${esc(j.status)}${j.deadline?` · hạn ${esc(dmy(j.deadline))}`:""}${j.debitDate&&!j.paidDate?` · debit ${esc(fmt(j.debitAmount,"VND"))} gửi ${esc(dmy(j.debitDate))}`:""}${team()?` · 👤 ${esc(j.assigneeName||whoName(whoOf(j)))}`:""}</small></button>`;
+  const line=j=>`<button type="button" class="td-i" data-tdopen="${esc(j.id)}"><span class="mono">${esc(j.code)}</span><b>${esc(j.title||"(chưa có tiêu đề)")}</b><small>${esc(j.status)}${j.deadline?` · hạn ${esc(dmy(j.deadline))}`:""}${j.debitDate&&!j.paidDate?` · debit ${esc(fmt(j.debitAmount,"VND"))} gửi ${esc(dmy(j.debitDate))}`:""}${team()?` · 👤 ${esc(whoName(whoOf(j)))}`:""}</small></button>`;
   const sec=g=>g.js.length?`<section class="td-g ${g.cls||""}"><h3>${g.ic} ${esc(g.t)} <span class="mono">${g.js.length}</span></h3>${g.d?`<p>${esc(g.d)}</p>`:""}${g.js.slice(0,30).map(line).join("")}</section>`:"";
   const tg=D.tags.length?`<section class="td-g tag"><h3>🔔 Nhắc đến bạn <span class="mono">${D.tags.length}</span></h3>${D.tags.slice(0,20).map(m=>`<button type="button" class="td-i" ${m.job?`data-tdopen="${esc(m.job.id)}"`:'data-tdteam="1"'}><span class="mono">${esc(m.job?m.job.code:"Chat chung")}</span><b>${esc(m.byName||m.by)}: ${esc(String(m.text||"").slice(0,90))}</b><small>${esc(tmTime(m.at))}</small></button>`).join("")}</section>`:"";
   const body=tg+D.G.map(sec).join("");
@@ -2723,7 +2728,7 @@ function kbSumPop(btn){
   const why=j=>{if(k==="blk")return "⚠ "+j.blocker;const ll=lateLine(j);return ll?ll.text:(isOverdue(j)?"Quá hạn "+(-dayDiff(j.deadline))+" ngày":"")};
   const p=document.createElement("div");p.id="kbsumpop";p.className="kbsumpop";p.setAttribute("role","dialog");p.setAttribute("aria-label",btn.textContent);
   p.innerHTML=`<div class="ksp-h"><b>${k==="late"?"Đứng yên / quá hạn":"Có vướng mắc"} (${js.length})</b><button type="button" class="ghost sm" data-ksp-x aria-label="Đóng">✕</button></div>`+
-    js.map(j=>`<button type="button" class="ksp-i" data-ksp="${esc(j.id)}"><span class="mono">${esc(j.code)}</span><b>${esc(j.title||"(chưa có tiêu đề)")}</b><small>${esc(j.status)}${team()?` · 👤 ${esc(j.assigneeName||whoName(whoOf(j)))}`:""}</small><small class="why">${esc(why(j))}</small></button>`).join("");
+    js.map(j=>`<button type="button" class="ksp-i" data-ksp="${esc(j.id)}"><span class="mono">${esc(j.code)}</span><b>${esc(j.title||"(chưa có tiêu đề)")}</b><small>${esc(j.status)}${team()?` · 👤 ${esc(whoName(whoOf(j)))}`:""}</small><small class="why">${esc(why(j))}</small></button>`).join("");
   document.body.appendChild(p);
   const r=btn.getBoundingClientRect();p.style.top=Math.min(r.bottom+6,innerHeight-80)+"px";p.style.left=Math.max(8,Math.min(r.left,innerWidth-p.offsetWidth-8))+"px";
 }
@@ -2791,7 +2796,7 @@ function teamMsgs(){
     const d=new Date(m.at||0).toLocaleDateString("vi-VN",{weekday:"long",day:"2-digit",month:"2-digit"});const sep=d!==day?`<div class="tday">${esc(d)}</div>`:"";day=d;
     const j=m.job&&S.all.find(x=>x.id===m.job.id);
     const chip=m.job?`<button class="jchip" data-tmjob="${esc(m.job.id)}" title="Mở job">📁 ${esc(m.job.code||"")}${m.job.label?" · "+esc(m.job.label):""}${m.from==="job"?" · trong job":""}</button>`:"";
-    return sep+`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}" data-mid="${esc(m.id||"")}">${msgReply(m)}<small>${esc(m.by===me()?"Bạn":(m.byName||m.by))} · ${tmTime(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}${m.editedAt?" · đã sửa":""}</small>${chip}${mnText(m)}${msgActs(m)}</div>`}).join("");
+    return sep+`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}" data-mid="${esc(m.id||"")}">${msgReply(m)}<small>${esc(m.by===me()?"Bạn":msgWho(m))} · ${tmTime(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}${m.editedAt?" · đã sửa":""}</small>${chip}${mnText(m)}${msgActs(m)}</div>`}).join("");
 }
 function renderTeam(el){
   if(el.dataset.v!=="team"||!$("#tmList")){
@@ -2975,7 +2980,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-24i";
+const APP_VER="2026-11-24j";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
