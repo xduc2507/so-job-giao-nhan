@@ -176,11 +176,12 @@ var TZ = "Asia/Ho_Chi_Minh";
 
 function caiLich() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (["theoDoiToKhai", "nhacViecSang", "saoLuuDem"].indexOf(t.getHandlerFunction()) >= 0) ScriptApp.deleteTrigger(t);
+    if (["theoDoiToKhai", "nhacViecSang", "saoLuuDem", "nhacHen"].indexOf(t.getHandlerFunction()) >= 0) ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger("theoDoiToKhai").timeBased().everyMinutes(30).create();
   ScriptApp.newTrigger("nhacViecSang").timeBased().atHour(8).nearMinute(0).everyDays(1).inTimezone(TZ).create();
   ScriptApp.newTrigger("saoLuuDem").timeBased().atHour(23).nearMinute(0).everyDays(1).inTimezone(TZ).create();
+  ScriptApp.newTrigger("nhacHen").timeBased().everyMinutes(10).create();
   Logger.log("Đã cài lịch: " + ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); }).join(", "));
 }
 
@@ -379,4 +380,21 @@ function doTocDoAI() {
       payload: JSON.stringify({ contents: [{ parts: [{ text: "Trả lời đúng chữ: OK" }] }], generationConfig: Object.assign({ maxOutputTokens: 200 }, x[1]) }) });
     Logger.log(x[0] + " " + JSON.stringify(x[1]) + ": " + r.getResponseCode() + " sau " + (Date.now() - t0) + "ms · " + r.getContentText().slice(0, 160).replace(/\s+/g, " "));
   });
+}
+
+/* 4) Hẹn giờ nhắc từng job (10 phút/lần): gửi lên điện thoại người đặt nhắc. Việc riêng: không ghi nội dung. */
+function nhacHen() {
+  var owner = chuSo(), now = Date.now(), kq = [];
+  docHet("jobs").forEach(function (j) {
+    var R = j.reminders || [], doi = false;
+    R.forEach(function (r) {
+      if (!r || r.sent || !r.at || r.at > now || !r.by) return;
+      var rieng = laViecRieng(j, owner);
+      var n = guiToi([String(r.by).toLowerCase()], "⏰ " + (rieng ? "Nhắc việc riêng" : (j.code || "") + " · nhắc việc"), rieng ? "Mở app để xem lời nhắc." : (r.note || j.title || "Đến giờ nhắc"), { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "rem-" + r.id);
+      r.sent = true; r.sentBy = "server"; doi = true; kq.push((j.code || j._id) + ": " + n);
+    });
+    if (doi) vaFs("jobs/" + j._id, { reminders: R });
+  });
+  if (kq.length) Logger.log(kq.join(" | "));
+  return { ok: true, kq: kq };
 }
