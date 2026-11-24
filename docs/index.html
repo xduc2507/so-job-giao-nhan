@@ -868,6 +868,15 @@ table.q td input::placeholder{color:#b3b8c0;font-weight:400}
 .kbw input[type=range]{width:120px;min-height:0!important;padding:0!important;border:0!important;background:none!important;accent-color:var(--accent)}
 .kbw button{min-width:32px}
 @media (max-width:780px){.kbw input[type=range]{width:90px}.kbw [data-kbw=fit]{display:none}}
+/* Quy trình: danh sách job đứng yên / vướng mắc */
+.sumlink{display:inline;min-height:0!important;padding:0 2px!important;border:0!important;background:none!important;color:var(--accent)!important;font:inherit;font-weight:700;text-decoration:underline dotted;cursor:pointer}
+.sumlink.bad{color:var(--bad)!important}
+.kbsumpop{position:fixed;z-index:85;width:min(380px,calc(100vw - 16px));max-height:min(60vh,460px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:6px}
+.ksp-h{display:flex;align-items:center;justify-content:space-between;padding:4px 6px 6px;border-bottom:1px solid var(--line)}
+.ksp-i{display:grid;grid-template-columns:auto 1fr;gap:0 8px;width:100%;text-align:left;padding:8px!important;min-height:44px;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:none!important;color:var(--ink)!important}
+.ksp-i:hover{background:var(--surface-2)!important}
+.ksp-i .mono{grid-row:1/4;font-size:12px;color:var(--muted);align-self:center}.ksp-i b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ksp-i small{font-size:12px;color:var(--muted)}.ksp-i .why{color:var(--bad)}
 </style>
 <style id="ui1o" media="not all">
 /* ===== Theo dõi làm hàng – BẢN THỬ kiểu 1office =====
@@ -1496,7 +1505,7 @@ function renderBoard(el){
   }).join("");
   el.innerHTML=`<div class="kb-bar"><select id="kbGroup" aria-label="Lọc theo FWD / công ty"><option value="__all">Tất cả FWD / cty (${S.jobs.length})</option>${groups.map(g=>`<option value="${esc(g)}" ${S.group===g?"selected":""}>${esc(g)}</option>`).join("")}</select>
     <select id="kbSvc" aria-label="Lọc theo loại dịch vụ"><option value="">Mọi dịch vụ</option>${SERVICES.map(s=>`<option value="${s}" ${S.svc===s?"selected":""}>${s} · ${SERVICE_NAME[s]}</option>`).join("")}</select>
-    <span class="sum">${open.length} job đang mở${late?` · <b>${late} đứng yên / quá hạn</b>`:""}${blk?` · ${blk} có vướng mắc`:""}</span>
+    <span class="sum">${open.length} job đang mở${late?` · <button type="button" class="sumlink bad" data-kbsum="late" aria-haspopup="true">${late} đứng yên / quá hạn ▾</button>`:""}${blk?` · <button type="button" class="sumlink" data-kbsum="blk" aria-haspopup="true">${blk} có vướng mắc ▾</button>`:""}</span>
     <span class="kbw" title="Độ rộng mỗi cột (kéo thanh, hoặc kéo mép phải của cột)"><button type="button" class="sm ghost" data-kbw="-" aria-label="Thu hẹp cột">−</button><input type="range" id="kbW" min="150" max="360" step="10" value="${kbColW()}" aria-label="Độ rộng cột"><button type="button" class="sm ghost" data-kbw="+" aria-label="Nới rộng cột">+</button><button type="button" class="sm" data-kbw="fit" title="Chia đều cho vừa màn hình">Vừa màn hình</button></span></div>
     <div class="kb" style="--colw:${kbColW()}px">${cols}</div>`;
 }
@@ -2708,6 +2717,23 @@ document.addEventListener("pointerdown",e=>{const h=e.target.closest(".col-rz");
   const mv=ev=>kbSetW(w0+(ev.clientX-x0),false),up=ev=>{h.removeEventListener("pointermove",mv);h.removeEventListener("pointerup",up);document.body.classList.remove("kb-resizing");kbSetW(w0+(ev.clientX-x0))};
   h.addEventListener("pointermove",mv);h.addEventListener("pointerup",up)});
 document.addEventListener("dblclick",e=>{if(e.target.closest(".col-rz"))kbFit()});
+/* Quy trình: bấm "đứng yên / quá hạn" hoặc "có vướng mắc" để xem danh sách job */
+function kbSumPop(btn){
+  document.getElementById("kbsumpop")?.remove();
+  const k=btn.dataset.kbsum,open=visibleJobs(true).filter(j=>isOpen(j.status));
+  const js=k==="late"?open.filter(isLate):open.filter(j=>j.blocker);
+  const why=j=>{if(k==="blk")return "⚠ "+j.blocker;const ll=lateLine(j);return ll?ll.text:(isOverdue(j)?"Quá hạn "+(-dayDiff(j.deadline))+" ngày":"")};
+  const p=document.createElement("div");p.id="kbsumpop";p.className="kbsumpop";p.setAttribute("role","dialog");p.setAttribute("aria-label",btn.textContent);
+  p.innerHTML=`<div class="ksp-h"><b>${k==="late"?"Đứng yên / quá hạn":"Có vướng mắc"} (${js.length})</b><button type="button" class="ghost sm" data-ksp-x aria-label="Đóng">✕</button></div>`+
+    js.map(j=>`<button type="button" class="ksp-i" data-ksp="${esc(j.id)}"><span class="mono">${esc(j.code)}</span><b>${esc(j.title||"(chưa có tiêu đề)")}</b><small>${esc(j.status)}${team()?` · 👤 ${esc(j.assigneeName||whoName(whoOf(j)))}`:""}</small><small class="why">${esc(why(j))}</small></button>`).join("");
+  document.body.appendChild(p);
+  const r=btn.getBoundingClientRect();p.style.top=Math.min(r.bottom+6,innerHeight-80)+"px";p.style.left=Math.max(8,Math.min(r.left,innerWidth-p.offsetWidth-8))+"px";
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-kbsum]");if(b){e.preventDefault();const o=document.getElementById("kbsumpop");if(o&&o.dataset.k===b.dataset.kbsum){o.remove();return}kbSumPop(b);document.getElementById("kbsumpop").dataset.k=b.dataset.kbsum;return}
+  const i=e.target.closest("[data-ksp]");if(i){document.getElementById("kbsumpop")?.remove();openJob(i.dataset.ksp);return}
+  if(e.target.closest("[data-ksp-x]")||(document.getElementById("kbsumpop")&&!e.target.closest("#kbsumpop")))document.getElementById("kbsumpop")?.remove()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.getElementById("kbsumpop")?.remove()});
 /* ---------- Chọn giao diện: Hiện tại / Kiểu 1office (nhớ trên từng máy) ---------- */
 const UI_LS="sojob.ui",UI_LIST=[["cu","Giao diện hiện tại","Thanh xanh, chữ Open Sans"],["1office","Kiểu 1office","Nền trắng gọn, chữ Inter Tight"]];
 function uiGet(){try{return localStorage.getItem(UI_LS)||"cu"}catch(e){return "cu"}}
@@ -2951,7 +2977,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-24h";
+const APP_VER="2026-11-24i";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
