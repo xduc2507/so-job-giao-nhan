@@ -789,6 +789,54 @@ html:not([data-ui="1office"]) .stages button:first-child{padding-left:10px!impor
 .rbar>span>span{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chat .m.flash{outline:2px solid var(--accent);outline-offset:2px}
 @media (hover:none){.chat .m .macts button{min-height:36px!important}}
+body.view-report .app{grid-template-columns:minmax(0,1fr)}
+body.view-report #side,body.view-report #detail{display:none}
+.rp{max-width:1100px}
+/* báo cáo tháng */
+.rp{display:flex;flex-direction:column;gap:14px;padding:14px}
+.rp-h{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}.rp-h .fld{min-width:170px}.rp-h .muted{font-size:12.5px;color:var(--muted)}
+.rp-k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.rp-k>div{border:1px solid var(--line);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:2px;background:var(--surface)}
+.rp-k b{font-size:22px;line-height:1.2;font-variant-numeric:tabular-nums}.rp-k span{font-size:13px;color:var(--muted)}.rp-k small{font-size:12px;color:var(--muted)}
+.rp-k .warn b{color:var(--warn)}.rp-k .bad b{color:var(--bad)}
+table.rp-t{width:100%;border-collapse:collapse;font-size:13.5px}
+table.rp-t th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line)}
+table.rp-t td{padding:8px 6px;border-bottom:1px solid var(--line)}table.rp-t .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.rp-t tfoot td{font-weight:700;border-top:2px solid var(--line)}
+/* Báo giá trên điện thoại: mỗi khoản phí là 1 thẻ, ô nhập to rõ */
+@media (max-width:600px){
+  table.q,table.q tbody{display:block;width:100%!important;min-width:0!important}
+  table.q thead{display:none}
+  table.q tr{display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:6px 8px;padding:10px;margin:0 0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);position:relative}
+  table.q tr.chrow{border-left:4px solid #f0b400}
+  table.q tr.chhead{display:block;padding:6px 10px;border:0;background:#fff6e5;border-radius:6px}
+  table.q tr.chhead td{display:block;border:0!important;padding:0!important}
+  table.q td{display:flex;flex-direction:column;gap:2px;border:0!important;padding:0!important;min-width:0}
+  table.q td::before{font-size:11.5px;color:var(--muted);font-weight:600}
+  table.q tr:not(.chhead) td:nth-child(1){grid-column:1/4}
+  table.q tr:not(.chhead) td:nth-child(1)::before{content:"Hạng mục"}
+  table.q tr:not(.chhead) td:nth-child(2)::before{content:"SL"}
+  table.q tr:not(.chhead) td:nth-child(3)::before{content:"ĐVT"}
+  table.q tr:not(.chhead) td:nth-child(4)::before{content:"Đơn giá"}
+  table.q tr:not(.chhead) td:nth-child(5){grid-column:1/3;align-items:flex-start}
+  table.q tr:not(.chhead) td:nth-child(5)::before{content:"Thành tiền"}
+  table.q tr:not(.chhead) td:nth-child(6)::before{content:"Giá NET"}
+  table.q tr:not(.chhead) td:nth-child(7){grid-column:1/3;align-items:flex-start}
+  table.q tr:not(.chhead) td:nth-child(7)::before{content:"Thành tiền NET"}
+  table.q tr:not(.chhead) td:nth-child(8){grid-column:3/5;align-items:flex-start}
+  table.q tr:not(.chhead) td:nth-child(8)::before{content:"Giá lần trước"}
+  table.q tr:not(.chhead) td:nth-child(8):empty{display:none}
+  table.q tr:not(.chhead) td:nth-child(9){grid-column:4;grid-row:1;align-self:start}
+  table.q tr:not(.chhead) td:nth-child(9)::before{content:none}
+  table.q tr:not(.chhead) td:nth-child(5),table.q tr:not(.chhead) td:nth-child(7){font-size:16px;font-weight:700}
+  table.q td input{width:100%;min-height:44px!important;font-size:16px!important}
+  table.q td .x{width:40px;height:40px}
+  .qwrap{overflow:visible}
+}
+/* chữ số: dùng chữ thường của app (số 0 không có chấm), số thẳng cột */
+:root{--f-mono:var(--f-body)}
+.mono,code,kbd,.num,table.q td input,.tot b{font-family:var(--f-body)!important;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+table.q td input::placeholder{color:#b3b8c0;font-weight:400}
 </style>
 <style id="ui1o" media="not all">
 /* ===== Theo dõi làm hàng – BẢN THỬ kiểu 1office =====
@@ -950,7 +998,7 @@ table.q td input{min-height:36px!important;font-size:14px!important}
       <div class="tabs" role="tablist">
         <button data-view="team" hidden><i class="fa fa-comments ic-fa" aria-hidden="true"></i>Chat chung<span class="tbadge" id="teamBadge" hidden></span></button>
         <button data-view="board"><i class="fa fa-columns ic-fa" aria-hidden="true"></i>Quy trình</button>
-        <button data-view="list" class="on"><i class="fa fa-list ic-fa" aria-hidden="true"></i>Danh sách</button>
+        <button data-view="list" class="on"><i class="fa fa-list ic-fa" aria-hidden="true"></i>Danh sách</button><button data-view="report" hidden><i class="fa fa-bar-chart ic-fa" aria-hidden="true"></i>Báo cáo</button>
       </div>
       <span class="sp"></span>
       <select id="fStatus" aria-label="Lọc trạng thái">
@@ -1156,7 +1204,7 @@ async function splitPartners(){
 }
 
 function nextCode(){
-  const d=new Date();const p=`${mineOn()?"R":"J"}${String(d.getFullYear()).slice(2)}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+  const d=new Date();const p=`${mineOn()?"R":"FDI"}${String(d.getFullYear()).slice(2)}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
   const tag=boss()?"":me().replace(/[^a-z]/g,"").slice(0,2).toUpperCase();
   const n=(S.all.length?S.all:S.jobs).filter(j=>(j.code||"").startsWith(p+"-"+tag)).length+1;return `${p}-${tag}${pad(n)}`;
 }
@@ -1458,7 +1506,7 @@ addEventListener("resize",closeKmenu);
 document.addEventListener("scroll",closeKmenu,true);
 function renderMain(){
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===S.view));
-  document.body.classList.toggle("view-board",S.view==="board");if(S.view!=="board")closeKmenu();
+  document.body.classList.toggle("view-board",S.view==="board");document.body.classList.toggle("view-report",S.view==="report");if(S.view!=="board")closeKmenu();
   $("#fStatus").hidden=S.view!=="list";
   renderProfile();
   const el=$("#content");
@@ -1468,7 +1516,10 @@ function renderMain(){
   teamWatch();peopleWatch();teamBadge();
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===S.view));$("#fStatus").hidden=S.view!=="list";
   document.body.classList.toggle("view-team",S.view==="team");
+  {const rb=document.querySelector('.tabs [data-view="report"]');if(rb)rb.hidden=!boss()}
+  if(S.view==="report"&&!boss())S.view="list";
   if(S.view==="team"){renderTeam(el);return}
+  if(S.view==="report"){renderReport(el);return}
   if(S.view==="tpl"){
     if(el.dataset.v==="tpl"&&el.contains(document.activeElement))return;
     el.dataset.v="tpl";
@@ -1611,7 +1662,7 @@ function renderDetail(force){
   <div class="sec"><h3>Báo giá <span class="acts"><button class="ghost sm ai" data-act="aiQuote" title="Claude lập báo giá từ yêu cầu và giá đã báo trước đây">✦ Claude soạn</button><button class="ghost sm" data-act="fillPrices">Điền giá lần trước</button><button class="ghost sm${QADD==="fee"?" on":""}" data-act="qadd" aria-expanded="${QADD==="fee"}">+ Thêm phí ▾</button><button class="ghost sm${QADD==="ch"?" on":""}" data-act="qaddch" aria-expanded="${QADD==="ch"}">+ Chi hộ ▾</button></span></h3>
     ${qPresetBox(j)}
     ${(j.quote||[]).length?`<div class="qwrap"><table class="q"><thead><tr><th style="width:24%">Hạng mục</th><th class="num" style="width:6%">SL</th><th style="width:8%">ĐVT</th><th class="num" style="width:13%">Đơn giá</th><th class="num" style="width:13%">Thành tiền</th><th class="num net" style="width:13%" title="Giá vốn / giá nhập hệ thống công ty – không gửi khách">Giá NET</th><th class="num net" style="width:13%">Thành tiền NET</th><th>Giá lần trước</th><th></th></tr></thead><tbody>
-    ${(()=>{const R=(q,i)=>`<tr class="${q.ch?"chrow":""}"><td>${q.ch?'<span class="chtag">Chi hộ</span>':""}<input id="q-${i}-name" data-q="${i}:name" list="${q.ch?"chitems":"items"}" placeholder="Chọn hoặc gõ" value="${esc(q.name)}"></td><td><input class="num mono" id="q-${i}-qty" data-q="${i}:qty" value="${esc(q.qty)}" inputmode="decimal"></td><td><input id="q-${i}-unit" data-q="${i}:unit" value="${esc(q.unit)}"></td><td><input class="num mono" id="q-${i}-price" data-q="${i}:price" value="${esc(q.price)}" inputmode="decimal"></td><td class="num mono" data-amt="${i}">${fmt(num(q.qty)*num(q.price),q.currency)}</td><td><input class="num mono net" id="q-${i}-net" data-q="${i}:net" value="${esc(q.net||"")}" inputmode="decimal" placeholder="NET"></td><td class="num mono netamt" data-namt="${i}">${num(q.net)?fmt(num(q.qty)*num(q.net),q.currency):""}</td><td data-hint="${i}">${hintHtml(q,j,i)}</td><td><button class="x" data-act="qdel" data-i="${i}" aria-label="Xoá dòng">✕</button></td></tr>`;const A=[],B=[];j.quote.forEach((q,i)=>(q.ch?B:A).push(R(q,i)));
+    ${(()=>{const R=(q,i)=>`<tr class="${q.ch?"chrow":""}"><td>${q.ch?'<span class="chtag">Chi hộ</span>':""}<input id="q-${i}-name" data-q="${i}:name" list="${q.ch?"chitems":"items"}" placeholder="Chọn hoặc gõ" value="${esc(q.name)}"></td><td><input class="num mono" id="q-${i}-qty" data-q="${i}:qty" value="${esc(q.qty)}" inputmode="decimal"></td><td><input id="q-${i}-unit" data-q="${i}:unit" value="${esc(q.unit)}"></td><td><input class="num mono" id="q-${i}-price" data-q="${i}:price" value="${num(q.price)?esc(q.price):""}" placeholder="Nhập giá" inputmode="decimal"></td><td class="num mono" data-amt="${i}">${num(q.qty)*num(q.price)?fmt(num(q.qty)*num(q.price),q.currency):""}</td><td><input class="num mono net" id="q-${i}-net" data-q="${i}:net" value="${esc(q.net||"")}" inputmode="decimal" placeholder="NET"></td><td class="num mono netamt" data-namt="${i}">${num(q.net)?fmt(num(q.qty)*num(q.net),q.currency):""}</td><td data-hint="${i}">${hintHtml(q,j,i)}</td><td><button class="x" data-act="qdel" data-i="${i}" aria-label="Xoá dòng">✕</button></td></tr>`;const A=[],B=[];j.quote.forEach((q,i)=>(q.ch?B:A).push(R(q,i)));
       return A.join("")+(B.length?`<tr class="chhead"><td colspan="9">Chi hộ <span>– thu theo hoá đơn thực tế, không cộng VAT dịch vụ</span></td></tr>`+B.join(""):"")})()}
     </tbody></table></div><span style="font-size:11.5px;color:var(--muted)">Giá lần trước lấy từ cùng FWD; dấu * là giá báo cho FWD khác.</span>`:`<p style="margin:0;color:var(--muted);font-size:13px">Chưa có hạng mục. Bấm “+ Thêm phí” hoặc “+ Chi hộ”.</p>`}
     <div class="grid2"><div class="vatbox"><span>VAT</span><div class="chips2">${VAT_OPEN?[8,10].map(v=>`<button type="button" class="${vatRate(j)===v?"on":""}" data-vat="${v}">${v}%</button>`).join(""):`<button type="button" class="on" data-vat="open" title="Bấm để đổi VAT">${vatRate(j)}% ▾</button>`}</div></div><div class="tot" id="qtot"></div></div>
@@ -1888,7 +1939,7 @@ D.addEventListener("input",e=>{
   else if(t.dataset.t!==undefined){j.tasks[+t.dataset.t].text=t.value;queueSave(j)}
   else if(t.dataset.q){const[i,fl]=t.dataset.q.split(":");const q=j.quote[+i];
     q[fl]=(fl==="qty"||fl==="price"||fl==="net")?t.value.replace(/[^\d.,\-]/g,"").replace(/,(?=\d{1,2}$)/,".").replace(/,/g,""):t.value;
-    queueSave(j);const a=D.querySelector(`[data-amt="${i}"]`);if(a)a.textContent=fmt(num(q.qty)*num(q.price),q.currency);const na=D.querySelector(`[data-namt="${i}"]`);if(na)na.textContent=num(q.net)?fmt(num(q.qty)*num(q.net),q.currency):"";
+    queueSave(j);const a=D.querySelector(`[data-amt="${i}"]`);if(a)a.textContent=num(q.qty)*num(q.price)?fmt(num(q.qty)*num(q.price),q.currency):"";const na=D.querySelector(`[data-namt="${i}"]`);if(na)na.textContent=num(q.net)?fmt(num(q.qty)*num(q.net),q.currency):"";
     if(fl==="name"){const h=D.querySelector(`[data-hint="${i}"]`);if(h)h.innerHTML=hintHtml(q,j,+i)}
     renderTotals(j)}
 });
@@ -2275,7 +2326,7 @@ const chatNew=j=>!!(chatSeen&&j.chatAt&&j.chatBy&&j.chatBy!==me()&&j.chatAt>(cha
 function chatMsgs(id){
   const ms=S.chat[id];if(!ms)return `<div class="none"><span class="spin"></span> Đang tải…</div>`;
   if(!ms.length)return `<div class="none">Chưa có trao đổi nào. Gõ tin bên dưới, mọi người thấy job này đều đọc được.</div>`;
-  return ms.map(m=>`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}" data-mid="${esc(m.id||"")}">${msgReply(m)}<small>${m.by===me()?"":`<b>${esc(m.byName||m.by)}</b> · `}${hm(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}</small>${mnText(m)}${msgActs(m)}</div>`).join("");
+  return ms.map(m=>`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}" data-mid="${esc(m.id||"")}">${msgReply(m)}<small>${m.by===me()?"":`<b>${esc(m.byName||m.by)}</b> · `}${hm(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}${m.editedAt?" · đã sửa":""}</small>${mnText(m)}${msgActs(m)}</div>`).join("");
 }
 function dlRow(j){const k=dayDiff(j.deadline),open=isOpen(j.status);
   const tag=!j.deadline?`<span class="dltag none">Chưa đặt hạn</span>`:!open?"":k<0?`<span class="dltag late">⚠ Quá hạn ${-k} ngày</span>`:k===0?`<span class="dltag today">Hôm nay</span>`:`<span class="dltag ${k<=2?"soon":""}">Còn ${k} ngày</span>`;
@@ -2432,7 +2483,20 @@ S.reply=null; // {ctx:"job"|"team", id, byName, text}
 function msgReply(m){const r=m.reply;if(!r)return "";
   return `<button type="button" class="mreply" data-mgo="${esc(r.id||"")}" title="Xem tin gốc"><b>↩ ${esc(r.by===me()?"Bạn":(r.byName||""))}</b><span>${esc(r.text||"")}</span></button>`}
 function msgActs(m){if(!m.id||String(m.id).startsWith("tmp"))return "";
-  return `<span class="macts"><button type="button" class="ghost sm" data-mact="reply">↩ Trả lời</button>${boss()?`<button type="button" class="ghost sm danger" data-mact="del">Xoá</button>`:""}</span>`}
+  const mine=m.by===me()&&Date.now()-(m.at||0)<MSG_EDIT_MS;
+  return `<span class="macts"><button type="button" class="ghost sm" data-mact="reply">↩ Trả lời</button>${mine?`<button type="button" class="ghost sm" data-mact="edit">Sửa</button>`:""}${boss()||mine?`<button type="button" class="ghost sm danger" data-mact="del">Xoá</button>`:""}</span>`}
+const MSG_EDIT_MS=5*60*1000;
+async function msgMirrors(ctx,m){ // tìm bản chép của tin ở nơi còn lại (cùng người gửi, cùng giờ gửi)
+  const out=[];try{
+    if(ctx==="job"){const j=cur();const q=await db.collection("teamchat").where("at","==",m.at).get();q.docs.filter(d=>d.data().by===m.by&&d.data().job?.id===j.id).forEach(d=>out.push("teamchat/"+d.id))}
+    else if(m.job&&m.job.id){const q=await db.collection("jobs/"+m.job.id+"/chat").where("at","==",m.at).get();q.docs.filter(d=>d.data().by===m.by).forEach(d=>out.push("jobs/"+m.job.id+"/chat/"+d.id))}
+  }catch(e){}return out}
+async function msgEdit(ctx,m){
+  const v=await ask({title:"Sửa tin nhắn",text:"Sửa được trong 5 phút sau khi gửi.",ok:"Lưu",fields:[{id:"t",label:"Nội dung",value:m.text||""}]});
+  if(!v)return;const t=String(v.t||"").trim();if(!t||t===m.text)return;if(t.length>4000)return toast("Tin quá dài (tối đa 4000 ký tự).");
+  const path=ctx==="job"?"jobs/"+cur().id+"/chat/"+m.id:"teamchat/"+m.id,up={text:t,editedAt:Date.now()};
+  try{await db.doc(path).update(up);for(const p of await msgMirrors(ctx,m))await db.doc(p).update(up).catch(()=>{});toast("Đã sửa tin nhắn.")}
+  catch(e){toast(/permission/i.test(e?.code||e?.message||"")?"Quá 5 phút, không sửa được nữa.":"Chưa sửa được: "+(e?.message||e?.code))}}
 function replyTake(ctx){const r=S.reply;if(!r||r.ctx!==ctx)return {};S.reply=null;replyBar();return {reply:{id:r.id,by:r.by,byName:r.byName,text:r.text}}}
 function replyBar(){document.querySelectorAll(".rbar").forEach(x=>x.remove());const r=S.reply;if(!r)return;
   const box=document.querySelector(r.ctx==="job"?"#chatTxt":"#tmTxt")?.closest(".chatin");if(!box)return;
@@ -2440,28 +2504,75 @@ function replyBar(){document.querySelectorAll(".rbar").forEach(x=>x.remove());co
   box.parentElement.insertBefore(d,box)}
 const msgList=ctx=>ctx==="job"?(S.chat[cur()?.id]||[]):(S.team||[]);
 async function msgDelete(ctx,m){
-  if(!boss()||!db)return;
+  if(!db||!(boss()||(m.by===me()&&Date.now()-(m.at||0)<MSG_EDIT_MS)))return;
   const v=await ask({title:"Xoá tin nhắn",text:`${m.byName||m.by}: ${String(m.text||"").slice(0,120)}\n\nXoá hẳn, không khôi phục được. Bản chép của tin này (ở Chat chung hoặc trong job) cũng bị xoá.`,ok:"Xoá",danger:true});
   if(!v)return;
   try{
+    const mir=await msgMirrors(ctx,m);
+    await db.doc(ctx==="job"?"jobs/"+cur().id+"/chat/"+m.id:"teamchat/"+m.id).delete();
+    for(const p of mir)await db.doc(p).delete().catch(()=>{});
+    toast("Đã xoá tin nhắn.");return;
     if(ctx==="job"){const j=cur();await db.collection("jobs/"+j.id+"/chat").doc(m.id).delete();
       const q=await db.collection("teamchat").where("at","==",m.at).get();for(const d of q.docs.filter(d=>d.data().by===m.by&&d.data().job?.id===j.id))await db.collection("teamchat").doc(d.id).delete().catch(()=>{})}
     else{await db.collection("teamchat").doc(m.id).delete();
       if(m.job&&m.job.id){const q=await db.collection("jobs/"+m.job.id+"/chat").where("at","==",m.at).get();for(const d of q.docs.filter(d=>d.data().by===m.by))await db.collection("jobs/"+m.job.id+"/chat").doc(d.id).delete().catch(()=>{})}}
     toast("Đã xoá tin nhắn.")
-  }catch(e){toast("Chưa xoá được: "+(e?.message||e?.code||e))}}
+  }catch(e){toast(/permission/i.test(e?.code||e?.message||"")?"Quá 5 phút, không xoá được nữa.":"Chưa xoá được: "+(e?.message||e?.code||e))}}
 document.addEventListener("click",e=>{
   const a=e.target.closest("[data-mact]");
   if(a){e.preventDefault();e.stopPropagation();
     if(a.dataset.mact==="unreply"){S.reply=null;replyBar();return}
     const el=a.closest("[data-mid]"),ctx=a.closest("#tmList")?"team":"job",m=msgList(ctx).find(x=>x.id===el?.dataset.mid);if(!m)return;
     if(a.dataset.mact==="reply"){S.reply={ctx,id:m.id,by:m.by,byName:m.byName||m.by,text:String(m.text||"").slice(0,120)};replyBar();document.querySelector(ctx==="job"?"#chatTxt":"#tmTxt")?.focus();return}
-    if(a.dataset.mact==="del"){msgDelete(ctx,m);return}}
+    if(a.dataset.mact==="del"){msgDelete(ctx,m);return}
+    if(a.dataset.mact==="edit"){msgEdit(ctx,m);return}}
   const g=e.target.closest("[data-mgo]");
   if(g){const t=g.closest(".chat")?.querySelector(`[data-mid="${CSS.escape(g.dataset.mgo)}"]`);if(t){t.scrollIntoView({block:"center",behavior:"smooth"});t.classList.add("flash");setTimeout(()=>t.classList.remove("flash"),1400)}else toast("Tin gốc đã bị xoá hoặc nằm ở trang cũ.");return}
   const bub=e.target.closest(".chat .m[data-mid]");
   if(bub&&!e.target.closest("button,a")){document.querySelectorAll(".chat .m.act").forEach(x=>x!==bub&&x.classList.remove("act"));bub.classList.toggle("act")}
 },true);
+/* ---------- Báo cáo tháng (chủ sổ): số job, doanh thu, NET, lãi gộp, công nợ; xuất Excel ---------- */
+S.rpMonth=null;
+const rpKey=j=>String(jobDate(j)).slice(0,7);
+function rpCalc(month){
+  const js=S.jobs.filter(j=>rpKey(j)===month),row=j=>{
+    const Q=j.quote||[],dv=Q.filter(q=>!q.ch).reduce((a,q)=>a+num(q.qty)*num(q.price),0),ch=Q.filter(q=>q.ch).reduce((a,q)=>a+num(q.qty)*num(q.price),0),
+      net=Q.filter(q=>!q.ch&&num(q.net)>0).reduce((a,q)=>a+num(q.qty)*num(q.net),0),noNet=Q.some(q=>!q.ch&&num(q.price)>0&&!(num(q.net)>0));
+    return {j,dv,ch,net,lai:dv-net,noNet,no:j.debitDate&&!j.paidDate?num(j.debitAmount):0}};
+  const R=js.map(row),sum=k=>R.reduce((a,r)=>a+r[k],0);
+  const by={};R.forEach(r=>{const k=r.j.fwd||r.j.company||"(chưa ghi)";const g=by[k]=by[k]||{k,n:0,dv:0,ch:0,net:0,lai:0,no:0};g.n++;["dv","ch","net","lai","no"].forEach(x=>g[x]+=r[x])});
+  const noAll=S.jobs.filter(j=>j.debitDate&&!j.paidDate);
+  return {month,R,n:js.length,done:js.filter(j=>j.status==="Hoàn thành").length,fail:js.filter(j=>j.status===FAIL).length,open:js.filter(j=>isOpen(j.status)).length,
+    late:js.filter(j=>j.odAck||isOverdue(j)).length,dv:sum("dv"),ch:sum("ch"),net:sum("net"),lai:sum("lai"),noNet:R.filter(r=>r.noNet).length,
+    groups:Object.values(by).sort((a,b)=>b.dv-a.dv),noAll:noAll.reduce((a,j)=>a+num(j.debitAmount),0),noAllN:noAll.length}}
+function renderReport(el){
+  const months=[...new Set(S.jobs.map(rpKey))].sort().reverse();const now=TODAY().slice(0,7);if(!months.includes(now))months.unshift(now);
+  if(!S.rpMonth||!months.includes(S.rpMonth))S.rpMonth=months[0];
+  const r=rpCalc(S.rpMonth),v=x=>fmt(x,"VND"),ml=m=>m.slice(5)+"/"+m.slice(0,4);
+  el.dataset.v="report";
+  el.innerHTML=`<div class="rp"><div class="rp-h"><label class="fld"><span>Tháng</span><select id="rpMonth">${months.map(m=>`<option value="${m}"${m===S.rpMonth?" selected":""}>Tháng ${ml(m)}</option>`).join("")}</select></label>
+      <button class="primary" id="rpXlsx">${ic("xlsx")}Xuất Excel</button><span class="muted">${SPACE==="mine"?"Việc riêng":"Sổ chung"} · tính theo ngày tờ khai, chưa có thì theo ngày tạo job</span></div>
+    <div class="rp-k">
+      <div><b>${r.n}</b><span>job trong tháng</span><small>${r.done} xong · ${r.open} đang làm · ${r.fail} thất bại</small></div>
+      <div><b>${v(r.dv)}</b><span>phí dịch vụ (chưa VAT)</span><small>chi hộ ${v(r.ch)}</small></div>
+      <div><b>${v(r.lai)}</b><span>lãi gộp (phí dịch vụ − NET)</span><small>${r.noNet?`${r.noNet} job chưa nhập đủ NET`:"đủ NET"}</small></div>
+      <div class="${r.noAll?"warn":""}"><b>${v(r.noAll)}</b><span>công nợ chưa thu (mọi tháng)</span><small>${r.noAllN} job đã gửi debit</small></div>
+      <div class="${r.late?"bad":""}"><b>${r.late}</b><span>job quá hạn trong tháng</span><small>gồm đã ghi lý do</small></div></div>
+    <div class="qwrap"><table class="rp-t"><thead><tr><th>FWD / khách</th><th class="num">Job</th><th class="num">Phí dịch vụ</th><th class="num">Chi hộ</th><th class="num">NET</th><th class="num">Lãi gộp</th><th class="num">Chưa thu</th></tr></thead><tbody>
+      ${r.groups.map(g=>`<tr><td>${esc(g.k)}</td><td class="num">${g.n}</td><td class="num">${v(g.dv)}</td><td class="num">${v(g.ch)}</td><td class="num">${v(g.net)}</td><td class="num"><b>${v(g.lai)}</b></td><td class="num">${g.no?v(g.no):""}</td></tr>`).join("")||`<tr><td colspan="7" class="muted">Tháng này chưa có job.</td></tr>`}
+      </tbody>${r.groups.length?`<tfoot><tr><td>Cộng</td><td class="num">${r.n}</td><td class="num">${v(r.dv)}</td><td class="num">${v(r.ch)}</td><td class="num">${v(r.net)}</td><td class="num"><b>${v(r.lai)}</b></td><td class="num"></td></tr></tfoot>`:""}</table></div></div>`;
+  el.querySelector("#rpMonth").onchange=e=>{S.rpMonth=e.target.value;renderReport(el)};
+  el.querySelector("#rpXlsx").onclick=()=>rpXlsx(r);
+}
+async function rpXlsx(r){
+  let X;try{X=await loadXL()}catch(e){return toast(e.message)}
+  const wb=new X.Workbook(),hd=ws=>{ws.getRow(1).font={bold:true};ws.getRow(1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE3F0FA"}};ws.views=[{state:"frozen",ySplit:1}]},money="#,##0";
+  const a=wb.addWorksheet("Tổng hợp");a.columns=[{header:"FWD / khách",width:34},{header:"Số job",width:9},{header:"Phí dịch vụ",width:16,style:{numFmt:money}},{header:"Chi hộ",width:16,style:{numFmt:money}},{header:"NET",width:16,style:{numFmt:money}},{header:"Lãi gộp",width:16,style:{numFmt:money}},{header:"Chưa thu",width:16,style:{numFmt:money}}];
+  r.groups.forEach(g=>a.addRow([g.k,g.n,g.dv,g.ch,g.net,g.lai,g.no||null]));a.addRow(["Cộng",r.n,r.dv,r.ch,r.net,r.lai,null]).font={bold:true};hd(a);
+  const b=wb.addWorksheet("Chi tiết job");b.columns=[{header:"Mã job",width:14},{header:"Ngày",width:12},{header:"Tiêu đề",width:40},{header:"FWD",width:18},{header:"Khách",width:30},{header:"Giai đoạn",width:20},{header:"Phí dịch vụ",width:15,style:{numFmt:money}},{header:"Chi hộ",width:15,style:{numFmt:money}},{header:"NET",width:15,style:{numFmt:money}},{header:"Lãi gộp",width:15,style:{numFmt:money}},{header:"Chưa thu",width:15,style:{numFmt:money}}];
+  r.R.forEach(x=>b.addRow([x.j.code,dmy(jobDate(x.j)),x.j.title||"",x.j.fwd||"",x.j.company||"",x.j.status,x.dv,x.ch,x.net,x.lai,x.no||null]));hd(b);
+  const buf=await wb.xlsx.writeBuffer(),u=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+  const l=document.createElement("a");l.href=u;l.download=`bao-cao-${r.month}.xlsx`;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast("Đã xuất báo cáo tháng "+r.month.slice(5)+"/"+r.month.slice(0,4)+".")}
 /* ---------- Chọn giao diện: Hiện tại / Kiểu 1office (nhớ trên từng máy) ---------- */
 const UI_LS="sojob.ui",UI_LIST=[["cu","Giao diện hiện tại","Thanh xanh, chữ Open Sans"],["1office","Kiểu 1office","Nền trắng gọn, chữ Inter Tight"]];
 function uiGet(){try{return localStorage.getItem(UI_LS)||"cu"}catch(e){return "cu"}}
@@ -2521,7 +2632,7 @@ function teamMsgs(){
     const d=new Date(m.at||0).toLocaleDateString("vi-VN",{weekday:"long",day:"2-digit",month:"2-digit"});const sep=d!==day?`<div class="tday">${esc(d)}</div>`:"";day=d;
     const j=m.job&&S.all.find(x=>x.id===m.job.id);
     const chip=m.job?`<button class="jchip" data-tmjob="${esc(m.job.id)}" title="Mở job">📁 ${esc(m.job.code||"")}${m.job.label?" · "+esc(m.job.label):""}${m.from==="job"?" · trong job":""}</button>`:"";
-    return sep+`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}" data-mid="${esc(m.id||"")}">${msgReply(m)}<small>${esc(m.by===me()?"Bạn":(m.byName||m.by))} · ${tmTime(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}</small>${chip}${mnText(m)}${msgActs(m)}</div>`}).join("");
+    return sep+`<div class="m${m.by===me()?" me":""}${mnMine(m)?" tagme":""}" data-mid="${esc(m.id||"")}">${msgReply(m)}<small>${esc(m.by===me()?"Bạn":(m.byName||m.by))} · ${tmTime(m.at)}${mnMine(m)?' · <b class="tagme-l">nhắc bạn</b>':""}${m.editedAt?" · đã sửa":""}</small>${chip}${mnText(m)}${msgActs(m)}</div>`}).join("");
 }
 function renderTeam(el){
   if(el.dataset.v!=="team"||!$("#tmList")){
@@ -2705,7 +2816,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-24d";
+const APP_VER="2026-11-24f";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
@@ -3177,7 +3288,7 @@ function debitOpen(j){
     if(t.dataset.dl){const[i,f]=t.dataset.dl.split(":"),l=d.lines[+i];
       l[f]=f==="price"?num(String(t.value).replace(/[.,\s]/g,"")):f==="qty"?String(t.value).replace(/[^\d.,]/g,"").replace(",","."):t.value;
       if(l.src&&(f==="price"||f==="qty"||f==="unit"))l.numEdited=true;if(l.src&&f==="name")l.nameEdited=true;
-      const a=box.querySelector(`[data-amt="${i}"]`);if(a)a.textContent=fmt(Math.round(num(l.price)*num(l.qty)),"VND");
+      const a=box.querySelector(`[data-amt="${i}"]`);if(a)a.textContent=num(l.price)*num(l.qty)?fmt(Math.round(num(l.price)*num(l.qty)),"VND"):"";
       box.querySelector("#dbTot").innerHTML=tot();save()}});
   box.addEventListener("focusout",e=>{const t=e.target;if(t.dataset.dl&&t.dataset.dl.endsWith(":price")){const l=d.lines[+t.dataset.dl.split(":")[0]];t.value=num(l.price)?fmt(l.price,"VND"):""}});
   box.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b){if(e.target===box)close();return}

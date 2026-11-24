@@ -5,7 +5,7 @@
  * gửi cho người thấy được job (chủ sổ; nhân viên nếu job đã chia sẻ hoặc do họ tạo),
  * trừ người gửi. Việc riêng của chủ sổ không bao giờ gửi.
  * Chạy bằng tài khoản chủ sổ (chủ dự án Firebase) nên đọc được Firestore và gửi được FCM.
- * appsscript.json: "oauthScopes": [datastore, firebase.messaging, script.external_request, userinfo.email],
+ * appsscript.json: "oauthScopes": [datastore, firebase.messaging, script.external_request, userinfo.email, script.scriptapp, drive],
  * "webapp": {"executeAs":"USER_DEPLOYING","access":"ANYONE_ANONYMOUS"}. Triển khai: Ứng dụng web.
  */
 var PID = "so-job-giao-nhan";
@@ -161,4 +161,137 @@ function chanDoan() {
   var m = goi(FS + "/members?pageSize=200");
   ((m.json && m.json.documents) || []).forEach(function (d) { nguoi.push(decodeURIComponent(d.name.split("/").pop()).toLowerCase()); });
   nguoi.forEach(function (mail) { var p = docFs("push/" + mail); Logger.log(mail.replace(/^(.{3}).*@/, "$1…@") + ": " + ((p && p.tokens) || []).length + " máy" + (p && p.at ? ", đăng ký " + new Date(p.at).toLocaleString() : "") + (p && p.diag ? " | bản " + (p.diag.ver || "cũ") + " | lần cuối: " + p.diag.stage + (p.diag.err ? " (" + p.diag.err + ")" : "") + ", quyền " + p.diag.perm + ", màn hình chính " + p.diag.standalone + ", " + new Date(p.diag.at).toLocaleString() + " | " + p.diag.ua : "")); });
+}
+
+/* =====================================================================
+ * TỰ ĐỘNG (chạy theo giờ). Cài một lần: chọn hàm caiLich rồi bấm Chạy.
+ *  - theoDoiToKhai: 30 phút/lần, 7h–19h: kiểm tra các lô "Chờ thông quan"; thông quan thì báo điện thoại.
+ *  - nhacViecSang: 8h sáng: báo mỗi người lô đến hạn hôm nay, quá hạn chưa ghi lý do.
+ *  - saoLuuDem: 23h: sao lưu toàn bộ dữ liệu vào Google Drive (thư mục "So Job - Sao luu", giữ 30 bản).
+ * Việc riêng của chủ sổ không bao giờ đưa vào thông báo.
+ * ===================================================================== */
+var TK_URL = "https://script.google.com/macros/s/AKfycbwtQV7vcwRtQLjxpZde6wB59jGrjdrakSeUNznnYNtOKa6Wv5BaBJ2cBPcRl0DgIT_G/exec";
+var TZ = "Asia/Ho_Chi_Minh";
+
+function caiLich() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (["theoDoiToKhai", "nhacViecSang", "saoLuuDem"].indexOf(t.getHandlerFunction()) >= 0) ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger("theoDoiToKhai").timeBased().everyMinutes(30).create();
+  ScriptApp.newTrigger("nhacViecSang").timeBased().atHour(8).nearMinute(0).everyDays(1).inTimezone(TZ).create();
+  ScriptApp.newTrigger("saoLuuDem").timeBased().atHour(23).nearMinute(0).everyDays(1).inTimezone(TZ).create();
+  Logger.log("Đã cài lịch: " + ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); }).join(", "));
+}
+
+/* Đổi giá trị JS sang dạng Firestore REST */
+function veFs(v) {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === "boolean") return { booleanValue: v };
+  if (typeof v === "number") return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (typeof v === "string") return { stringValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(veFs) } };
+  var f = {}; for (var k in v) f[k] = veFs(v[k]); return { mapValue: { fields: f } };
+}
+function moFs(doc) { var o = {}, f = doc.fields || {}; for (var k in f) o[k] = giaTri(f[k]); o._id = doc.name.split("/").pop(); return o; }
+function vaFs(path, obj) { // cập nhật vài trường của 1 tài liệu
+  var keys = Object.keys(obj), f = {}; keys.forEach(function (k) { f[k] = veFs(obj[k]); });
+  return goi(FS + "/" + path + "?" + keys.map(function (k) { return "updateMask.fieldPaths=" + encodeURIComponent(k); }).join("&"), { method: "patch", payload: { fields: f } });
+}
+function docHet(col) { // đọc hết 1 bộ sưu tập (theo trang)
+  var out = [], tok = "";
+  do {
+    var r = goi(FS + "/" + col + "?pageSize=300" + (tok ? "&pageToken=" + encodeURIComponent(tok) : ""));
+    ((r.json && r.json.documents) || []).forEach(function (d) { out.push(moFs(d)); });
+    tok = r.json && r.json.nextPageToken;
+  } while (tok);
+  return out;
+}
+function chuSo() { return Session.getEffectiveUser().getEmail().toLowerCase(); }
+function thanhVien() {
+  var m = goi(FS + "/members?pageSize=200");
+  return ((m.json && m.json.documents) || []).map(function (d) { return decodeURIComponent(d.name.split("/").pop()).toLowerCase(); });
+}
+function laViecRieng(j, owner) { return !j.shared && (!j.createdBy || String(j.createdBy).toLowerCase() === owner); }
+function nguoiThayJob(j, owner, tv) { // ai thấy job này (để báo)
+  if (laViecRieng(j, owner)) return [];
+  var a = [owner];
+  if (j.shared) a = a.concat(tv); else if (j.createdBy) a.push(String(j.createdBy).toLowerCase());
+  return a.filter(function (x, i, s) { return x && s.indexOf(x) === i; });
+}
+function guiToi(mails, title, body, data, link, tag) { // gửi 1 thông báo tới các máy của danh sách người
+  var sent = 0;
+  mails.forEach(function (mail) {
+    var p = docFs("push/" + mail); if (!p) return;
+    (p.tokens || []).forEach(function (t) {
+      var r = goi("https://fcm.googleapis.com/v1/projects/" + PID + "/messages:send", { method: "post", payload: { message: { token: t, data: data || {},
+        webpush: { notification: { title: title, body: body, icon: APP + "icon-192.png", badge: APP + "icon-192.png", tag: tag || "sojob", renotify: true }, fcm_options: { link: link || APP } } } } });
+      if (r.code === 200) sent++;
+    });
+  });
+  return sent;
+}
+function homNay() { return Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd"); }
+function dm(s) { return s ? s.slice(8, 10) + "/" + s.slice(5, 7) : ""; }
+var RE_TQ = /thông quan|giải phóng|mang hàng về/i;
+
+/* 1) Tự theo dõi tờ khai các lô "Chờ thông quan" */
+function theoDoiToKhai() {
+  var gio = Number(Utilities.formatDate(new Date(), TZ, "H"));
+  if (gio < 7 || gio >= 19) return { ok: true, msg: "Ngoài giờ" };
+  var owner = chuSo(), tv = thanhVien(), kq = [];
+  docHet("jobs").filter(function (j) { return j.status === "Chờ thông quan"; }).forEach(function (j) {
+    var tk = String(j.tkNo || "").replace(/\D/g, ""), mst = String(j.mst || "").replace(/[^\d-]/g, ""), hq = String(j.hqCode || "").toUpperCase().trim();
+    var d = String(j.tkDate || ""), m = d.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/); if (m) d = m[3] + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[1]).slice(-2);
+    if (tk.length !== 12 || !mst || hq.length !== 4 || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    var o; try { o = JSON.parse(UrlFetchApp.fetch(TK_URL + "?" + ["mst=" + mst, "hq=" + hq, "tk=" + tk, "date=" + d].join("&"), { muteHttpExceptions: true, followRedirects: true }).getContentText()); } catch (e) { return; }
+    var cu = j.tkCheck || {}, thongQuan = o.ok && RE_TQ.test(o.status || "");
+    var moi = o.ok ? { at: Date.now(), q: tk, ok: true, mv: !!o.mv, status: o.status || "", lane: o.lane || "", kind: o.kind || "", tkNo: o.tkNo || "", url: o.url || "", auto: true }
+                   : { at: Date.now(), q: tk, ok: false, msg: o.msg || "", auto: true };
+    var up = { tkCheck: moi }; if (o.ok && ["Xanh", "Vàng", "Đỏ"].indexOf(o.lane) >= 0 && !j.lane) up.lane = o.lane;
+    vaFs("jobs/" + j._id, up);
+    var daBao = cu.ok && RE_TQ.test(cu.status || "");
+    if (thongQuan && !daBao) {
+      var n = guiToi(nguoiThayJob(j, owner, tv), "✅ " + (j.code || "") + " đã " + String(o.status || "thông quan").toLowerCase(),
+        (j.title ? String(j.title).slice(0, 60) + "\n" : "") + (o.lane ? "Luồng " + o.lane + " · " : "") + "Bấm để mở job, lấy mã vạch và chuyển bước.",
+        { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "tk-" + j._id);
+      kq.push(j.code + ": báo " + n);
+    } else kq.push(j.code + ": " + (o.ok ? o.status : o.msg));
+  });
+  Logger.log(kq.join(" | ") || "Không có lô nào chờ thông quan đủ thông tin"); return { ok: true, kq: kq };
+}
+
+/* 2) Nhắc việc 8h sáng: chủ sổ nhận tổng hợp Sổ chung; nhân viên nhận các lô do mình tạo */
+function nhacViecSang() {
+  var owner = chuSo(), tv = thanhVien(), today = homNay();
+  var mo = docHet("jobs").filter(function (j) { return j.status !== "Hoàn thành" && j.status !== "Thất bại" && !laViecRieng(j, owner); });
+  var nguoi = [owner].concat(tv).filter(function (x, i, s) { return x && s.indexOf(x) === i; }), kq = [];
+  nguoi.forEach(function (mail) {
+    var cua = mo.filter(function (j) { return mail === owner || String(j.createdBy || "").toLowerCase() === mail; });
+    var hn = cua.filter(function (j) { return j.deadline === today; });
+    var qh = cua.filter(function (j) { return j.deadline && j.deadline < today && !(j.odAck && j.odAck.deadline === j.deadline && !j.odAck.rejected); });
+    if (!hn.length && !qh.length) return;
+    var dong = [];
+    if (hn.length) dong.push("Đến hạn hôm nay: " + hn.slice(0, 5).map(function (j) { return j.code; }).join(", ") + (hn.length > 5 ? "…" : ""));
+    if (qh.length) dong.push("Quá hạn chưa ghi lý do: " + qh.slice(0, 5).map(function (j) { return j.code + " (hạn " + dm(j.deadline) + ")"; }).join(", ") + (qh.length > 5 ? "…" : ""));
+    var n = guiToi([mail], "☀ Nhắc việc: " + hn.length + " lô đến hạn, " + qh.length + " lô quá hạn", dong.join("\n"), { view: "list" }, APP, "nhac-sang");
+    kq.push(mail.slice(0, 3) + "…: " + n);
+  });
+  Logger.log(kq.join(" | ") || "Không có gì cần nhắc"); return { ok: true, kq: kq };
+}
+
+/* 3) Sao lưu mỗi đêm vào Google Drive (cùng định dạng file "Sao lưu" trong app nên khôi phục được) */
+function saoLuuDem() {
+  var docs = [];
+  ["jobs", "meta", "partners", "todos", "members", "mypartners", "teamchat"].forEach(function (col) {
+    docHet(col).forEach(function (o) {
+      var id = o._id; delete o._id; docs.push({ path: col + "/" + id, data: o });
+      if (col === "jobs") docHet("jobs/" + id + "/chat").forEach(function (x) { var mid = x._id; delete x._id; docs.push({ path: "jobs/" + id + "/chat/" + mid, data: x }); });
+    });
+  });
+  var it = DriveApp.getFoldersByName("So Job - Sao luu"), folder = it.hasNext() ? it.next() : DriveApp.createFolder("So Job - Sao luu");
+  var ten = "so-job-" + Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd") + ".json";
+  folder.createFile(ten, JSON.stringify({ app: "so-job", version: 1, exportedAt: new Date().toISOString(), docs: docs }), "application/json");
+  var files = [], fi = folder.getFiles(); while (fi.hasNext()) files.push(fi.next());
+  files.sort(function (a, b) { return b.getDateCreated() - a.getDateCreated(); }).slice(30).forEach(function (f) { f.setTrashed(true); });
+  Logger.log("Đã sao lưu " + docs.length + " mục vào " + ten); return { ok: true, n: docs.length };
 }
