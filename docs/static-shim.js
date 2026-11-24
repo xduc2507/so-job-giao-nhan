@@ -154,6 +154,7 @@
   async function sample(input, opts) {
     opts = opts || {};
     const key = getKey();
+    if (!key && FB && fuser) return sampleServer(input, opts); // không có key Claude: dùng AI miễn phí (Gemini) qua máy chủ của sổ
     if (!key) throw { code: "sampling_disabled", message: "Chưa có API key Claude. Bấm “Đọc chữ (miễn phí)” để đọc chữ trong ảnh không cần key, hoặc nhập key trong “Cài đặt” để Claude tự tách thông tin." };
     const prompt = typeof input === "string" ? input : (input || []).map(m => m.content).join("\n\n");
     const content = [];
@@ -200,8 +201,24 @@
     if (typeof opts.onText === "function") { try { opts.onText({ text, delta: text }); } catch (e) {} }
     return { text, truncated: j.stop_reason === "max_tokens", modelTierApplied: "default" };
   }
+  /* AI miễn phí: máy chủ Apps Script của sổ gọi Google Gemini (key giấu ở máy chủ), chỉ thành viên sổ dùng được */
+  const AI_URL = "https://script.google.com/macros/s/AKfycbybwZjSrdEh0xrt0MFKtbwh6dEfCCJuldpqVrQSAgP4e14RwZZs04FB_fPUZ7vKRFP2XQ/exec";
+  async function sampleServer(input, opts) {
+    opts = opts || {};
+    const prompt = typeof input === "string" ? input : (input || []).map(m => m.content).join("\n\n");
+    const files = [];
+    for (const doc of asList(opts.documents).slice(0, 3)) { const u = await toDataURL(doc); files.push({ mime: "application/pdf", data: u.slice(u.indexOf(",") + 1) }); }
+    for (const img of asList(opts.images).slice(0, Math.min(opts.maxImages || 5, 8))) { const b = await shrink(img, 1600, 0.85); const u = await toDataURL(b); files.push({ mime: b.type || "image/jpeg", data: u.slice(u.indexOf(",") + 1) }); }
+    let token = ""; try { token = await window.firebase.auth().currentUser.getIdToken(); } catch (e) {}
+    let r, j = null;
+    try { r = await fetch(AI_URL, { method: "POST", signal: opts.signal, headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ ai: { prompt, files, json: !!opts.json }, token }) }); j = await r.json(); }
+    catch (e) { if (e && e.name === "AbortError") throw { code: "cancelled", message: "Đã dừng." }; throw { code: "unavailable", message: "Không kết nối được máy chủ AI. Kiểm tra mạng rồi thử lại." }; }
+    if (!j || !j.ok) throw { code: (j && j.code) || "upstream_error", message: (j && j.msg) || "AI chưa trả lời được. Thử lại sau." };
+    if (typeof opts.onText === "function") { try { opts.onText({ text: j.text, delta: j.text }); } catch (e) {} }
+    return { text: j.text, truncated: !!j.truncated, modelTierApplied: "gemini" };
+  }
   sample.json = async (input, opts) => {
-    const r = await sample(input, opts);
+    const r = await sample(input, Object.assign({}, opts, { json: true }));
     if (r.truncated) throw { code: "invalid_json", message: "Câu trả lời bị cắt ngắn.", text: r.text };
     return parseLoose(r.text);
   };

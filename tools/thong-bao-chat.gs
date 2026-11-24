@@ -16,9 +16,10 @@ function doPost(e) {
   var out = { ok: false }, body = null;
   try {
     body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
-    out = body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
+    out = body.ai ? goiAI(body.ai, body.token) : body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
   } catch (err) { out = { ok: false, msg: String(err) }; }
   console.log(JSON.stringify(out));
+  if (body && body.ai) return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON); // không ghi nhật ký nội dung AI
   try { var P = PropertiesService.getScriptProperties(), L = JSON.parse(P.getProperty("log") || "[]"); L.unshift({ t: new Date().toISOString(), job: (body && body.job) || (body && body.team ? "team" : ""), out: out }); P.setProperty("log", JSON.stringify(L.slice(0, 10))); } catch (x) {}
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -251,7 +252,9 @@ function theoDoiToKhai() {
     vaFs("jobs/" + j._id, up);
     var daBao = cu.ok && RE_TQ.test(cu.status || "");
     if (thongQuan && !daBao) {
-      var n = guiToi(nguoiThayJob(j, owner, tv), "✅ " + (j.code || "") + " đã " + String(o.status || "thông quan").toLowerCase(),
+      var w = String(j.assignee || j.createdBy || "").toLowerCase();
+      ghiTraoDoi(j, "✅ Tờ khai đã " + String(o.status || "thông quan").toLowerCase() + (o.lane ? " (luồng " + o.lane + ")" : "") + ": lấy mã vạch, điều xe hoặc làm bảng kê." + (w ? " @" + (j.assigneeName || j.createdByName || w.split("@")[0]) : ""), w);
+      var n = guiToi([owner, w].filter(function (x, i, s) { return x && s.indexOf(x) === i && (x === owner || nguoiThayJob(j, owner, tv).indexOf(x) >= 0); }), "✅ " + (j.code || "") + " đã " + String(o.status || "thông quan").toLowerCase(),
         (j.title ? String(j.title).slice(0, 60) + "\n" : "") + (o.lane ? "Luồng " + o.lane + " · " : "") + "Bấm để mở job, lấy mã vạch và chuyển bước.",
         { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "tk-" + j._id);
       kq.push(j.code + ": báo " + n);
@@ -265,15 +268,19 @@ function nhacViecSang() {
   var owner = chuSo(), tv = thanhVien(), today = homNay();
   var mo = docHet("jobs").filter(function (j) { return j.status !== "Hoàn thành" && j.status !== "Thất bại" && !laViecRieng(j, owner); });
   var nguoi = [owner].concat(tv).filter(function (x, i, s) { return x && s.indexOf(x) === i; }), kq = [];
+  var han15 = Utilities.formatDate(new Date(Date.now() - 15 * 864e5), TZ, "yyyy-MM-dd");
+  var docNo = docHet("jobs").filter(function (j) { return j.debitDate && !j.paidDate && j.debitDate <= han15 && !laViecRieng(j, owner); });
   nguoi.forEach(function (mail) {
-    var cua = mo.filter(function (j) { return mail === owner || String(j.createdBy || "").toLowerCase() === mail; });
+    var cua = mo.filter(function (j) { return mail === owner || String(j.assignee || j.createdBy || "").toLowerCase() === mail; });
     var hn = cua.filter(function (j) { return j.deadline === today; });
     var qh = cua.filter(function (j) { return j.deadline && j.deadline < today && !(j.odAck && j.odAck.deadline === j.deadline && !j.odAck.rejected); });
-    if (!hn.length && !qh.length) return;
+    var no = mail === owner ? docNo : [];
+    if (!hn.length && !qh.length && !no.length) return;
     var dong = [];
+    if (no.length) dong.push("Công nợ quá 15 ngày: " + no.slice(0, 5).map(function (j) { return j.code + " (gửi " + dm(j.debitDate) + ")"; }).join(", ") + (no.length > 5 ? "…" : ""));
     if (hn.length) dong.push("Đến hạn hôm nay: " + hn.slice(0, 5).map(function (j) { return j.code; }).join(", ") + (hn.length > 5 ? "…" : ""));
     if (qh.length) dong.push("Quá hạn chưa ghi lý do: " + qh.slice(0, 5).map(function (j) { return j.code + " (hạn " + dm(j.deadline) + ")"; }).join(", ") + (qh.length > 5 ? "…" : ""));
-    var n = guiToi([mail], "☀ Nhắc việc: " + hn.length + " lô đến hạn, " + qh.length + " lô quá hạn", dong.join("\n"), { view: "list" }, APP, "nhac-sang");
+    var n = guiToi([mail], "☀ Nhắc việc: " + hn.length + " lô đến hạn, " + qh.length + " lô quá hạn" + (no.length ? ", " + no.length + " lô nợ lâu" : ""), dong.join("\n"), { view: "today" }, APP + "?view=today", "nhac-sang");
     kq.push(mail.slice(0, 3) + "…: " + n);
   });
   Logger.log(kq.join(" | ") || "Không có gì cần nhắc"); return { ok: true, kq: kq };
@@ -294,4 +301,54 @@ function saoLuuDem() {
   var files = [], fi = folder.getFiles(); while (fi.hasNext()) files.push(fi.next());
   files.sort(function (a, b) { return b.getDateCreated() - a.getDateCreated(); }).slice(30).forEach(function (f) { f.setTrashed(true); });
   Logger.log("Đã sao lưu " + docs.length + " mục vào " + ten); return { ok: true, n: docs.length };
+}
+
+/* =====================================================================
+ * AI MIỄN PHÍ (Google Gemini). Key lấy ở aistudio.google.com → Get API key,
+ * dán vào: Cài đặt dự án → Thuộc tính tập lệnh → GEMINI_KEY (không để key trong code).
+ * Chỉ thành viên sổ gọi được (kiểm tra mã đăng nhập Firebase). Có thể đổi mô hình bằng thuộc tính AI_MODEL.
+ * ===================================================================== */
+var FB_WEB_KEY = "AIzaSyCU35XKhtdlNKOMOauoe6q19tiFis87qqI"; // khoá web Firebase (công khai, giống trong firebase-config.js)
+function nguoiGoi(token) {
+  if (!token) return "";
+  var r = UrlFetchApp.fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + FB_WEB_KEY, { method: "post", contentType: "application/json", payload: JSON.stringify({ idToken: token }), muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) return "";
+  var u = (JSON.parse(r.getContentText()).users || [])[0];
+  return u && u.emailVerified !== false ? String(u.email || "").toLowerCase() : "";
+}
+function goiAI(ai, token) {
+  var mail = nguoiGoi(token);
+  if (!mail) return { ok: false, code: "sampling_disabled", msg: "Hết phiên đăng nhập, tải lại trang rồi thử lại." };
+  if (mail !== chuSo() && !docFs("members/" + encodeURIComponent(mail))) return { ok: false, code: "sampling_disabled", msg: "Tài khoản này chưa là thành viên sổ." };
+  var P = PropertiesService.getScriptProperties(), key = P.getProperty("GEMINI_KEY");
+  if (!key) return { ok: false, code: "sampling_disabled", msg: "Chưa cài AI miễn phí: chủ sổ cần dán key Gemini vào máy chủ (GEMINI_KEY)." };
+  var parts = [{ text: String(ai.prompt || "").slice(0, 200000) }];
+  (ai.files || []).slice(0, 8).forEach(function (f) { if (f && f.data) parts.push({ inline_data: { mime_type: f.mime || "image/jpeg", data: f.data } }); });
+  var body = { contents: [{ role: "user", parts: parts }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } };
+  if (ai.json) body.generationConfig.responseMimeType = "application/json";
+  var models = [P.getProperty("AI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"].filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+  var last = "";
+  for (var i = 0; i < models.length; i++) {
+    var r = UrlFetchApp.fetch("https://generativelanguage.googleapis.com/v1beta/models/" + models[i] + ":generateContent", { method: "post", contentType: "application/json", headers: { "x-goog-api-key": key }, payload: JSON.stringify(body), muteHttpExceptions: true });
+    var c = r.getResponseCode(), j = {}; try { j = JSON.parse(r.getContentText()); } catch (e) {}
+    if (c === 404) { last = "không có mô hình " + models[i]; continue; }
+    if (c === 429) return { ok: false, code: "rate_limited", msg: "AI miễn phí đã dùng hết lượt trong phút / ngày. Thử lại sau ít phút." };
+    if (c === 400 || c === 403) return { ok: false, code: "invalid_request", msg: "AI không nhận yêu cầu: " + ((j.error && j.error.message) || c) };
+    if (c !== 200) { last = "lỗi " + c; continue; }
+    var cand = (j.candidates || [])[0] || {}, text = ((cand.content && cand.content.parts) || []).map(function (p) { return p.text || ""; }).join("");
+    if (!text.trim()) return { ok: false, code: "empty_completion", msg: "AI không trả về nội dung (có thể bị chặn vì nội dung nhạy cảm)." };
+    return { ok: true, text: text, truncated: cand.finishReason === "MAX_TOKENS", model: models[i] };
+  }
+  return { ok: false, code: "upstream_error", msg: "AI chưa trả lời được (" + last + "). Thử lại sau." };
+}
+
+/* Ghi 1 tin tự động vào Trao đổi của job (và Chat chung nếu job ở Sổ chung) */
+function ghiTraoDoi(j, text, tagMail) {
+  var msg = { text: text, by: "tu-dong", byName: "🤖 Tự động", at: Date.now(), auto: true };
+  if (tagMail) { msg.tags = [tagMail]; msg.tagN = [j.assigneeName || j.createdByName || tagMail.split("@")[0]]; }
+  var f = {}; for (var k in msg) f[k] = veFs(msg[k]);
+  goi(FS + "/jobs/" + j._id + "/chat", { method: "post", payload: { fields: f } });
+  vaFs("jobs/" + j._id, { chatAt: msg.at, chatBy: msg.by, chatByName: msg.byName, chatLast: text.slice(0, 80), chatN: (Number(j.chatN) || 0) + 1 });
+  if (j.shared) { var t = JSON.parse(JSON.stringify(msg)); t.job = { id: j._id, code: j.code || "", label: String(j.company || j.title || "").slice(0, 32) }; t.from = "job";
+    var f2 = {}; for (var k2 in t) f2[k2] = veFs(t[k2]); goi(FS + "/teamchat", { method: "post", payload: { fields: f2 } }); }
 }

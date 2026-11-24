@@ -837,6 +837,25 @@ table.rp-t tfoot td{font-weight:700;border-top:2px solid var(--line)}
 :root{--f-mono:var(--f-body)}
 .mono,code,kbd,.num,table.q td input,.tot b{font-family:var(--f-body)!important;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 table.q td input::placeholder{color:#b3b8c0;font-weight:400}
+/* người phụ trách */
+.asgchip{display:inline-flex;align-items:center;gap:2px;font-size:11.5px;padding:0 6px;border-radius:999px;background:var(--surface-2);color:var(--muted);margin-left:6px;white-space:nowrap}
+.asgchip.me{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.asgsel{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--muted);margin-left:4px}
+.asgsel select{min-height:30px!important;padding:2px 6px!important;font-size:13px!important;max-width:160px}
+.fmine.on{background:var(--accent)!important;border-color:var(--accent)!important;color:#fff!important}
+/* Hôm nay */
+.td{display:flex;flex-direction:column;gap:14px;padding:14px;max-width:900px}
+.td-h{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap}.td-h h2{margin:0;font-size:20px}.td-h .muted{color:var(--muted);font-size:13px}
+.td-g{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--surface);display:flex;flex-direction:column;gap:4px}
+.td-g h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}.td-g h3 .mono{font-size:12px;color:var(--muted);font-weight:600}
+.td-g>p{margin:0 0 4px;font-size:12.5px;color:var(--muted)}
+.td-g.bad{border-left:4px solid var(--bad)}.td-g.ok{border-left:4px solid var(--ok)}.td-g.warn{border-left:4px solid var(--warn)}.td-g.tag{border-left:4px solid #f0b400}
+.td-i{display:grid;grid-template-columns:auto 1fr;gap:0 10px;text-align:left;width:100%;padding:8px 10px!important;min-height:48px;border:0!important;border-top:1px solid var(--line)!important;border-radius:0!important;background:none!important;color:var(--ink)!important}
+.td-i:hover{background:var(--surface-2)!important}
+.td-i .mono{grid-row:1/3;align-self:center;font-size:12px;color:var(--muted)}.td-i b{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.td-i small{font-size:12.5px;color:var(--muted)}
+.td-empty{padding:40px 10px;text-align:center;font-size:16px}.td-empty small{color:var(--muted);font-size:13px}
+.tabs .cbadge{margin-left:6px;min-width:18px;height:18px;font-size:11px}
+.aisum{font-size:14.5px;line-height:1.6;white-space:normal}
 </style>
 <style id="ui1o" media="not all">
 /* ===== Theo dõi làm hàng – BẢN THỬ kiểu 1office =====
@@ -996,11 +1015,12 @@ table.q td input{min-height:36px!important;font-size:14px!important}
     <div id="latebar"></div>
     <div class="bar">
       <div class="tabs" role="tablist">
-        <button data-view="team" hidden><i class="fa fa-comments ic-fa" aria-hidden="true"></i>Chat chung<span class="tbadge" id="teamBadge" hidden></span></button>
+        <button data-view="today"><i class="fa fa-sun-o ic-fa" aria-hidden="true"></i>Hôm nay<span class="cbadge" id="todayN" hidden></span></button><button data-view="team" hidden><i class="fa fa-comments ic-fa" aria-hidden="true"></i>Chat chung<span class="tbadge" id="teamBadge" hidden></span></button>
         <button data-view="board"><i class="fa fa-columns ic-fa" aria-hidden="true"></i>Quy trình</button>
         <button data-view="list" class="on"><i class="fa fa-list ic-fa" aria-hidden="true"></i>Danh sách</button><button data-view="report" hidden><i class="fa fa-bar-chart ic-fa" aria-hidden="true"></i>Báo cáo</button>
       </div>
       <span class="sp"></span>
+      <button type="button" id="fMine" class="sm fmine" aria-pressed="false" title="Chỉ hiện job mình phụ trách" hidden>👤 Việc của tôi</button>
       <select id="fStatus" aria-label="Lọc trạng thái">
         <option value="open">Đang mở</option>
         <option value="all">Tất cả</option>
@@ -1037,7 +1057,7 @@ table.q td input{min-height:36px!important;font-size:14px!important}
 <div id="toast" hidden></div>
 
 <script src="firebase-config.js?v=483007a3c3"></script>
-<script src="static-shim.js?v=12109f34fd"></script>
+<script src="static-shim.js?v=ab4be862a8"></script>
 <script>
 const TYPES=["Báo giá","Khai HQ nhập","Khai HQ xuất","Vận chuyển","Chứng từ / C/O","Kiểm tra chuyên ngành","Khác"];
 const MODES=["","Sea FCL","Sea LCL","Air","Road","Express"];
@@ -1221,7 +1241,7 @@ async function createJob(data){
     raw:"",images:[],createdAt:Date.now(),updatedAt:Date.now(),stageAt:Date.now(),history:[]
   },data);
   if(!SERVICES.includes(j.service)){j.service="";j.svcPending=true}
-  if(team()){j.createdBy=me();j.createdByName=window.SOJOB_USER||me();j.shared=!mineOn()}
+  if(team()){j.createdBy=me();j.createdByName=window.SOJOB_USER||me();j.shared=!mineOn();if(!j.assignee){j.assignee=me();j.assigneeName=window.SOJOB_USER||me()}}
   logH(j,{kind:"create",to:j.status});
   let cut=0;while((j.images||[]).length&&jobBytes(j)>JOB_MAX){j.images.pop();cut++}
   if(cut)setTimeout(()=>toast(`Bỏ bớt ${cut} ảnh cuối vì job vượt giới hạn 1 MB. Ảnh nhiều nên để OneDrive rồi gắn link.`),600);
@@ -1249,6 +1269,7 @@ function setStatus(j,st,kind="move",note=""){
   if(from!==st){j.stageAt=Date.now();logH(j,{kind,from,to:st,note});if(j.lateAck){if(j.blocker===j.lateAck.reason)j.blocker="";delete j.lateAck}}
   j.status=st;
   if(kind!=="return")j.returnNote="";
+  if(from!==st&&kind!=="return"&&kind!=="create")try{autoRule(j,"st:"+st)}catch(e){}
   if(st==="Báo giá"&&!j.quoteSentAt&&(j.quote||[]).length)j.quoteSentAt=TODAY();
   if(st==="Chờ thu tiền"&&!j.debitDate)j.debitDate=TODAY();
   if(st===DONE&&!j.paidDate)j.paidDate=TODAY();
@@ -1331,6 +1352,7 @@ function visibleJobs(ignoreStatus){
     if(S.fLate){const st=lateState(j);if(!st||st==="ok")return false}
     if(S.group!=="__all"&&groupKey(j)!==S.group)return false;
     if(S.svc&&svcOf(j)!==S.svc)return false;
+    if(S.mineOnly&&team()&&whoOf(j)!==me())return false;
     if(q){const h=[j.code,j.title,j.fwd,j.company,j.contact,j.refs,j.cargo,j.pol,j.pod,j.summary,j.mst,j.bl,j.cont,j.tkNo,j.truck,j.yard,j.blocker].join(" ").toLowerCase();if(!h.includes(q))return false}
     return true;
   }).sort((a,b)=>{
@@ -1404,7 +1426,7 @@ function jobRow(j){
     <span class="code">${esc(j.code)}</span>
     <span class="t">${j.priority==="Gấp"?'<span class="urgent">GẤP · </span>':""}${esc(j.title||"(chưa có tiêu đề)")}</span>
     <span class="right">${cbadge(j)}${odState(j)==="none"?`<span class="pill odmiss">⚠ Quá hạn – thiếu lý do</span>`:odState(j)==="pend"?`<span class="pill wait">Lý do quá hạn chờ duyệt</span>`:""}${j.example?'<span class="ex">VÍ DỤ</span>':""}${j.coNeed==="Có"&&j.coStatus!=="Đã cấp"&&isOpen(j.status)?`<span class="pill wait">C/O ${esc(j.coStatus||"chưa xin")}</span>`:""}${j.blocker?`<span class="pill wait" title="${esc(j.blocker)}">Vướng: ${esc(j.blocker.slice(0,28))}</span>`:""}${isStalled(j)&&!isOverdue(j)&&!STRICT.includes(j.status)?`<span class="pill dl-over">Đứng yên ${stageDays(j)} ngày</span>`:""}<span class="pill svc">${svcTag(j)}</span>${dlPill(j.deadline,isOpen(j.status))}${stPill(j.status)}</span>
-    <span class="meta">${who.map((w,i)=>`<span class="pill ${i===0?"fwd":""}">${esc(w)}</span>`).join("")}<span>${esc(j.type)}</span>${j.mode?`<span>· ${esc(j.mode)}</span>`:""}${j.pol||j.pod?`<span>· ${esc(j.pol||"?")} → ${esc(j.pod||"?")}</span>`:""}${all&&!team()?`<span>· việc ${done}/${all}</span>`:""}<span class="cd" title="${esc(cDateFull(j))}">· tạo ${cDate(j)}</span></span>
+    <span class="meta">${who.map((w,i)=>`<span class="pill ${i===0?"fwd":""}">${esc(w)}</span>`).join("")}<span>${esc(j.type)}</span>${j.mode?`<span>· ${esc(j.mode)}</span>`:""}${j.pol||j.pod?`<span>· ${esc(j.pol||"?")} → ${esc(j.pod||"?")}</span>`:""}${all&&!team()?`<span>· việc ${done}/${all}</span>`:""}<span class="cd" title="${esc(cDateFull(j))}">· tạo ${cDate(j)}</span>${asgChip(j)}</span>
     ${ll?`<span class="lr ${ll.cls}" title="${esc(ll.text)}">${ll.cls?"":"<b>"}${esc(ll.text)}${ll.cls?"":"</b>"}</span>`:""}
   </div>`;
 }
@@ -1440,7 +1462,7 @@ function kanbanCard(j){
     ${(ll=>ll?`<span class="note-l ${ll.cls}" title="${esc(ll.text)}">${esc(ll.text)}</span>`:"")(lateLine(j))}
     ${j.blocker&&isOpen(j.status)&&!(lateState(j)&&j.lateAck&&j.blocker===j.lateAck.reason)?`<span class="note-b" title="${esc(j.blocker)}">⚠ ${esc(j.blocker)}</span>`:""}
     ${all&&!team()?`<span class="pg" title="Việc xong ${done}/${all}"><i style="width:${Math.round(done/all*100)}%"></i></span>`:""}
-    <span class="ft"><span class="av" style="background:${avColor(who)}" aria-hidden="true">${esc(initials(who))}</span><span class="who" title="${esc([j.fwd,j.company].filter(Boolean).join(" · ")||who)}">${esc(who)}${j.company&&j.company!==who?`<i class="co"> · ${esc(j.company)}</i>`:""}</span>${timeTag(j)}</span>
+    <span class="ft"><span class="av" style="background:${avColor(who)}" aria-hidden="true">${esc(initials(who))}</span><span class="who" title="${esc([j.fwd,j.company].filter(Boolean).join(" · ")||who)}">${esc(who)}${j.company&&j.company!==who?`<i class="co"> · ${esc(j.company)}</i>`:""}</span>${asgChip(j,true)}${timeTag(j)}</span>
   </div>`;
 }
 const COLNAME={[DONE]:"Hoàn thành (Done)",[FAIL]:"Thất bại (Failed)"};
@@ -1508,7 +1530,7 @@ addEventListener("resize",closeKmenu);
 document.addEventListener("scroll",closeKmenu,true);
 function renderMain(){
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===S.view));
-  document.body.classList.toggle("view-board",S.view==="board");document.body.classList.toggle("view-report",S.view==="report");if(S.view!=="board")closeKmenu();
+  document.body.classList.toggle("view-board",S.view==="board");document.body.classList.toggle("view-report",S.view==="report"||S.view==="today");if(S.view!=="board")closeKmenu();
   $("#fStatus").hidden=S.view!=="list";
   renderProfile();
   const el=$("#content");
@@ -1520,8 +1542,10 @@ function renderMain(){
   document.body.classList.toggle("view-team",S.view==="team");
   {const rb=document.querySelector('.tabs [data-view="report"]');if(rb)rb.hidden=!boss()}
   if(S.view==="report"&&!boss())S.view="list";
+  fMinePaint();
   if(S.view==="team"){renderTeam(el);return}
   if(S.view==="report"){renderReport(el);return}
+  if(S.view==="today"){renderToday(el);return}
   if(S.view==="tpl"){
     if(el.dataset.v==="tpl"&&el.contains(document.activeElement))return;
     el.dataset.v="tpl";
@@ -1638,7 +1662,7 @@ function renderDetail(force){
   el.innerHTML=`<div class="d">
   <div class="d-head">
     <div class="l1"><button class="back" data-act="close">← Danh sách</button><span class="acts">${isOpen(j.status)?`<button class="primary go" data-act="stpop" aria-haspopup="true" aria-expanded="false" aria-controls="stpop">Chuyển tiếp ▾</button>`:`<button class="sm" data-st="${esc(STAGES[0])}">Mở lại</button>`}</span></div>
-    <div class="l2"><span class="mono jcode">${esc(j.code)}${j.example?' <span class="ex">VÍ DỤ</span>':""}</span><span class="stnow${j.status===FAIL?" bad":""}" title="Bước hiện tại">${esc(SHORT[j.status]||j.status)}</span><button class="ghost sm urg${j.priority==="Gấp"?" on":""}" data-act="urgent" title="Bật / tắt job gấp">⚡ Gấp</button>${spaceOn()&&isMine(j)?`<button class="ghost sm shr" data-act="share" title="Đưa job này sang Sổ chung: nhân viên thấy và làm cùng">→ Chuyển sang Sổ chung</button>`:""}</div>
+    <div class="l2"><span class="mono jcode">${esc(j.code)}${j.example?' <span class="ex">VÍ DỤ</span>':""}</span><span class="stnow${j.status===FAIL?" bad":""}" title="Bước hiện tại">${esc(SHORT[j.status]||j.status)}</span>${asgSel(j)}<button class="ghost sm urg${j.priority==="Gấp"?" on":""}" data-act="urgent" title="Bật / tắt job gấp">⚡ Gấp</button>${spaceOn()&&isMine(j)?`<button class="ghost sm shr" data-act="share" title="Đưa job này sang Sổ chung: nhân viên thấy và làm cùng">→ Chuyển sang Sổ chung</button>`:""}</div>
     <div id="stpop" class="stpop" hidden role="dialog" aria-label="Chọn bước"><div class="stp-h">${nextStage(j)&&isOpen(j.status)?`<button class="primary go stp-next" data-st="${esc(nextStage(j))}">→ Sang bước tiếp: ${esc(nextStage(j))}</button>`:""}<span class="muted">hoặc chọn bước khác</span></div><div id="stagebar">${stagesHtml(j)}</div></div>
     ${lateBox(j)}
     ${j.status===FAIL?`<div class="alert bad">Thất bại: ${esc(j.failReason||"chưa ghi lý do")}${j.failNote?" · "+esc(j.failNote):""}</div>`:""}
@@ -1748,7 +1772,7 @@ function lateNotify(){
   toast(fresh.length===1?`⚠ ${fresh[0].code} vừa ${lateState(fresh[0])==="pend"?"có lý do chờ duyệt":"quá hạn ở “"+fresh[0].status+"”"}.`:`⚠ ${fresh.length} job vừa quá hạn / chờ duyệt.`);
 }
 setInterval(()=>{if(S.loaded){renderAll(false)}},5*60*1000); // cập nhật đồng hồ quá hạn
-function renderAll(forceDetail){renderLateBar();lateNotify();chatNotify();renderSide();renderMain();renderDetail(forceDetail);nbellPaint()}
+function renderAll(forceDetail){renderLateBar();lateNotify();chatNotify();renderSide();renderMain();renderDetail(forceDetail);nbellPaint();try{todayBadge()}catch(e){}}
 
 /* ---------- text exports ---------- */
 function quoteText(j){
@@ -1936,7 +1960,7 @@ D.addEventListener("input",e=>{
     queueSave(j);
     if(LISTF.includes(f)||f==="debitDate"||f==="paidDate"){renderSide();renderMain()}
     if(f==="vat")renderTotals(j);
-    if(f==="type"||f==="service"||f==="vehicle"||f==="lane"||f==="deadline"){renderDetail(true)}
+    if(f==="lane"&&j.lane)autoRule(j,"lane:"+j.lane);if(f==="type"||f==="service"||f==="vehicle"||f==="lane"||f==="deadline"){renderDetail(true)}
   }
   else if(t.dataset.t!==undefined){j.tasks[+t.dataset.t].text=t.value;queueSave(j)}
   else if(t.dataset.q){const[i,fl]=t.dataset.q.split(":");const q=j.quote[+i];
@@ -1982,6 +2006,7 @@ D.addEventListener("click",e=>{
   if(st&&j){moveAndRender(j,st.dataset.st);return}
   const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
   if(a==="close"){S.sel=null;renderAll(true);return}
+  if(a==="aiChatSum"){aiChatSum(cur());return}
   if(a==="stpop"){const p=D.querySelector("#stpop");if(p){p.hidden=!p.hidden;b.setAttribute("aria-expanded",String(!p.hidden));if(!p.hidden)p.querySelector(".stp-next,.stages button.now")?.focus()}return}
   if(!j)return;
   if(a==="tdel"){j.tasks.splice(+b.dataset.i,1);queueSave(j);renderAll(true)}
@@ -2221,6 +2246,7 @@ function setLotField(j,f,v){
     j.checks=has?j.checks.filter(x=>x!==v):(j.checks||[]).concat(v);
     has?dropFee(j,fee):addFee(j,fee);
     logH(j,{kind:"note",note:(has?"Bỏ ":"Chọn ")+fee.slice(4)});
+    if(!has)autoRule(j,"chk:"+v);
   }else j[f]=v;
   if(f==="vehicle"){const q=(j.quote||[]).find(q=>q.name===FEE_VC);if(q&&["cont","chuyến"].includes(q.unit))q.unit=v==="Xe tải"?"chuyến":"cont"}
   queueSave(j);renderAll(true);
@@ -2335,7 +2361,7 @@ function dlRow(j){const k=dayDiff(j.deadline),open=isOpen(j.status);
   return `<div class="sec dlrow"><label for="f-deadline">⏰ Thời hạn xử lý</label><input id="f-deadline" data-f="deadline" type="date" value="${esc(j.deadline||"")}">${tag}</div>`}
 function chatSec(j){
   chatWatch(j);
-  return `<div class="sec"><h3>Trao đổi <span class="mono">${(S.chat[j.id]||[]).length||""}</span></h3>
+  return `<div class="sec"><h3><span>Trao đổi <span class="mono">${(S.chat[j.id]||[]).length||""}</span></span>${(S.chat[j.id]||[]).length>=3?`<button class="ghost sm ai" data-act="aiChatSum" title="AI tóm tắt khung trao đổi: lô đang vướng gì, ai đang làm, việc tiếp theo">✦ Tóm tắt</button>`:""}</h3>
     <div class="chat" id="chatList">${chatMsgs(j.id)}</div>
     <div class="chatin"><textarea id="chatTxt" rows="1" placeholder="Nhắn cho nhóm…" title="Enter để gửi, Shift+Enter để xuống dòng">${esc(S.chatDraft[j.id]||"")}</textarea><button class="primary" data-act="chatSend">${ic("send")}Gửi</button></div></div>`;
 }
@@ -2402,7 +2428,7 @@ async function openJobAny(id){
 }
 let urlJobDone=false;
 function openFromUrl(){
-  if(urlJobDone)return;if(new URLSearchParams(location.search).get("view")==="team"){urlJobDone=true;S.view0=true;S.view="team";try{history.replaceState(null,"",location.pathname)}catch(e){}setTimeout(renderMain,0);return}const id=new URLSearchParams(location.search).get("job");if(!id){urlJobDone=true;return}
+  if(urlJobDone)return;{const vw=new URLSearchParams(location.search).get("view");if(vw==="today"){urlJobDone=true;S.view0=true;S.view="today";try{history.replaceState(null,"",location.pathname)}catch(e){}setTimeout(renderMain,0);return}}if(new URLSearchParams(location.search).get("view")==="team"){urlJobDone=true;S.view0=true;S.view="team";try{history.replaceState(null,"",location.pathname)}catch(e){}setTimeout(renderMain,0);return}const id=new URLSearchParams(location.search).get("job");if(!id){urlJobDone=true;return}
   if(!S.all.some(x=>x.id===id))return;urlJobDone=true;
   try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}
   setTimeout(()=>openJobAny(id),0)}
@@ -2575,6 +2601,89 @@ async function rpXlsx(r){
   r.R.forEach(x=>b.addRow([x.j.code,dmy(jobDate(x.j)),x.j.title||"",x.j.fwd||"",x.j.company||"",x.j.status,x.dv,x.ch,x.net,x.lai,x.no||null]));hd(b);
   const buf=await wb.xlsx.writeBuffer(),u=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
   const l=document.createElement("a");l.href=u;l.download=`bao-cao-${r.month}.xlsx`;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast("Đã xuất báo cáo tháng "+r.month.slice(5)+"/"+r.month.slice(0,4)+".")}
+/* ---------- Người phụ trách ---------- */
+const whoOf=j=>String(j.assignee||j.createdBy||"").toLowerCase();
+function whoName(m){m=String(m||"").toLowerCase();if(!m)return "";if(m===me())return window.SOJOB_USER||"Tôi";const p=S.people&&S.people[m];return (p&&p.n)||m.split("@")[0]}
+function asgChip(j,short){if(!team()||(boss()&&isMine(j)))return "";const w=whoOf(j);if(!w)return "";const n=j.assignee?(j.assigneeName||whoName(w)):whoName(w);
+  return `<span class="asgchip${w===me()?" me":""}" title="Phụ trách: ${esc(n)}">👤 ${esc(short?String(n).split(" ").pop():n)}</span>`}
+function asgSel(j){if(!team()||(boss()&&isMine(j)))return "";const w=whoOf(j),L=[[me(),window.SOJOB_USER||"Tôi"]].concat(Object.entries(S.people||{}).filter(([m,v])=>m!==me()&&v&&v.n).map(([m,v])=>[m,v.n]));
+  if(w&&!L.some(x=>x[0]===w))L.push([w,j.assigneeName||whoName(w)]);
+  return `<label class="asgsel" title="Người phụ trách job này">👤<select data-asg="1" aria-label="Người phụ trách"><option value="">Chưa giao</option>${L.map(([m,n])=>`<option value="${esc(m)}"${m===w?" selected":""}>${esc(n)}${m===me()?" (tôi)":""}</option>`).join("")}</select></label>`}
+document.addEventListener("change",e=>{const sel=e.target.closest("[data-asg]");if(!sel)return;const j=cur();if(!j)return;
+  const m=sel.value,old=whoOf(j),n=m?whoName(m):"";if(m===old)return;
+  j.assignee=m;j.assigneeName=n;logH(j,{kind:"note",note:m?"Giao cho "+n:"Bỏ người phụ trách"});queueSave(j);renderAll(true);
+  if(m&&m!==me())postJobMsg(j,`📌 Giao job này cho @${n}`,{tags:[m],tagN:[n]});toast(m?"Đã giao cho "+n+".":"Đã bỏ người phụ trách.")});
+S.mineOnly=(()=>{try{return localStorage.getItem("sojob.mineOnly")==="1"}catch(e){return false}})();
+function fMinePaint(){const b=document.getElementById("fMine");if(!b)return;b.hidden=!team()||!["list","board"].includes(S.view)||SPACE==="mine";b.classList.toggle("on",!!S.mineOnly);b.setAttribute("aria-pressed",S.mineOnly?"true":"false")}
+document.addEventListener("click",e=>{if(!e.target.closest("#fMine"))return;S.mineOnly=!S.mineOnly;try{localStorage.setItem("sojob.mineOnly",S.mineOnly?"1":"0")}catch(x){}renderAll(true)});
+/* ---------- Hôm nay: việc cần làm trước, gom ở một chỗ ---------- */
+S.todayAll=null; // null = mặc định (chủ sổ: cả nhóm; nhân viên: của tôi)
+const RE_TQ=/thông quan|giải phóng|mang hàng về/i;
+function todayData(){
+  const all=S.todayAll??boss(),T=TODAY();
+  const pool=S.jobs.filter(j=>isOpen(j.status)&&(all||!team()||whoOf(j)===me()));
+  const tqDone=j=>j.status==="Chờ thông quan"&&j.tkCheck&&j.tkCheck.ok&&RE_TQ.test(j.tkCheck.status||"");
+  const G=[
+    {k:"tq",ic:"✅",t:"Đã thông quan, chờ chuyển bước",d:"Lấy mã vạch, điều xe hoặc làm bảng kê",js:pool.filter(tqDone),cls:"ok"},
+    {k:"od",ic:"⚠",t:"Quá hạn",d:"Ghi lý do hoặc gia hạn",js:pool.filter(j=>isOverdue(j)),cls:"bad"},
+    {k:"due",ic:"⏰",t:"Đến hạn hôm nay",d:"",js:pool.filter(j=>j.deadline===T)},
+    {k:"st",ic:"🐢",t:"Đứng yên quá lâu",d:"Nằm ở một bước quá số ngày cho phép",js:pool.filter(j=>!isOverdue(j)&&isLate(j)),cls:"warn"},
+    {k:"urg",ic:"⚡",t:"Lô gấp",d:"",js:pool.filter(j=>j.priority==="Gấp"&&!isOverdue(j)&&j.deadline!==T)},
+  ];
+  if(boss())G.push({k:"pay",ic:"💰",t:"Chờ thu tiền",d:"Đã gửi debit, chưa thu",js:S.jobs.filter(j=>j.debitDate&&!j.paidDate).sort((a,b)=>String(a.debitDate).localeCompare(String(b.debitDate)))});
+  const tags=typeof mnUnread==="function"?mnUnread():[];
+  return {all,G,tags,n:G.filter(g=>g.k!=="pay"&&g.k!=="urg").reduce((a,g)=>a+g.js.length,0)+tags.length}}
+function todayBadge(){const b=document.getElementById("todayN");if(!b)return;const n=S.loaded?todayData().n:0;b.hidden=!n;b.textContent=n>99?"99+":n}
+function renderToday(el){
+  const D=todayData(),T=TODAY(),dd=new Date().toLocaleDateString("vi-VN",{weekday:"long",day:"2-digit",month:"2-digit"});
+  const line=j=>`<button type="button" class="td-i" data-tdopen="${esc(j.id)}"><span class="mono">${esc(j.code)}</span><b>${esc(j.title||"(chưa có tiêu đề)")}</b><small>${esc(j.status)}${j.deadline?` · hạn ${esc(dmy(j.deadline))}`:""}${j.debitDate&&!j.paidDate?` · debit ${esc(fmt(j.debitAmount,"VND"))} gửi ${esc(dmy(j.debitDate))}`:""}${team()?` · 👤 ${esc(j.assigneeName||whoName(whoOf(j)))}`:""}</small></button>`;
+  const sec=g=>g.js.length?`<section class="td-g ${g.cls||""}"><h3>${g.ic} ${esc(g.t)} <span class="mono">${g.js.length}</span></h3>${g.d?`<p>${esc(g.d)}</p>`:""}${g.js.slice(0,30).map(line).join("")}</section>`:"";
+  const tg=D.tags.length?`<section class="td-g tag"><h3>🔔 Nhắc đến bạn <span class="mono">${D.tags.length}</span></h3>${D.tags.slice(0,20).map(m=>`<button type="button" class="td-i" ${m.job?`data-tdopen="${esc(m.job.id)}"`:'data-tdteam="1"'}><span class="mono">${esc(m.job?m.job.code:"Chat chung")}</span><b>${esc(m.byName||m.by)}: ${esc(String(m.text||"").slice(0,90))}</b><small>${esc(tmTime(m.at))}</small></button>`).join("")}</section>`:"";
+  const body=tg+D.G.map(sec).join("");
+  el.dataset.v="today";
+  el.innerHTML=`<div class="td"><div class="td-h"><div><h2>☀ Hôm nay</h2><span class="muted">${esc(dd)}</span></div>
+    ${team()&&SPACE!=="mine"?`<div class="chips2 td-sw"><button type="button" data-tdall="0" class="${D.all?"":"on"}">Của tôi</button><button type="button" data-tdall="1" class="${D.all?"on":""}">Cả nhóm</button></div>`:""}</div>
+    ${body||`<div class="td-empty">Không có việc nào cần làm gấp. 🎉<br><small>Lô quá hạn, đến hạn, vừa thông quan, đứng yên lâu và tin nhắc đến bạn sẽ hiện ở đây.</small></div>`}</div>`;
+}
+document.addEventListener("click",e=>{if(S.view!=="today")return;
+  const o=e.target.closest("[data-tdopen]");if(o){S.view="list";openJobAny(o.dataset.tdopen);return}
+  if(e.target.closest("[data-tdteam]")){S.view="team";renderAll(true);return}
+  const a=e.target.closest("[data-tdall]");if(a){S.todayAll=a.dataset.tdall==="1";renderMain();return}});
+/* AI tóm tắt khung Trao đổi của job */
+async function aiChatSum(j){
+  if(!j)return;if(!sample){toast("Chế độ xem này không gọi được AI.");return}
+  const ms=(S.chat[j.id]||[]).slice(-120);if(ms.length<2)return toast("Chưa có đủ tin để tóm tắt.");
+  const m=aiModal("Tóm tắt trao đổi – "+j.code);m.busy(`AI đang đọc ${ms.length} tin…`);
+  const lines=ms.map(x=>`[${new Date(x.at||0).toLocaleString("vi-VN",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}] ${x.byName||x.by}: ${String(x.text||"").replace(/\s+/g," ").slice(0,400)}`).join("\n");
+  const p=`Bạn là trợ lý của công ty giao nhận hải quan FDI. Đây là khung trao đổi nội bộ của lô ${j.code} (${j.title||""}), đang ở bước "${j.status}"${j.deadline?", hạn "+dmy(j.deadline):""}.
+Tóm tắt bằng tiếng Việt, ngắn gọn, đúng 3 mục, mỗi mục 1–3 gạch đầu dòng:
+1. Tình hình hiện tại
+2. Đang vướng gì / chờ ai
+3. Việc tiếp theo nên làm (ghi rõ ai làm nếu biết)
+Chỉ dùng thông tin trong tin nhắn, không bịa số liệu.
+
+Tin nhắn:
+${lines}`;
+  try{const r=await sample(p,{signal:m.signal,cache:false});
+    m.body.innerHTML=`<div class="aisum">${esc(String(r.text||"").trim()).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>")}</div><p class="muted" style="font-size:12px">AI tóm tắt từ ${ms.length} tin gần nhất, có thể sai, nên đọc lại tin gốc khi cần.</p>`;
+  }catch(e){m.body.innerHTML=`<p>${esc(aiErr(e))}</p>`}}
+/* ---------- Quy tắc tự động "khi… thì…" (đăng nhắc vào Trao đổi, tag người phụ trách) ---------- */
+const RULE_MSG={
+  "chk:kh":"🔍 Lô có kiểm hoá: nhớ hẹn lịch kiểm hoá với hải quan và báo khách chuẩn bị hàng.",
+  "chk:tv":"🌿 Lô có kiểm dịch thực vật: nộp hồ sơ đăng ký kiểm dịch, hẹn lịch lấy mẫu.",
+  "chk:dv":"🐄 Lô có kiểm dịch động vật: nộp hồ sơ đăng ký kiểm dịch, hẹn lịch lấy mẫu.",
+  "chk:attp":"🥫 Lô có kiểm tra ATTP: đăng ký kiểm tra và chuẩn bị hồ sơ an toàn thực phẩm.",
+  "chk:cl":"🧪 Lô có kiểm tra chất lượng: đăng ký kiểm tra chất lượng, xin kết quả trước khi thông quan.",
+  "lane:Đỏ":"🔴 Tờ khai luồng đỏ: chuẩn bị kiểm hoá, hẹn lịch với hải quan.",
+  "lane:Vàng":"🟡 Tờ khai luồng vàng: chuẩn bị bộ chứng từ giấy để hải quan kiểm tra.",
+  "st:Chờ điều xe":"🚚 Lô chuyển sang Chờ điều xe: đặt xe, báo nhà xe giờ lấy hàng và nơi giao.",
+  "st:Chờ thu tiền":"💰 Lô chờ thu tiền: theo dõi khách thanh toán debit."};
+function autoRule(j,key){
+  if(!team()||(boss()&&isMine(j))||!RULE_MSG[key])return;
+  j.ruleDone=j.ruleDone||{};if(j.ruleDone[key])return;j.ruleDone[key]=Date.now();queueSave(j);
+  const w=whoOf(j),n=w?whoName(w):"";
+  postJobMsg(j,RULE_MSG[key]+(w?` @${n}`:""),Object.assign({auto:true},w&&w!==me()?{tags:[w],tagN:[n]}:{}));
+}
 /* ---------- Chọn giao diện: Hiện tại / Kiểu 1office (nhớ trên từng máy) ---------- */
 const UI_LS="sojob.ui",UI_LIST=[["cu","Giao diện hiện tại","Thanh xanh, chữ Open Sans"],["1office","Kiểu 1office","Nền trắng gọn, chữ Inter Tight"]];
 function uiGet(){try{return localStorage.getItem(UI_LS)||"cu"}catch(e){return "cu"}}
@@ -2724,8 +2833,8 @@ function odBox(j){const st=odState(j);if(!st)return "";const a=j.odAck||{};
       <label class="oddate"><span>Gia hạn đến</span><input id="odDate" type="date" min="${TODAY()}"></label>
       <button class="primary" data-act="odSend">Gửi lý do</button></div>
     <small class="muted">Chưa ghi lý do thì không chuyển tiếp được. Lý do được ghi vào lịch sử và khung Trao đổi.</small></div>`}
-async function postJobMsg(j,text){ // đăng 1 tin vào Trao đổi của job (dùng cho lý do quá hạn)
-  if(!db||!team())return;const msg={text,by:me(),byName:window.SOJOB_USER||me(),at:Date.now()};
+async function postJobMsg(j,text,extra){ // đăng 1 tin vào Trao đổi của job (lý do quá hạn, giao việc…)
+  if(!db||!team())return;const msg=Object.assign({text,by:me(),byName:window.SOJOB_USER||me(),at:Date.now()},extra||{});
   try{await db.collection("jobs/"+j.id+"/chat").add(msg)}catch(e){return}
   j.chatAt=msg.at;j.chatBy=me();j.chatByName=msg.byName;j.chatLast=text.slice(0,80);j.chatN=(j.chatN||0)+1;queueSave(j);chatMarkSeen(j);
   teamMirror(j,msg);pushPing(j)}
@@ -2818,7 +2927,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-24f";
+const APP_VER="2026-11-24g";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
@@ -2997,7 +3106,7 @@ $("#btnAnalyze").addEventListener("click",async()=>{
 /* ---------- Claude trợ lý: đối chiếu chứng từ, soạn báo giá, soạn tin nhắc ---------- */
 function aiErr(e){
   if(e?.code==="cancelled")return "Đã dừng.";
-  if(e?.code==="sampling_disabled")return "Cần API key Claude: bấm “Cài đặt” → dán key. (Mỗi lần dùng tính phí vào tài khoản Anthropic của bạn.)";
+  if(e?.code==="sampling_disabled")return e?.message&&!/API key Claude/.test(e.message)?e.message:"Chưa dùng được AI: chủ sổ cần cài key Gemini miễn phí vào máy chủ (hoặc nhập key Claude trong “Cài đặt”).";
   return (window.SOJOB_BLOB_BASE!=null&&e?.message)?e.message:ERR[e?.code]||"Có lỗi khi gọi Claude ("+(e?.code||"không rõ")+"). Thử lại.";
 }
 function aiModal(title){
@@ -3208,7 +3317,7 @@ async function tkCheck(id){const j=S.all.find(x=>x.id===id);if(!j)return;
   try{const api=tkApi(),r=await fetch(api+(api.includes("?")?"&":"?")+new URLSearchParams(q),{redirect:"follow"});
     if(!r.ok)throw new Error("HTTP "+r.status);const o=await r.json();
     j.tkCheck=Object.assign({at:Date.now(),q:q.tk},o.ok?{ok:true,mv:!!o.mv,status:o.status,lane:o.lane,kind:o.kind,tkNo:o.tkNo,url:o.url}:{ok:false,msg:o.msg});
-    if(o.ok&&["Xanh","Vàng","Đỏ"].includes(o.lane)&&!j.lane)j.lane=o.lane;
+    if(o.ok&&["Xanh","Vàng","Đỏ"].includes(o.lane)&&!j.lane){j.lane=o.lane;autoRule(j,"lane:"+o.lane)}
     logH(j,{kind:"note",note:"Kiểm tra tờ khai: "+(o.ok?`${o.status||"có mã vạch"}${o.lane?", luồng "+o.lane:""}`:o.msg)});
     if(!o.ok)MV_OPEN="";queueSave(j);
   }catch(e){toast("Không kiểm tra được: "+e.message+". Thử lại sau.")}
