@@ -258,7 +258,8 @@ function saoLuuDem() {
   });
   var it = DriveApp.getFoldersByName("So Job - Sao luu"), folder = it.hasNext() ? it.next() : DriveApp.createFolder("So Job - Sao luu");
   var ten = "so-job-" + Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd") + ".json";
-  folder.createFile(ten, JSON.stringify({ app: "so-job", version: 1, exportedAt: new Date().toISOString(), docs: docs }), "application/json");
+  var tep = folder.createFile(ten, JSON.stringify({ app: "so-job", version: 1, exportedAt: new Date().toISOString(), docs: docs }), "application/json");
+  try { PropertiesService.getScriptProperties().setProperty("DB_DUNG", JSON.stringify({ at: Date.now(), n: docs.length, bytes: tep.getSize() })); } catch (e) {}
   var files = [], fi = folder.getFiles(); while (fi.hasNext()) files.push(fi.next());
   files.sort(function (a, b) { return b.getDateCreated() - a.getDateCreated(); }).slice(30).forEach(function (f) { f.setTrashed(true); });
   Logger.log("Đã sao lưu " + docs.length + " mục vào " + ten); return { ok: true, n: docs.length };
@@ -438,6 +439,7 @@ function thuOp(q, token) {
   if (who !== owner && !docFs("members/" + encodeURIComponent(who))) return { ok: false, msg: "Tài khoản này chưa là thành viên sổ." };
   if (!zhP().getProperty("ZOHO_REFRESH")) return { ok: false, msg: "Chủ sổ chưa nối hộp thư Zoho với máy chủ." };
   var A = zhAcc(), B = "/accounts/" + A.id, op = q.op;
+  if (op === "dung") return dungLuong(who === owner, B);
   if (op === "list") {
     var lim = Math.min(Number(q.limit) || 40, 100), st = Number(q.start) || 1, r;
     if (q.q) r = zhGoi(B + "/messages/search?searchKey=" + encodeURIComponent("entire:" + String(q.q).slice(0, 80)) + "&start=" + st + "&limit=" + lim + "&includeto=true");
@@ -525,6 +527,27 @@ function thuMoi() {
     kq.push(m.s + " → " + (o ? o.loai : "AI không đọc được"));
   });
   Logger.log("thuMoi: " + kq.join(" | "));
+}
+/* Dung lượng: hộp thư Zoho (KB đã dùng / KB được dùng) cho mọi thành viên; dữ liệu Sổ (ước tính) chỉ cho chủ sổ */
+function dungLuong(laChu, B) {
+  var o = { ok: true }, r = zhGoi(B), d = (r.json && r.json.data) || {};
+  if (Array.isArray(d)) d = d[0] || {};
+  if (r.code === 200) o.mail = { used: Number(d.usedStorage) || 0, total: Number(d.allowedStorage) || 0 };
+  if (laChu) {
+    var P = PropertiesService.getScriptProperties(), db = null;
+    try { db = JSON.parse(P.getProperty("DB_DUNG") || "null"); } catch (e) {}
+    if (!db) { db = uocDb(); P.setProperty("DB_DUNG", JSON.stringify(db)); }
+    db.total = 1073741824; o.db = db;
+  }
+  return o;
+}
+/* Ước tính dung lượng dữ liệu Sổ trên Firestore (đọc hết các bộ sưu tập; dùng khi chưa có số từ bản sao lưu đêm) */
+function uocDb() {
+  var n = 0, b = 0, cong = function (x) { n++; b += Utilities.newBlob(JSON.stringify(x)).getBytes().length + 40; };
+  ["jobs", "meta", "partners", "todos", "members", "mypartners", "teamchat", "teamseen", "mailjobs", "push"].forEach(function (col) {
+    docHet(col).forEach(function (o) { cong(o); if (col === "jobs") ["chat", "seen"].forEach(function (s) { docHet("jobs/" + o._id + "/" + s).forEach(cong); }); });
+  });
+  return { at: Date.now(), n: n, bytes: b };
 }
 /* Ghi thư nào thuộc job nào (mailjobs, status "gan") để tab Email trong app hiện mã job, bấm mở job */
 function ganThu(m, j) {
