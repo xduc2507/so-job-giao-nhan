@@ -16,10 +16,10 @@ function doPost(e) {
   var out = { ok: false }, body = null;
   try {
     body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
-    out = body.ai ? goiAI(body.ai, body.token) : body.test ? thuMayToi(body.token) : body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
+    out = body.ai ? goiAI(body.ai, body.token) : body.mail ? thuOp(body.mail, body.token) : body.test ? thuMayToi(body.token) : body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
   } catch (err) { out = { ok: false, msg: String(err) }; }
-  console.log(JSON.stringify(out));
-  if (body && (body.ai || body.test)) return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON); // không ghi nhật ký nội dung AI / thử
+  if (!(body && body.mail)) console.log(JSON.stringify(out));
+  if (body && (body.ai || body.test || body.mail)) return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON); // không ghi nhật ký nội dung AI / thử
   try { var P = PropertiesService.getScriptProperties(), L = JSON.parse(P.getProperty("log") || "[]"); L.unshift({ t: new Date().toISOString(), job: (body && body.job) || (body && body.team ? "team" : ""), out: out }); P.setProperty("log", JSON.stringify(L.slice(0, 10))); } catch (x) {}
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -143,15 +143,15 @@ var TZ = "Asia/Ho_Chi_Minh";
 
 function caiLich() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (["theoDoiToKhai", "nhacViecSang", "saoLuuDem", "nhacHen"].indexOf(t.getHandlerFunction()) >= 0) ScriptApp.deleteTrigger(t);
+    if (["theoDoiToKhai", "nhacViecSang", "saoLuuDem", "nhacHen", "thuMoi"].indexOf(t.getHandlerFunction()) >= 0) ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger("theoDoiToKhai").timeBased().everyMinutes(30).create();
   ScriptApp.newTrigger("nhacViecSang").timeBased().atHour(8).nearMinute(0).everyDays(1).inTimezone(TZ).create();
   ScriptApp.newTrigger("saoLuuDem").timeBased().atHour(23).nearMinute(0).everyDays(1).inTimezone(TZ).create();
   ScriptApp.newTrigger("nhacHen").timeBased().everyMinutes(10).create();
+  ScriptApp.newTrigger("thuMoi").timeBased().everyMinutes(5).create();
   Logger.log("Đã cài lịch: " + ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); }).join(", "));
 }
-
 /* Đổi giá trị JS sang dạng Firestore REST */
 function veFs(v) {
   if (v === null || v === undefined) return { nullValue: null };
@@ -386,4 +386,148 @@ function thuMayToi(token) {
   if (!mail) return { ok: false, msg: "Hết phiên đăng nhập, tải lại trang rồi thử lại." };
   var r = guiMay(mail, { title: "✅ Thông báo đang chạy", body: "Máy này nhận được thông báo của Theo dõi làm hàng.", data: { view: "today" }, link: APP + "?view=today", tag: "thu" });
   return { ok: true, sent: r.sent, may: r.may, xoa: r.xoa, loi: r.loi };
+}
+
+/* ===== Email: hộp thư chung giaonhan@opsdad.net qua Zoho Mail API =====
+ * Script Properties (anh tự dán): ZOHO_ID, ZOHO_SECRET, ZOHO_CODE (mã cấp quyền 10 phút) → chạy zhKetNoi() → lưu ZOHO_REFRESH */
+function zhP() { return PropertiesService.getScriptProperties(); }
+
+function zhKetNoi() {
+  var P = zhP(), acc = P.getProperty("ZOHO_ACCOUNTS") || "https://accounts.zoho.com";
+  var r = UrlFetchApp.fetch(acc + "/oauth/v2/token", { method: "post", muteHttpExceptions: true, payload: {
+    grant_type: "authorization_code", client_id: P.getProperty("ZOHO_ID"), client_secret: P.getProperty("ZOHO_SECRET"), code: P.getProperty("ZOHO_CODE") } });
+  var o = {}; try { o = JSON.parse(r.getContentText()); } catch (x) {}
+  if (!o.refresh_token) { Logger.log("Chưa nối được Zoho: " + (o.error || r.getResponseCode())); return; }
+  P.setProperty("ZOHO_REFRESH", o.refresh_token); P.deleteProperty("ZOHO_CODE"); P.deleteProperty("ZOHO_ACC");
+  if (o.api_domain) P.setProperty("ZOHO_API_DOMAIN", o.api_domain);
+  CacheService.getScriptCache().put("zhTok", o.access_token, 3000);
+  Logger.log("Đã nối Zoho. Thử đọc hộp thư…"); zhThu();
+}
+
+function zhTok() {
+  var c = CacheService.getScriptCache(), t = c.get("zhTok"); if (t) return t;
+  var P = zhP(), acc = P.getProperty("ZOHO_ACCOUNTS") || "https://accounts.zoho.com";
+  var r = UrlFetchApp.fetch(acc + "/oauth/v2/token", { method: "post", muteHttpExceptions: true, payload: {
+    grant_type: "refresh_token", client_id: P.getProperty("ZOHO_ID"), client_secret: P.getProperty("ZOHO_SECRET"), refresh_token: P.getProperty("ZOHO_REFRESH") } });
+  var o = {}; try { o = JSON.parse(r.getContentText()); } catch (x) {}
+  if (!o.access_token) throw new Error("Zoho chưa cấp quyền (" + (o.error || r.getResponseCode()) + ")");
+  c.put("zhTok", o.access_token, 3000); return o.access_token;
+}
+
+function zhGoi(path, opt) {
+  opt = opt || {};
+  opt.headers = Object.assign({ Authorization: "Zoho-oauthtoken " + zhTok() }, opt.headers || {});
+  opt.muteHttpExceptions = true;
+  if (opt.payload && typeof opt.payload !== "string" && !opt.raw) { opt.payload = JSON.stringify(opt.payload); opt.contentType = "application/json"; }
+  var r = UrlFetchApp.fetch("https://mail.zoho.com/api" + path, opt);
+  var j = {}; try { j = JSON.parse(r.getContentText().replace(/("[A-Za-z]*Id"\s*:\s*)(\d{12,})/g, '$1"$2"')); } catch (x) {} // mã Zoho dài hơn 2^53: giữ dạng chữ
+  return { code: r.getResponseCode(), json: j, text: r.getContentText().slice(0, 300), blob: opt.blob ? r.getBlob() : null };
+}
+
+function zhAcc() { // mã hộp thư + mã thư mục (lưu lại)
+  var P = zhP(), s = P.getProperty("ZOHO_ACC"); if (s) return JSON.parse(s);
+  var a = zhGoi("/accounts"); var ac = ((a.json && a.json.data) || [])[0];
+  if (!ac) throw new Error("Không đọc được hộp thư Zoho (" + a.code + " " + a.text + ")");
+  var f = zhGoi("/accounts/" + ac.accountId + "/folders"), F = {};
+  ((f.json && f.json.data) || []).forEach(function (x) { var k = String(x.folderType || x.folderName).toLowerCase(); if (!F[k] || String(x.path || "").toLowerCase() === "/" + k) F[k] = x.folderId; });
+  var o = { id: ac.accountId, mail: ac.primaryEmailAddress || ac.mailboxAddress || "", F: F };
+  P.setProperty("ZOHO_ACC", JSON.stringify(o)); return o;
+}
+
+function zhThu() {
+  var A = zhAcc(); Logger.log("Hộp thư: " + A.mail + " · thư mục: " + Object.keys(A.F).join(", "));
+  var r = zhGoi("/accounts/" + A.id + "/messages/view?folderId=" + A.F.inbox + "&limit=5");
+  Logger.log("Đọc Inbox: HTTP " + r.code + " · " + (((r.json && r.json.data) || []).map(function (m) { return m.subject; }).join(" | ") || r.text));
+}
+
+function zhXem() { // xem thô vài trường của thư (để dò tên trường)
+  zhP().deleteProperty("ZOHO_ACC"); var A = zhAcc(); Logger.log(JSON.stringify(A.F)); var r = zhGoi("/accounts/" + A.id + "/messages/view?folderId=" + A.F.inbox + "&limit=3&includeto=true");
+  ((r.json && r.json.data) || []).forEach(function (m) { var o = {}; Object.keys(m).forEach(function (k) { o[k] = String(m[k]).slice(0, 40); }); Logger.log(JSON.stringify(o)); });
+}
+
+function zhMsg(m) { // rút gọn 1 thư cho app
+  return { id: String(m.messageId), f: String(m.folderId || ""), s: m.subject || "(không tiêu đề)", sum: String(m.summary || "").slice(0, 160),
+    from: m.fromAddress || "", fromN: m.sender || "", to: String(m.toAddress || "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, ""), t: Number(m.receivedTime || m.sentDateInGMT || 0),
+    read: String(m.status) === "1", att: String(m.hasAttachment) === "1", th: String(m.threadId || "") };
+}
+
+/* App gọi mục Email: {mail:{op,...}, token}. Chỉ chủ sổ + thành viên. */
+function thuOp(q, token) {
+  var who = nguoiGoi(token);
+  if (!who) return { ok: false, msg: "Hết phiên đăng nhập, tải lại trang rồi thử lại." };
+  var owner = chuSo();
+  if (who !== owner && !docFs("members/" + encodeURIComponent(who))) return { ok: false, msg: "Tài khoản này chưa là thành viên sổ." };
+  if (!zhP().getProperty("ZOHO_REFRESH")) return { ok: false, msg: "Chủ sổ chưa nối hộp thư Zoho với máy chủ." };
+  var A = zhAcc(), B = "/accounts/" + A.id, op = q.op;
+  if (op === "list") {
+    var lim = Math.min(Number(q.limit) || 40, 100), st = Number(q.start) || 1, r;
+    if (q.q) r = zhGoi(B + "/messages/search?searchKey=" + encodeURIComponent("entire:" + String(q.q).slice(0, 80)) + "&start=" + st + "&limit=" + lim + "&includeto=true");
+    else r = zhGoi(B + "/messages/view?folderId=" + (A.F[q.folder || "inbox"] || A.F.inbox) + "&start=" + st + "&limit=" + lim + "&includeto=true");
+    if (r.code !== 200) return { ok: false, msg: "Zoho chưa trả danh sách thư (" + r.code + ")" };
+    return { ok: true, mail: A.mail, list: ((r.json && r.json.data) || []).map(zhMsg) };
+  }
+  var id = String(q.id || "").replace(/\D/g, ""), f = String(q.f || "").replace(/\D/g, "");
+  if (op === "read") {
+    if (!id || !f) return { ok: false, msg: "Thiếu mã thư" };
+    var P = B + "/folders/" + f + "/messages/" + id;
+    var c = zhGoi(P + "/content?includeBlockContent=true"), d = zhGoi(P + "/details"), a = zhGoi(P + "/attachmentinfo");
+    if (c.code !== 200) return { ok: false, msg: "Không mở được thư (" + c.code + ")" };
+    if (q.mark !== false) zhGoi(B + "/updatemessage", { method: "put", payload: { mode: "markAsRead", messageId: [id] } });
+    var D = (d.json && d.json.data) || {};
+    var att = (((a.json && a.json.data) || {}).attachments || []).map(function (x) { return { id: String(x.attachmentId), n: x.attachmentName, sz: Number(x.attachmentSize) || 0 }; });
+    return { ok: true, html: ((c.json && c.json.data) || {}).content || "", from: D.fromAddress || "", fromN: D.sender || "", to: D.toAddress || "", cc: D.ccAddress || "", s: D.subject || "", t: Number(D.receivedTime || D.sentDateInGMT || 0), att: att };
+  }
+  if (op === "att") {
+    var r2 = zhGoi(B + "/folders/" + f + "/messages/" + id + "/attachments/" + String(q.aid || "").replace(/\D/g, ""), { blob: true });
+    if (r2.code !== 200 || !r2.blob) return { ok: false, msg: "Không tải được tệp (" + r2.code + ")" };
+    if (r2.blob.getBytes().length > 15e6) return { ok: false, msg: "Tệp quá lớn để tải qua Sổ, mở Zoho Mail để tải." };
+    return { ok: true, b64: Utilities.base64Encode(r2.blob.getBytes()), type: r2.blob.getContentType() || "application/octet-stream" };
+  }
+  if (op === "send") {
+    var to = String(q.to || "").trim(), sub = String(q.s || "").slice(0, 300);
+    if (!to) return { ok: false, msg: "Chưa có người nhận" };
+    var ten = q.byName || who.split("@")[0];
+    var body = String(q.html || "").slice(0, 200000) + '<br><div style="color:#666;font-size:12px">— ' + String(ten).replace(/[<>&]/g, "") + " · Giao nhận FDI · " + A.mail + "</div>";
+    var pl = { fromAddress: A.mail, toAddress: to, subject: sub, content: body, mailFormat: "html", askReceipt: "no" };
+    if (q.cc) pl.ccAddress = String(q.cc);
+    var files = (q.files || []).slice(0, 10), up = [];
+    for (var i = 0; i < files.length; i++) {
+      var fl = files[i]; if (!fl || !fl.b64) continue;
+      var u = zhGoi(B + "/messages/attachments?fileName=" + encodeURIComponent(fl.n || "tep"), { method: "post", raw: true, contentType: "application/octet-stream", payload: Utilities.base64Decode(fl.b64) });
+      var ud = u.json && u.json.data; ud = Array.isArray(ud) ? ud[0] : ud;
+      if (u.code !== 200 || !ud) return { ok: false, msg: "Không đính kèm được " + (fl.n || "tệp") + " (" + u.code + ")" };
+      up.push({ storeName: ud.storeName, attachmentPath: ud.attachmentPath, attachmentName: ud.attachmentName });
+    }
+    if (up.length) pl.attachments = up;
+    var rs;
+    if (q.reply && id) { pl.action = q.action === "forward" ? "forward" : "reply"; rs = zhGoi(B + "/messages/" + id, { method: "post", payload: pl }); }
+    else rs = zhGoi(B + "/messages", { method: "post", payload: pl });
+    if (rs.code !== 200) return { ok: false, msg: "Zoho chưa gửi được (" + rs.code + " " + ((rs.json && rs.json.data && (rs.json.data.moreInfo || rs.json.data.errorCode)) || "") + ")" };
+    if (q.job) { var j = docFs("jobs/" + String(q.job).replace(/[^A-Za-z0-9_-]/g, "")); if (j && j.shared) { j._id = String(q.job); ghiTraoDoi(j, "✉ " + ten + " đã gửi email tới " + to + ": " + sub); } }
+    return { ok: true };
+  }
+  return { ok: false, msg: "Không rõ yêu cầu" };
+}
+
+/* Cứ 5 phút: thư mới đến giaonhan → báo cả nhóm; tiêu đề có mã job (FDI…) → ghi vào Trao đổi của job (chỉ job ở Sổ chung) */
+function thuMoi() {
+  var P = zhP(); if (!P.getProperty("ZOHO_REFRESH")) return;
+  var A = zhAcc(), r = zhGoi("/accounts/" + A.id + "/messages/view?folderId=" + A.F.inbox + "&limit=20");
+  if (r.code !== 200) { Logger.log("thuMoi: " + r.code); return; }
+  var last = Number(P.getProperty("ZOHO_LAST") || 0), L = ((r.json && r.json.data) || []).map(zhMsg).filter(function (m) { return m.t > last; }).sort(function (a, b) { return a.t - b.t; });
+  if (!last) { P.setProperty("ZOHO_LAST", String(Math.max.apply(null, [Date.now()].concat(L.map(function (m) { return m.t; }))))); return; }
+  if (!L.length) return;
+  P.setProperty("ZOHO_LAST", String(L[L.length - 1].t));
+  var owner = chuSo(), nguoi = [owner].concat(thanhVien()).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+  var jobs = null;
+  L.forEach(function (m) {
+    guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · Email", m.s + (m.sum ? "\n" + m.sum.slice(0, 120) : ""), { view: "mail" }, APP + "?view=mail", "mail");
+    var code = (String(m.s).match(/FDI\d{6}-\d+/i) || [])[0];
+    if (code) {
+      jobs = jobs || docHet("jobs");
+      var j = jobs.filter(function (x) { return String(x.code || "").toUpperCase() === code.toUpperCase() && x.shared; })[0];
+      if (j) ghiTraoDoi(j, "✉ Email mới từ " + (m.fromN || m.from) + ": " + m.s);
+    }
+  });
+  Logger.log("thuMoi: " + L.length + " thư mới");
 }

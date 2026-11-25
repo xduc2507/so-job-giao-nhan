@@ -802,6 +802,46 @@ html:not([data-ui="1office"]) .stages button:first-child{padding-left:10px!impor
 body.view-report .app{grid-template-columns:minmax(0,1fr)}
 body.view-report #side,body.view-report #detail{display:none}
 .rp{max-width:1100px}
+/* Email */
+.mailbox{display:grid;grid-template-columns:180px minmax(260px,360px) minmax(0,1fr);gap:0;height:calc(100vh - 140px);min-height:420px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r,12px);overflow:hidden}
+.mb-side{display:flex;flex-direction:column;gap:4px;padding:10px;border-right:1px solid var(--line);background:var(--surface-2)}
+.mb-side .primary{margin-bottom:8px}
+.mb-f{display:flex;align-items:center;gap:8px;justify-content:flex-start;border:0!important;background:transparent!important;box-shadow:none!important;color:var(--ink)!important;padding:7px 10px!important;border-radius:8px!important;text-align:left}
+.mb-f i{width:16px;color:var(--muted)}.mb-f b{margin-left:auto;font-size:11.5px;background:var(--accent);color:#fff;border-radius:9px;padding:0 6px}
+.mb-f.on{background:var(--accent-soft)!important;color:var(--accent)!important;font-weight:600}
+.mb-side small{margin-top:auto;font-size:11.5px;line-height:1.4}
+.mb-list{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+.mb-tools{display:flex;gap:6px;padding:8px;border-bottom:1px solid var(--line)}.mb-tools input{flex:1;min-width:0}
+.mb-qnote{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 10px;font-size:12.5px;background:var(--accent-soft)}
+.mb-rows{flex:1;overflow:auto}
+.mrow{display:flex!important;flex-direction:column;align-items:stretch!important;gap:2px;width:100%;text-align:left;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:9px 12px!important;color:var(--ink)!important;min-height:0!important;font-weight:400!important}
+.mrow:hover{background:var(--surface-2)!important}.mrow.on{background:var(--accent-soft)!important}
+.mrow.unread{border-left:3px solid var(--accent)!important}.mrow.unread .mr-top b,.mrow.unread .mr-s{font-weight:700}
+.mr-top{display:flex;justify-content:space-between;gap:8px;font-size:13px}.mr-top b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mr-top time{color:var(--muted);font-size:11.5px;flex:none}
+.mr-s{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mr-sum{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow .jchip{align-self:flex-start;margin-top:3px}
+.mb-read{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:auto}
+.mb-empty{margin:auto;text-align:center;line-height:1.6}
+.mb-rh{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.mb-rh h3{margin:0;font-size:16px}.mb-meta{font-size:13px}.mb-acts,.mb-att{display:flex;flex-wrap:wrap;gap:6px}
+.mb-back{display:none!important;align-self:flex-start}
+.mb-body{flex:1;min-height:320px;width:100%;border:0;background:#fff}
+.mcomp{display:flex;flex-direction:column;gap:8px;padding:12px 14px}
+.mcomp label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}.mcomp label input,.mcomp label select{font-size:14px;color:var(--ink)}
+.mcomp textarea{min-height:180px;font:inherit;font-size:14px}
+.mc-q pre{white-space:pre-wrap;font:12.5px/1.4 inherit;color:var(--muted);max-height:200px;overflow:auto;margin:6px 0 0}
+.mc-files{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.mc-files .jchip button{border:0;background:none;padding:0 2px;cursor:pointer}
+.mc-add{display:inline-flex!important;align-items:center;cursor:pointer;color:var(--accent)!important;font-size:12.5px!important;flex-direction:row!important}
+.mc-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+@media (max-width:900px){
+  .mailbox{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);height:calc(100vh - 120px)}
+  .mailbox.open{grid-template-rows:minmax(0,1fr)}
+  .mb-side{flex-direction:row;flex-wrap:nowrap;align-items:center;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:6px}
+  .mb-side>*{flex:none}.mb-side .primary{white-space:nowrap;min-height:34px!important;padding:4px 12px!important}
+  .mb-side .primary{margin:0}.mb-side small{display:none}.mb-f{white-space:nowrap}
+  .mailbox .mb-read{display:none}.mailbox.open .mb-read{display:flex}.mailbox.open .mb-list,.mailbox.open .mb-side{display:none}
+  .mb-back{display:inline-flex!important}
+}
 /* báo cáo tháng */
 .rp{display:flex;flex-direction:column;gap:14px;padding:14px}
 .rp-h{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}.rp-h .fld{min-width:170px}.rp-h .muted{font-size:12.5px;color:var(--muted)}
@@ -1078,7 +1118,7 @@ table.q td input{min-height:36px!important;font-size:14px!important}
       <div class="tabs" role="tablist">
         <button data-view="today"><i class="fa fa-sun-o ic-fa" aria-hidden="true"></i>Hôm nay<span class="cbadge" id="todayN" hidden></span></button><button data-view="team" hidden><i class="fa fa-comments ic-fa" aria-hidden="true"></i>Chat chung<span class="tbadge" id="teamBadge" hidden></span></button>
         <button data-view="board"><i class="fa fa-columns ic-fa" aria-hidden="true"></i>Quy trình</button>
-        <button data-view="list" class="on"><i class="fa fa-list ic-fa" aria-hidden="true"></i>Danh sách</button><button data-view="report" hidden><i class="fa fa-bar-chart ic-fa" aria-hidden="true"></i>Báo cáo</button>
+        <button data-view="list" class="on"><i class="fa fa-list ic-fa" aria-hidden="true"></i>Danh sách</button><button data-view="mail" hidden><i class="fa fa-envelope ic-fa" aria-hidden="true"></i>Email<span class="tbadge" id="mailBadge" hidden></span></button><button data-view="report" hidden><i class="fa fa-bar-chart ic-fa" aria-hidden="true"></i>Báo cáo</button>
       </div>
       <span class="sp"></span>
       <button type="button" id="fMine" class="sm fmine" aria-pressed="false" title="Chỉ hiện job mình phụ trách" hidden>👤 Việc của tôi</button><select id="fWho" class="fwho" aria-label="Lọc theo người phụ trách" hidden></select>
@@ -1594,7 +1634,7 @@ addEventListener("resize",closeKmenu);
 document.addEventListener("scroll",closeKmenu,true);
 function renderMain(){
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===S.view));
-  document.body.classList.toggle("view-board",S.view==="board");document.body.classList.toggle("view-report",S.view==="report"||S.view==="today");if(S.view!=="board")closeKmenu();
+  document.body.classList.toggle("view-board",S.view==="board");document.body.classList.toggle("view-report",S.view==="report"||S.view==="today"||S.view==="mail");if(S.view!=="board")closeKmenu();
   $("#fStatus").hidden=S.view!=="list";
   renderProfile();
   const el=$("#content");
@@ -1607,7 +1647,10 @@ function renderMain(){
   {const rb=document.querySelector('.tabs [data-view="report"]');if(rb)rb.hidden=!boss()}
   if(S.view==="report"&&!boss())S.view="list";
   fMinePaint();try{bulkBar()}catch(e){}
+  {const mb=document.querySelector('.tabs [data-view="mail"]');if(mb)mb.hidden=!mailOn()}
+  if(S.view==="mail"&&!mailOn())S.view="list";
   if(S.view==="team"){renderTeam(el);return}
+  if(S.view==="mail"){renderMail(el);return}
   if(S.view==="report"){renderReport(el);return}
   if(S.view==="today"){renderToday(el);return}
   if(S.view==="tpl"){
@@ -2074,6 +2117,7 @@ D.addEventListener("click",e=>{
   if(a==="remind"){remAdd(j);return}
   if(a==="remDel"){remDel(j,b.dataset.rid);return}
   if(a==="aiChatSum"){aiChatSum(cur());return}
+  if(a==="mailJob"){mailForJob(cur());return}
   if(a==="stpop"){const p=D.querySelector("#stpop");if(p){p.hidden=!p.hidden;b.setAttribute("aria-expanded",String(!p.hidden));if(!p.hidden)p.querySelector(".stp-next,.stages button.now")?.focus()}return}
   if(!j)return;
   if(a==="tdel"){j.tasks.splice(+b.dataset.i,1);queueSave(j);renderAll(true)}
@@ -2429,7 +2473,7 @@ function dlRow(j){const k=dayDiff(j.deadline),open=isOpen(j.status);
   return `<div class="sec dlrow"><label for="f-deadline">⏰ Thời hạn xử lý</label><input id="f-deadline" data-f="deadline" type="date" value="${esc(j.deadline||"")}">${tag}</div>`}
 function chatSec(j){
   chatWatch(j);
-  return `<div class="sec"><h3><span>Trao đổi <span class="mono">${(S.chat[j.id]||[]).length||""}</span></span>${(S.chat[j.id]||[]).length>=3?`<button class="ghost sm ai" data-act="aiChatSum" title="AI tóm tắt khung trao đổi: lô đang vướng gì, ai đang làm, việc tiếp theo">✦ Tóm tắt</button>`:""}</h3>
+  return `<div class="sec"><h3><span>Trao đổi <span class="mono">${(S.chat[j.id]||[]).length||""}</span></span>${mailOn()&&!(boss()&&isMine(j))?`<button class="ghost sm" data-act="mailJob" title="Email của job này (tìm theo mã job) và soạn thư mới có mã job trong tiêu đề">✉ Email</button>`:""}${(S.chat[j.id]||[]).length>=3?`<button class="ghost sm ai" data-act="aiChatSum" title="AI tóm tắt khung trao đổi: lô đang vướng gì, ai đang làm, việc tiếp theo">✦ Tóm tắt</button>`:""}</h3>
     <div class="chat" id="chatList">${chatMsgs(j.id)}</div>
     <div class="chatin"><textarea id="chatTxt" rows="1" placeholder="Nhắn cho nhóm…" title="Enter để gửi, Shift+Enter để xuống dòng">${esc(S.chatDraft[j.id]||"")}</textarea><button class="primary" data-act="chatSend">${ic("send")}Gửi</button></div></div>`;
 }
@@ -2498,7 +2542,7 @@ async function openJobAny(id){
 }
 let urlJobDone=false;
 function openFromUrl(){
-  if(urlJobDone)return;{const vw=new URLSearchParams(location.search).get("view");if(vw==="today"){urlJobDone=true;S.view0=true;S.view="today";try{history.replaceState(null,"",location.pathname)}catch(e){}setTimeout(renderMain,0);return}}if(new URLSearchParams(location.search).get("view")==="team"){urlJobDone=true;S.view0=true;S.view="team";try{history.replaceState(null,"",location.pathname)}catch(e){}setTimeout(renderMain,0);return}const id=new URLSearchParams(location.search).get("job");if(!id){urlJobDone=true;return}
+  if(urlJobDone)return;{const vw=new URLSearchParams(location.search).get("view");if(vw==="today"){urlJobDone=true;S.view0=true;S.view="today";try{history.replaceState(null,"",location.pathname)}catch(e){}setTimeout(renderMain,0);return}}if(new URLSearchParams(location.search).get("view")==="mail"){urlJobDone=true;S.view0=true;S.view="mail";try{history.replaceState(null,"",location.pathname)}catch(e){}setTimeout(renderMain,0);return}if(new URLSearchParams(location.search).get("view")==="team"){urlJobDone=true;S.view0=true;S.view="team";try{history.replaceState(null,"",location.pathname)}catch(e){}setTimeout(renderMain,0);return}const id=new URLSearchParams(location.search).get("job");if(!id){urlJobDone=true;return}
   if(!S.all.some(x=>x.id===id))return;urlJobDone=true;
   try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}
   setTimeout(()=>openJobAny(id),0)}
@@ -2921,6 +2965,142 @@ function seenRow(sm,m,last){
 }
 document.addEventListener("click",e=>{const r=e.target.closest(".chat .seen[data-seen]");if(r)toast("👁 Đã xem\n"+r.dataset.seen)});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&cur()&&$("#chatList"))chatMarkSeen(cur())});
+/* ---------- Email: hộp thư chung giaonhan@opsdad.net (Zoho Mail qua máy chủ Sổ) ---------- */
+const MAIL_ADDR="giaonhan@opsdad.net";
+const MAIL_FOLDERS=[["inbox","Hộp thư đến","fa-inbox"],["sent","Đã gửi","fa-paper-plane-o"],["archive","Lưu trữ","fa-archive"],["spam","Thư rác","fa-ban"],["trash","Thùng rác","fa-trash-o"]];
+S.mail={folder:"inbox",list:null,q:"",sel:null,msg:null,err:"",busy:false,compose:null,job:null,unread:0};
+const mailOn=()=>team()&&!!PUSH_URL&&SPACE!=="mine";
+async function mailCall(op,x){
+  if(window.SOJOB_MAILMOCK)return window.SOJOB_MAILMOCK(op,x||{});
+  const u=window.firebase&&firebase.auth().currentUser;if(!u)return {ok:false,msg:"Chưa đăng nhập."};
+  const token=await u.getIdToken();
+  const r=await fetch(PUSH_URL,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify({mail:Object.assign({op},x||{}),token})});
+  return r.json();
+}
+const mailJobOf=s=>{const c=(String(s||"").match(/FDI\d{6}-\d+/i)||[])[0];if(!c)return null;return S.all.find(j=>String(j.code||"").toUpperCase()===c.toUpperCase()&&!(boss()&&isMine(j)))||null};
+const mailWho=a=>{a=String(a||"");const m=a.match(/^\s*"?([^"<]+?)"?\s*<([^>]+)>/);return m?m[1]:a.replace(/<|>/g,"")};
+const mailTime=t=>{if(!t)return "";const d=new Date(t),n=new Date();return d.toDateString()===n.toDateString()?d.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"}):d.toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"})+(d.getFullYear()!==n.getFullYear()?"/"+d.getFullYear():"")};
+function mailBadge(){const b=$("#mailBadge");if(!b)return;const n=S.mail.unread||0;b.hidden=!n;b.textContent=n>99?"99+":n}
+async function mailLoad(quiet){
+  if(S.mail.busy)return;S.mail.busy=true;if(!quiet){S.mail.err="";mailPaint()}
+  try{const o=await mailCall("list",{folder:S.mail.folder,q:S.mail.q,limit:50});
+    if(!o.ok){S.mail.err=o.msg||"Chưa tải được thư";}else{S.mail.list=o.list||[];S.mail.err="";if(S.mail.folder==="inbox"&&!S.mail.q)S.mail.unread=S.mail.list.filter(m=>!m.read).length;mailBadge()}}
+  catch(e){S.mail.err="Không kết nối được máy chủ thư."}
+  S.mail.busy=false;mailPaint();
+}
+let mailTimer=null;
+function renderMail(el){
+  if(el.dataset.v!=="mail"||!$("#mbList")){
+    el.dataset.v="mail";
+    el.innerHTML=`<div class="mailbox" id="mailbox"><div class="mb-side" id="mbSide"></div><div class="mb-list"><div class="mb-tools"><input id="mbQ" type="search" placeholder="Tìm thư: mã job, công ty, người gửi…" value="${esc(S.mail.q)}"><button class="ghost sm" data-mail="reload" title="Tải lại">⟳</button></div><div id="mbList" class="mb-rows"></div></div><div class="mb-read" id="mbRead"></div></div>`;
+    $("#mbQ").addEventListener("keydown",e=>{if(e.key==="Enter"){S.mail.q=e.target.value.trim();S.mail.sel=null;S.mail.msg=null;S.mail.list=null;mailLoad()}});
+    $("#mbQ").addEventListener("search",e=>{if(!e.target.value&&S.mail.q){S.mail.q="";S.mail.list=null;mailLoad()}});
+  }
+  mailPaint();
+  if(!S.mail.list&&!S.mail.busy)mailLoad();
+  clearInterval(mailTimer);mailTimer=setInterval(()=>{if(S.view==="mail"&&!document.hidden&&!S.mail.compose)mailLoad(true);else if(S.view!=="mail")clearInterval(mailTimer)},60000);
+}
+function mailPaint(){
+  const side=$("#mbSide"),L=$("#mbList"),R=$("#mbRead"),box=$("#mailbox");if(!L)return;
+  box.classList.toggle("open",!!(S.mail.sel||S.mail.compose));
+  {const q=$("#mbQ");if(q&&document.activeElement!==q)q.value=S.mail.q}
+  side.innerHTML=`<button class="primary" data-mail="new">✏ Soạn thư</button>`+MAIL_FOLDERS.map(([k,n,i])=>`<button class="mb-f${S.mail.folder===k&&!S.mail.q?" on":""}" data-mfold="${k}"><i class="fa ${i}"></i>${n}${k==="inbox"&&S.mail.unread?`<b>${S.mail.unread}</b>`:""}</button>`).join("")+`<small class="muted">${MAIL_ADDR}<br>Cả nhóm dùng chung hộp thư này.</small>`;
+  const ms=S.mail.list;
+  L.innerHTML=(S.mail.q?`<div class="mb-qnote">Kết quả tìm “${esc(S.mail.q)}” <button class="ghost sm" data-mail="clearq">✕ Bỏ tìm</button></div>`:"")+
+    (S.mail.err?`<div class="none">${esc(S.mail.err)}</div>`:!ms?`<div class="none"><span class="spin"></span> Đang tải thư…</div>`:!ms.length?`<div class="none">Không có thư nào.</div>`:
+    ms.map(m=>{const j=mailJobOf(m.s),who=S.mail.folder==="sent"?"Tới: "+mailWho(m.to):(m.fromN||m.from);
+      return `<button class="mrow${m.read?"":" unread"}${S.mail.sel===m.id?" on":""}" data-mid="${esc(m.id)}" data-mf="${esc(m.f)}"><span class="mr-top"><b>${esc(who)}</b><time>${mailTime(m.t)}</time></span><span class="mr-s">${m.att?"📎 ":""}${esc(m.s)}</span><span class="mr-sum">${esc(m.sum)}</span>${j?`<span class="jchip" data-mjob="${esc(j.id)}">📁 ${esc(j.code)}</span>`:""}</button>`}).join(""));
+  if(S.mail.compose)R.innerHTML=mailComposeHtml();
+  else if(!S.mail.sel)R.innerHTML=`<div class="none mb-empty">Chọn một thư để đọc.<br>Thư có mã job (FDI…) trong tiêu đề sẽ hiện nút 📁 mở job.</div>`;
+  else{const m=S.mail.msg;if(!m||m.id!==S.mail.sel){R.innerHTML=`<div class="none"><span class="spin"></span> Đang mở thư…</div>`}
+    else if(m.err)R.innerHTML=`<div class="mb-rh"><button class="ghost sm mb-back" data-mail="back">← Thư</button></div><div class="none">${esc(m.err)}</div>`;
+    else if(!R.querySelector(`[data-rid="${CSS.escape(m.id)}"]`)){const j=mailJobOf(m.s);
+      R.innerHTML=`<div class="mb-rh" data-rid="${esc(m.id)}"><button class="ghost sm mb-back" data-mail="back">← Thư</button><h3>${esc(m.s||"(không tiêu đề)")}</h3>
+        <div class="mb-meta"><b>${esc(m.fromN||m.from)}</b> <span class="muted">&lt;${esc(m.from)}&gt; · ${m.t?new Date(m.t).toLocaleString("vi-VN"):""}</span><br><span class="muted">Tới: ${esc(m.to)}${m.cc&&m.cc!=="Not Provided"?" · Cc: "+esc(m.cc):""}</span></div>
+        <div class="mb-acts"><button class="ghost sm" data-mail="reply">↩ Trả lời</button><button class="ghost sm" data-mail="replyall">↩↩ Trả lời tất cả</button><button class="ghost sm" data-mail="forward">↪ Chuyển tiếp</button>${j?`<button class="ghost sm" data-mjob="${esc(j.id)}">📁 Mở ${esc(j.code)}</button>`:""}</div>
+        ${m.att&&m.att.length?`<div class="mb-att">${m.att.map(a=>`<button class="ghost sm" data-matt="${esc(a.id)}" data-mname="${esc(a.n)}">📎 ${esc(a.n)} <span class="muted">${a.sz?Math.max(1,Math.round(a.sz/1024))+" KB":""}</span></button>`).join("")}</div>`:""}</div>
+        <iframe class="mb-body" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" title="Nội dung thư"></iframe>`;
+      R.querySelector("iframe").srcdoc=`<!doctype html><meta charset="utf-8"><base target="_blank"><style>body{font:14px/1.5 system-ui,Segoe UI,Arial,sans-serif;color:#222;margin:12px;word-wrap:break-word}img{max-width:100%;height:auto}blockquote{border-left:3px solid #ccc;margin:6px 0;padding-left:10px;color:#555}</style>`+(m.html||"<p>(Thư trống)</p>");
+    }}
+}
+async function mailOpen(id,f){
+  S.mail.sel=id;S.mail.compose=null;S.mail.msg=null;mailPaint();
+  const it=(S.mail.list||[]).find(x=>x.id===id);
+  try{const o=await mailCall("read",{id,f});if(S.mail.sel!==id)return;
+    S.mail.msg=o.ok?Object.assign({id,f},o):{id,err:o.msg||"Không mở được thư"};
+    if(o.ok&&it&&!it.read){it.read=true;if(S.mail.folder==="inbox"){S.mail.unread=Math.max(0,(S.mail.unread||0)-1);mailBadge()}}}
+  catch(e){S.mail.msg={id,err:"Không kết nối được máy chủ thư."}}
+  mailPaint();
+}
+const mailText=h=>{const d=document.createElement("div");d.innerHTML=String(h||"").replace(/<(script|style)[\s\S]*?<\/\1>/gi,"").replace(/<br\s*\/?>/gi,"\n").replace(/<\/(p|div|tr|li)>/gi,"\n");return (d.textContent||"").replace(/\n{3,}/g,"\n\n").trim()};
+function mailCompose(kind){
+  const m=S.mail.msg,j=S.mail.job&&S.all.find(x=>x.id===S.mail.job);
+  if(!kind||!m){S.mail.compose={to:"",cc:"",s:j?`${j.code} - ${j.company||j.title||""}`:"",body:"",job:j?j.id:"",files:[]}}
+  else{const me=MAIL_ADDR.toLowerCase(),split=x=>String(x||"").split(/[,;]/).map(a=>a.trim()).filter(a=>a&&a!=="Not Provided"&&!a.toLowerCase().includes(me));
+    const pre=kind==="forward"?"Fwd: ":"Re: ",sub=/^(re|fwd?):/i.test(m.s||"")&&kind!=="forward"?m.s:pre+(m.s||"");
+    const jj=mailJobOf(m.s);
+    S.mail.compose={kind,reply:m.id,f:m.f,to:kind==="forward"?"":kind==="replyall"?[m.from].concat(split(m.to)).join(", "):m.from,cc:kind==="replyall"?split(m.cc).join(", "):"",s:sub,
+      body:"",quote:`Vào ${m.t?new Date(m.t).toLocaleString("vi-VN"):""}, ${m.fromN||m.from} đã viết:\n`+mailText(m.html).slice(0,4000),job:jj?jj.id:"",files:[]}}
+  mailPaint();setTimeout(()=>{const f=$(S.mail.compose.to?"#mcBody":"#mcTo");f&&f.focus()},0);
+}
+function mailComposeHtml(){
+  const c=S.mail.compose,jobs=S.all.filter(j=>j.shared&&isOpen(j.status)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,80);
+  return `<div class="mb-rh"><button class="ghost sm mb-back" data-mail="cancel">← Thư</button><h3>${c.kind==="forward"?"Chuyển tiếp":c.kind?"Trả lời":"Thư mới"}</h3></div>
+  <div class="mcomp"><label>Tới<input id="mcTo" value="${esc(c.to)}" placeholder="email người nhận, cách nhau dấu phẩy" autocomplete="email"></label>
+  <label>Cc<input id="mcCc" value="${esc(c.cc)}" placeholder="(không bắt buộc)"></label>
+  <label>Tiêu đề<input id="mcS" value="${esc(c.s)}"></label>
+  <label>Gắn job<select id="mcJob"><option value="">(không gắn)</option>${jobs.map(j=>`<option value="${esc(j.id)}"${c.job===j.id?" selected":""}>${esc(j.code)} · ${esc(String(j.company||j.title||"").slice(0,40))}</option>`).join("")}</select></label>
+  <textarea id="mcBody" rows="10" placeholder="Nội dung thư…">${esc(c.body)}</textarea>
+  ${c.quote?`<details class="mc-q"><summary>Thư gốc (sẽ trích dẫn bên dưới)</summary><pre>${esc(c.quote)}</pre></details>`:""}
+  <div class="mc-files">${(c.files||[]).map((f,i)=>`<span class="jchip">📎 ${esc(f.n)} <button data-mcrm="${i}" aria-label="Bỏ tệp">✕</button></span>`).join("")}<label class="ghost sm mc-add">📎 Đính kèm<input type="file" id="mcFile" multiple hidden></label></div>
+  <div class="mc-foot"><span class="muted">Gửi từ ${MAIL_ADDR} · ký tên ${esc(window.SOJOB_USER||me())}</span><button class="primary" data-mail="send" id="mcSend">${ic("send")}Gửi</button></div></div>`;
+}
+function mailKeep(){const c=S.mail.compose;if(!c)return;const g=id=>{const e=$(id);return e?e.value:undefined};
+  ["to","cc","s","body"].forEach((k,i)=>{const v=g(["#mcTo","#mcCc","#mcS","#mcBody"][i]);if(v!==undefined)c[k]=v});const jv=g("#mcJob");if(jv!==undefined)c.job=jv}
+async function mailSend(){
+  mailKeep();const c=S.mail.compose;if(!c)return;
+  if(!c.to.trim())return toast("Nhập email người nhận.");
+  if(!/\S+@\S+\.\S+/.test(c.to))return toast("Email người nhận chưa đúng.");
+  const html=esc(c.body).replace(/\n/g,"<br>")+(c.quote?`<br><br><blockquote>${esc(c.quote).replace(/\n/g,"<br>")}</blockquote>`:"");
+  const b=$("#mcSend");if(b){b.disabled=true;b.textContent="Đang gửi…"}
+  try{const o=await mailCall("send",{to:c.to,cc:c.cc,s:c.s,html,files:c.files,job:c.job,byName:window.SOJOB_USER||"",reply:!!c.reply,id:c.reply,action:c.kind==="forward"?"forward":"reply"});
+    if(!o.ok){toast("Chưa gửi được: "+(o.msg||"lỗi"));if(b){b.disabled=false;b.innerHTML=ic("send")+"Gửi"}return}
+    toast(c.job?"Đã gửi thư, đã ghi vào Trao đổi của job.":"Đã gửi thư.");S.mail.compose=null;if(S.mail.folder==="sent")S.mail.list=null;mailPaint();if(S.mail.folder==="sent")mailLoad()}
+  catch(e){toast("Không kết nối được máy chủ thư.");if(b){b.disabled=false;b.innerHTML=ic("send")+"Gửi"}}
+}
+function mailForJob(j){if(!j)return;S.mail.job=j.id;S.mail.q=j.code||"";S.mail.list=null;S.mail.sel=null;S.mail.msg=null;S.mail.compose=null;S.view="mail";renderMain()}
+async function mailAtt(btn){
+  const m=S.mail.msg;if(!m)return;btn.disabled=true;
+  try{const o=await mailCall("att",{id:m.id,f:m.f,aid:btn.dataset.matt});
+    if(!o.ok){toast(o.msg||"Không tải được tệp");return}
+    const bin=atob(o.b64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([u8],{type:o.type}));a.download=btn.dataset.mname||"tep";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}
+  catch(e){toast("Không tải được tệp.")}finally{btn.disabled=false}
+}
+document.addEventListener("click",e=>{
+  if(!e.target.closest("#mailbox"))return;
+  const jb=e.target.closest("[data-mjob]");if(jb){e.preventDefault();e.stopPropagation();openJobAny(jb.dataset.mjob);return}
+  const r=e.target.closest(".mrow");if(r){mailOpen(r.dataset.mid,r.dataset.mf);return}
+  const f=e.target.closest("[data-mfold]");if(f){S.mail.folder=f.dataset.mfold;S.mail.q="";S.mail.job=null;const q=$("#mbQ");if(q)q.value="";S.mail.list=null;S.mail.sel=null;S.mail.msg=null;S.mail.compose=null;mailLoad();return}
+  const at=e.target.closest("[data-matt]");if(at){mailAtt(at);return}
+  const rm=e.target.closest("[data-mcrm]");if(rm){mailKeep();S.mail.compose.files.splice(+rm.dataset.mcrm,1);mailPaint();return}
+  const b=e.target.closest("[data-mail]");if(!b)return;const k=b.dataset.mail;
+  if(k==="reload"){S.mail.list=null;mailLoad();return}
+  if(k==="clearq"){S.mail.q="";S.mail.job=null;const q=$("#mbQ");if(q)q.value="";S.mail.list=null;mailLoad();return}
+  if(k==="new"){mailCompose();return}
+  if(k==="reply"||k==="replyall"||k==="forward"){mailCompose(k);return}
+  if(k==="back"){S.mail.sel=null;S.mail.msg=null;mailPaint();return}
+  if(k==="cancel"){if(S.mail.compose&&(($("#mcBody")||{}).value||"").trim()&&!confirm("Bỏ thư đang soạn?"))return;S.mail.compose=null;mailPaint();return}
+  if(k==="send"){mailSend();return}
+});
+document.addEventListener("change",async e=>{
+  if(e.target.id!=="mcFile")return;mailKeep();const c=S.mail.compose;if(!c)return;
+  let tot=(c.files||[]).reduce((a,f)=>a+f.sz,0);
+  for(const f of e.target.files){if(tot+f.size>12e6){toast("Tổng tệp đính kèm tối đa khoảng 12 MB.");break}
+    const b64=await new Promise(res=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]||"");r.readAsDataURL(f)});
+    c.files.push({n:f.name,b64,sz:f.size});tot+=f.size}
+  mailPaint();
+});
 /* ---------- Chat chung: cả nhóm trao đổi, gắn job bấm được ---------- */
 const TEAM_PAGE=200;
 let teamSub=null,teamN=TEAM_PAGE,teamPopFrom=Date.now(),teamMuteOn=false;
@@ -3152,7 +3332,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-25d";
+const APP_VER="2026-11-25e";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
