@@ -505,13 +505,13 @@ function thuMoi() {
     jobs = jobs || docHet("jobs").filter(function (x) { return x.shared && x.status !== "Hoàn thành" && x.status !== "Thất bại"; });
     var code = (String(m.s).match(/FDI\d{6}-\d+/i) || [])[0];
     var j = code ? jobs.filter(function (x) { return String(x.code || "").toUpperCase() === code.toUpperCase(); })[0] : null;
-    if (j) { ghiTraoDoi(j, "✉ Email mới từ " + (m.fromN || m.from) + ": " + m.s); guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · " + j.code, m.s, { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "mail"); kq.push(m.s + " → " + j.code); return; }
+    if (j) { ganThu(m, j); ghiTraoDoi(j, "✉ Email mới từ " + (m.fromN || m.from) + ": " + m.s); guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · " + j.code, m.s, { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "mail"); kq.push(m.s + " → " + j.code); return; }
     var o = null; try { o = thuDocAI(m, A, jobs); } catch (e) { Logger.log("AI lỗi: " + e); }
     if (o && o.loai === "cu") {
       var mc = String(o.maJob || "").toUpperCase();
       j = jobs.filter(function (x) { return String(x.code || "").toUpperCase() === mc; })[0];
       if (!j && o.bl) j = jobs.filter(function (x) { return x.bl && String(x.bl).replace(/\W/g, "").toUpperCase() === String(o.bl).replace(/\W/g, "").toUpperCase(); })[0];
-      if (j) { ghiTraoDoi(j, "✉ Email từ " + (m.fromN || m.from) + ": " + m.s + (o.tomTat ? "\n" + o.tomTat : "")); guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · " + j.code, m.s, { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "mail"); kq.push(m.s + " → " + j.code + " (AI)"); return; }
+      if (j) { ganThu(m, j); ghiTraoDoi(j, "✉ Email từ " + (m.fromN || m.from) + ": " + m.s + (o.tomTat ? "\n" + o.tomTat : "")); guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · " + j.code, m.s, { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "mail"); kq.push(m.s + " → " + j.code + " (AI)"); return; }
     }
     if (o && o.loai === "moi") {
       var doc = { at: Date.now(), status: "cho", mid: m.id, f: m.f, from: m.from, fromN: m.fromN || "", s: m.s, t: m.t,
@@ -525,6 +525,12 @@ function thuMoi() {
     kq.push(m.s + " → " + (o ? o.loai : "AI không đọc được"));
   });
   Logger.log("thuMoi: " + kq.join(" | "));
+}
+/* Ghi thư nào thuộc job nào (mailjobs, status "gan") để tab Email trong app hiện mã job, bấm mở job */
+function ganThu(m, j) {
+  var doc = { at: Date.now(), status: "gan", mid: m.id, f: m.f, from: m.from, fromN: m.fromN || "", s: m.s, t: m.t, jobId: j._id, code: j.code || "" };
+  var f = {}; for (var k in doc) f[k] = veFs(doc[k]);
+  try { goi(FS + "/mailjobs?documentId=" + encodeURIComponent("m" + m.id), { method: "post", payload: { fields: f } }); } catch (e) { Logger.log("ganThu: " + e); }
 }
 /* Gọi Gemini (dùng chung cho app và máy chủ): Lite trước vì nhanh, ít quá tải; lỗi thì thử bản Flash */
 function aiChay(ai) {
