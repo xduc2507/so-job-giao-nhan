@@ -746,3 +746,5 @@ function zaloCaiWebhook() {
   var r = zbGoi("setWebhook", { url: url + "?zb=" + s, secret_token: s });
   Logger.log("setWebhook " + r.code + ": " + JSON.stringify(r.json).replace(s, "***"));
 }
+/* Chạy tay: xem trạng thái webhook Zalo (ẩn mã bí mật) */
+function zaloKiemTra() { var s = PropertiesService.getScriptProperties().getProperty("ZB_SECRET") || "~"; Logger.log(JSON.stringify(zbGoi("getWebhookInfo").json).split(s).join("***")); }
