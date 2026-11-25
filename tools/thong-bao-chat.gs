@@ -16,10 +16,10 @@ function doPost(e) {
   var out = { ok: false }, body = null;
   try {
     body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
-    out = body.ai ? goiAI(body.ai, body.token) : body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
+    out = body.ai ? goiAI(body.ai, body.token) : body.test ? thuMayToi(body.token) : body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
   } catch (err) { out = { ok: false, msg: String(err) }; }
   console.log(JSON.stringify(out));
-  if (body && body.ai) return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON); // không ghi nhật ký nội dung AI
+  if (body && (body.ai || body.test)) return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON); // không ghi nhật ký nội dung AI / thử
   try { var P = PropertiesService.getScriptProperties(), L = JSON.parse(P.getProperty("log") || "[]"); L.unshift({ t: new Date().toISOString(), job: (body && body.job) || (body && body.team ? "team" : ""), out: out }); P.setProperty("log", JSON.stringify(L.slice(0, 10))); } catch (x) {}
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -58,7 +58,6 @@ function guiThongBao(jobId) {
   if (!job) return { ok: false, msg: "Không đọc được job" };
   var createdBy = String(job.createdBy || "").toLowerCase();
   if (!job.shared && (!createdBy || createdBy === owner)) return { ok: true, sent: 0, msg: "Việc riêng: không gửi" };
-
   // tin nhắn mới nhất
   var q = goi(FS + "/jobs/" + jobId + ":runQuery", { method: "post", payload: { structuredQuery: {
     from: [{ collectionId: "chat" }], orderBy: [{ field: { fieldPath: "at" }, direction: "DESCENDING" }], limit: 1 } } });
@@ -69,41 +68,20 @@ function guiThongBao(jobId) {
   var props = PropertiesService.getScriptProperties(), key = "last_" + jobId;
   if (Number(props.getProperty(key) || 0) >= msg.at) return { ok: true, sent: 0, msg: "Đã gửi" };
   props.setProperty(key, String(msg.at));
-
-  // người nhận
+  // người nhận: chủ sổ + (job chung: mọi thành viên; không chung: người tạo), trừ người gửi
   var nguoi = [owner];
-  if (job.shared) {
-    var m = goi(FS + "/members?pageSize=200");
-    ((m.json && m.json.documents) || []).forEach(function (d) { nguoi.push(decodeURIComponent(d.name.split("/").pop()).toLowerCase()); });
-  } else if (createdBy) nguoi.push(createdBy);
-  var tat = (job.mute || []).map(function (x) { return String(x).toLowerCase(); });
+  if (job.shared) nguoi = nguoi.concat(thanhVien()); else if (createdBy) nguoi.push(createdBy);
   nguoi = nguoi.filter(function (x, i, a) { return x && a.indexOf(x) === i && x !== msg.by; });
-
   var title = "💬 " + (msg.byName || msg.by) + " · " + (job.code || "");
   var titleTag = "🔔 " + (msg.byName || msg.by) + " nhắc đến bạn · " + (job.code || "");
   var body = (job.title ? String(job.title).slice(0, 60) + "\n" : "") + String(msg.text).slice(0, 160);
   var sent = 0, loi = [], det = [];
   nguoi.forEach(function (mail) {
-    var p = docFs("push/" + mail);
-    var toks = (p && p.tokens) || [], bad = [];
-    det.push(mail.slice(0, 3) + "…:" + toks.length);
-    toks.forEach(function (t) {
-      var r = goi("https://fcm.googleapis.com/v1/projects/" + PID + "/messages:send", { method: "post", payload: { message: {
-        token: t,
-        data: { job: jobId },
-        webpush: {
-          notification: { title: duocTag(msg, mail) ? titleTag : title, body: body, icon: APP + "icon-192.png", badge: APP + "icon-192.png", tag: "job-" + jobId, renotify: true },
-          fcm_options: { link: APP + "?job=" + encodeURIComponent(jobId) }
-        } } } });
-      if (r.code === 200) sent++;
-      else { loi.push(r.code); if (r.code === 404 || r.code === 400) bad.push(t); } // mã máy hết hạn / gỡ app
-    });
-    if (bad.length) goi(FS + "/push/" + encodeURIComponent(mail) + "?updateMask.fieldPaths=tokens", { method: "patch", payload: { fields: { tokens: { arrayValue: { values:
-      toks.filter(function (t) { return bad.indexOf(t) < 0; }).map(function (t) { return { stringValue: t }; }) } } } } });
+    var r = guiMay(mail, { title: duocTag(msg, mail) ? titleTag : title, body: body, data: { job: jobId }, link: APP + "?job=" + encodeURIComponent(jobId), tag: "job-" + jobId });
+    sent += r.sent; loi = loi.concat(r.loi); det.push(mail.slice(0, 3) + "…:" + r.may + (r.xoa ? "(-" + r.xoa + ")" : ""));
   });
   return { ok: true, sent: sent, to: nguoi.length, loi: loi, det: det };
 }
-
 /** Chạy thử bằng tay trong trình soạn Apps Script để cấp quyền lần đầu. */
 function thu() { Logger.log(Session.getEffectiveUser().getEmail()); Logger.log(JSON.stringify(goi(FS + "/members?pageSize=1").code)); }
 
@@ -136,26 +114,15 @@ function guiChatChung() {
   var props = PropertiesService.getScriptProperties();
   if (Number(props.getProperty("last_team") || 0) >= msg.at) return { ok: true, sent: 0, msg: "Đã gửi" };
   props.setProperty("last_team", String(msg.at));
-  var nguoi = [owner];
-  var m = goi(FS + "/members?pageSize=200");
-  ((m.json && m.json.documents) || []).forEach(function (d) { nguoi.push(decodeURIComponent(d.name.split("/").pop()).toLowerCase()); });
-  nguoi = nguoi.filter(function (x, i, a) { return x && a.indexOf(x) === i && x !== msg.by; });
+  var nguoi = [owner].concat(thanhVien()).filter(function (x, i, a) { return x && a.indexOf(x) === i && x !== msg.by; });
   var sent = 0, loi = [], det = [];
   nguoi.forEach(function (mail) {
-    var p = docFs("push/" + mail);
-    det.push(mail.slice(0, 3) + "…:" + ((p && p.tokens) || []).length);
-    if (!p) return;
-    (p.tokens || []).forEach(function (t) {
-      var r = goi("https://fcm.googleapis.com/v1/projects/" + PID + "/messages:send", { method: "post", payload: { message: { token: t,
-        data: { view: "team" },
-        webpush: { notification: { title: (duocTag(msg, mail) ? "🔔 " + (msg.byName || msg.by) + " nhắc đến bạn" : "💬 " + (msg.byName || msg.by)) + " · Chat chung", body: String(msg.text).slice(0, 200), icon: APP + "icon-192.png", badge: APP + "icon-192.png", tag: "teamchat", renotify: true },
-          fcm_options: { link: APP + "?view=team" } } } } });
-      if (r.code === 200) sent++; else loi.push(r.code);
-    });
+    var r = guiMay(mail, { title: (duocTag(msg, mail) ? "🔔 " + (msg.byName || msg.by) + " nhắc đến bạn" : "💬 " + (msg.byName || msg.by)) + " · Chat chung",
+      body: String(msg.text).slice(0, 200), data: { view: "team" }, link: APP + "?view=team", tag: "teamchat" });
+    sent += r.sent; loi = loi.concat(r.loi); det.push(mail.slice(0, 3) + "…:" + r.may + (r.xoa ? "(-" + r.xoa + ")" : ""));
   });
   return { ok: true, sent: sent, to: nguoi.length, loi: loi, det: det };
 }
-
 /** Kiểm tra: ai đã đăng ký máy nhận thông báo (chọn hàm này rồi bấm Chạy). */
 function chanDoan() {
   var owner = Session.getEffectiveUser().getEmail().toLowerCase(), nguoi = [owner];
@@ -222,14 +189,7 @@ function nguoiThayJob(j, owner, tv) { // ai thấy job này (để báo)
 }
 function guiToi(mails, title, body, data, link, tag) { // gửi 1 thông báo tới các máy của danh sách người
   var sent = 0;
-  mails.forEach(function (mail) {
-    var p = docFs("push/" + mail); if (!p) return;
-    (p.tokens || []).forEach(function (t) {
-      var r = goi("https://fcm.googleapis.com/v1/projects/" + PID + "/messages:send", { method: "post", payload: { message: { token: t, data: data || {},
-        webpush: { notification: { title: title, body: body, icon: APP + "icon-192.png", badge: APP + "icon-192.png", tag: tag || "sojob", renotify: true }, fcm_options: { link: link || APP } } } } });
-      if (r.code === 200) sent++;
-    });
-  });
+  mails.forEach(function (mail) { sent += guiMay(mail, { title: title, body: body, data: data, link: link, tag: tag }).sent; });
   return sent;
 }
 function homNay() { return Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd"); }
@@ -397,4 +357,33 @@ function nhacHen() {
   });
   if (kq.length) Logger.log(kq.join(" | "));
   return { ok: true, kq: kq };
+}
+
+/* MỘT cửa gửi thông báo (FCM HTTP v1 → web Chrome/Firefox/Edge/Safari; app iOS sau này dùng chung).
+ * Gửi tới mọi máy của 1 người; Urgency high + TTL 1 ngày để điện thoại nhận ngay;
+ * máy đã gỡ app / mã hết hạn (404, UNREGISTERED, token sai) thì tự xoá khỏi danh sách. */
+function guiMay(mail, n) {
+  mail = String(mail || "").toLowerCase();
+  var p = docFs("push/" + mail), toks = (p && p.tokens) || [], bad = [], sent = 0, loi = [];
+  toks.forEach(function (t) {
+    var r = goi("https://fcm.googleapis.com/v1/projects/" + PID + "/messages:send", { method: "post", payload: { message: { token: t, data: n.data || {},
+      webpush: { headers: { Urgency: "high", TTL: "86400" },
+        notification: { title: n.title, body: n.body || "", icon: APP + "icon-192.png", badge: APP + "icon-192.png", tag: n.tag || "sojob", renotify: true },
+        fcm_options: { link: n.link || APP } } } } });
+    if (r.code === 200) { sent++; return; }
+    loi.push(r.code);
+    var m = (r.json && r.json.error && (r.json.error.status + " " + r.json.error.message)) || r.text || "";
+    if (r.code === 404 || /UNREGISTERED|registration token|Requested entity was not found/i.test(m)) bad.push(t);
+  });
+  if (bad.length) goi(FS + "/push/" + encodeURIComponent(mail) + "?updateMask.fieldPaths=tokens", { method: "patch", payload: { fields: { tokens: { arrayValue: { values:
+    toks.filter(function (t) { return bad.indexOf(t) < 0; }).map(function (t) { return { stringValue: t }; }) } } } } });
+  return { sent: sent, may: toks.length, xoa: bad.length, loi: loi };
+}
+
+/* App bấm "Thử thông báo": gửi 1 tin thử tới mọi máy của chính người bấm */
+function thuMayToi(token) {
+  var mail = nguoiGoi(token);
+  if (!mail) return { ok: false, msg: "Hết phiên đăng nhập, tải lại trang rồi thử lại." };
+  var r = guiMay(mail, { title: "✅ Thông báo đang chạy", body: "Máy này nhận được thông báo của Theo dõi làm hàng.", data: { view: "today" }, link: APP + "?view=today", tag: "thu" });
+  return { ok: true, sent: r.sent, may: r.may, xoa: r.xoa, loi: r.loi };
 }

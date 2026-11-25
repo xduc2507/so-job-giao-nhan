@@ -517,6 +517,7 @@ button.sm .ic{width:14px;height:14px;margin-right:4px}
 .nbell .nb-ic{width:20px;height:20px}
 .nbell .nb{position:absolute;top:-7px;right:-7px;min-width:20px;height:20px;padding:0 5px;border-radius:7px;background:#D93025;color:#fff;font-size:12px;font-weight:700;line-height:20px;text-align:center;box-shadow:0 0 0 2px var(--surface)}
 .npanel{position:fixed;top:58px;right:16px;z-index:80;width:min(380px,calc(100vw - 32px));max-height:min(70vh,560px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg,12px);box-shadow:0 16px 40px rgba(10,16,22,.18);padding:6px}
+.np-h>span{display:inline-flex;gap:4px;align-items:center}
 .np-h{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}.np-h b{font-size:15px}
 .np-i{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;background:none;padding:9px 8px;border-radius:var(--r-sm,6px)}
 .np-i:hover{background:var(--surface-2)}.np-i.bad .np-t b{color:var(--bad)}
@@ -2829,6 +2830,17 @@ document.addEventListener("change",async e=>{const t=e.target.closest("select[da
   if(t.dataset.bulk==="move"){let ok=0,no=0;for(const j of js){try{(await moveJob(j,v))?ok++:no++}catch(x){no++}}toast(`Đã chuyển ${ok} lô sang “${v}”${no?`, ${no} lô chưa chuyển được (thiếu thông tin hoặc quá hạn chưa ghi lý do)`:""}.`)}
   if(t.dataset.bulk==="asg"){const n=whoName(v);js.forEach(j=>{if(whoOf(j)===v)return;j.assignee=v;j.assigneeName=n;logH(j,{kind:"note",note:"Giao cho "+n});queueSave(j);if(v!==me())postJobMsg(j,`📌 Giao job này cho @${n}`,{tags:[v],tagN:[n]})});toast(`Đã giao ${js.length} lô cho ${n}.`)}
   S.bulk.clear();renderAll(false);bulkBar()});
+/* Thử thông báo: máy chủ gửi 1 tin tới mọi máy của chính mình, báo lại số máy nhận */
+async function pushTest(){
+  if(!PUSH_URL||!window.firebase)return toast("Bản này chưa nối máy chủ thông báo.");
+  if(window.Notification&&Notification.permission!=="granted"){try{await pushSetup()}catch(e){}if(Notification.permission!=="granted")return toast("Máy này chưa cho phép thông báo. Bấm Cho phép khi trình duyệt hỏi, rồi thử lại.")}
+  try{await pushSetup()}catch(e){}
+  toast("Đang gửi thông báo thử…");
+  try{const token=await firebase.auth().currentUser.getIdToken();
+    const r=await fetch(PUSH_URL,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify({test:true,token})});const o=await r.json();
+    if(!o.ok)return toast("Chưa gửi được: "+(o.msg||"lỗi máy chủ"));
+    toast(o.sent?`Đã gửi tới ${o.sent} máy của bạn${o.xoa?` (đã dọn ${o.xoa} máy cũ không còn dùng)`:""}. Chờ vài giây để thông báo hiện.`:`Không máy nào nhận được (đang đăng ký ${o.may||0} máy${o.xoa?`, vừa dọn ${o.xoa} máy hỏng`:""}). Mở app trên điện thoại, cho phép thông báo rồi thử lại.`)}
+  catch(e){toast("Không kết nối được máy chủ thông báo. Thử lại sau.")}}
 /* ---------- Chọn giao diện: Hiện tại / Kiểu 1office (nhớ trên từng máy) ---------- */
 const UI_LS="sojob.ui",UI_LIST=[["cu","Giao diện hiện tại","Thanh xanh, chữ Open Sans"],["1office","Kiểu 1office","Nền trắng gọn, chữ Inter Tight"]];
 function uiGet(){try{return localStorage.getItem(UI_LS)||"cu"}catch(e){return "cu"}}
@@ -3031,10 +3043,10 @@ function nbellPaint(){
   if(nOpen)nPanelPaint(items)}
 function nPanelPaint(items){
   let p=$("#npanel");if(!p){p=document.createElement("div");p.id="npanel";p.className="npanel";p.setAttribute("role","dialog");p.setAttribute("aria-label","Thông báo");document.body.appendChild(p)}
-  p.innerHTML=`<div class="np-h"><b>Thông báo</b><button class="ghost sm" data-nclose aria-label="Đóng">✕</button></div>`+
+  p.innerHTML=`<div class="np-h"><b>Thông báo</b><span><button class="ghost sm" data-ntest title="Gửi 1 thông báo thử tới các máy của bạn">🔔 Thử thông báo</button><button class="ghost sm" data-nclose aria-label="Đóng">✕</button></span></div>`+
     (items.length?items.map((it,i)=>`<button class="np-i ${it.cls||""}" data-ni="${i}"><span class="np-ic">${it.ic}</span><span class="np-t"><b>${esc(it.t)}</b><small>${esc(it.s)}</small></span></button>`).join("")
       :`<div class="np-empty">Không có gì mới. Tin nhắn mới, job quá hạn và lý do chờ duyệt sẽ hiện ở đây.</div>`);
-  p.onclick=e=>{if(e.target.closest("[data-nclose]")){nToggle(false);return}const x=e.target.closest("[data-ni]");if(!x)return;const it=items[+x.dataset.ni];nToggle(false);if(it.go)it.go();else if(it.id)openJobAny(it.id)}}
+  p.onclick=e=>{if(e.target.closest("[data-nclose]")){nToggle(false);return}if(e.target.closest("[data-ntest]")){pushTest();return}const x=e.target.closest("[data-ni]");if(!x)return;const it=items[+x.dataset.ni];nToggle(false);if(it.go)it.go();else if(it.id)openJobAny(it.id)}}
 function nToggle(o){nOpen=o;$("#nbell")?.setAttribute("aria-expanded",o?"true":"false");if(o)nPanelPaint(notifItems());else $("#npanel")?.remove()}
 document.addEventListener("click",e=>{if(e.target.closest("#nbell")){nToggle(!nOpen);return}if(nOpen&&!e.target.closest("#npanel"))nToggle(false)});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&nOpen)nToggle(false)});
@@ -3055,7 +3067,10 @@ async function pushSetup(){
   if(firebase.messaging.isSupported&&!(await firebase.messaging.isSupported())){pushDiag("fcm-unsupported");return false}
   pushDiag("token");const tok=await withTimeout(firebase.messaging().getToken({vapidKey:PUSH_VAPID,serviceWorkerRegistration:reg}),20000,"lấy mã máy");
   if(!tok)return false;
-  if(localStorage.getItem("sojob.pushTok")!==tok||!diagSent.has("saved")){diagSent.add("saved");await db.collection("push").doc(me()).set({tokens:firebase.firestore.FieldValue.arrayUnion(tok),at:Date.now()},{merge:true});try{localStorage.setItem("sojob.pushTok",tok)}catch(e){}}
+  const oldTok=localStorage.getItem("sojob.pushTok");
+  if(oldTok!==tok||!diagSent.has("saved")){diagSent.add("saved");await db.collection("push").doc(me()).set({tokens:firebase.firestore.FieldValue.arrayUnion(tok),at:Date.now()},{merge:true});
+    if(oldTok&&oldTok!==tok)try{await db.collection("push").doc(me()).update({tokens:firebase.firestore.FieldValue.arrayRemove(oldTok)})}catch(e){}
+    try{localStorage.setItem("sojob.pushTok",tok)}catch(e){}}
   PUSH_ON=true;bellPaint();return true}
 async function bellClick(){
   if(!window.Notification){toast(isIOS&&!isStandalone?"Trên iPhone: bấm nút Chia sẻ (ô vuông có mũi tên) → “Thêm vào MH chính”, rồi mở app Làm hàng FDI từ biểu tượng ngoài màn hình và bấm 🔕 lần nữa.":"Trình duyệt này không hỗ trợ thông báo.");return}
@@ -3072,7 +3087,7 @@ const FA={copy:"fa-copy ic-blue",doc:"fa-file-text-o",xlsx:"fa-file-excel-o ic-a
   add:"fa-plus ic-add",send:"fa-send ic-blue",search:"fa-search",barcode:"fa-barcode",del:"fa-remove ic-del",next:"fa-arrow-right",fail:"fa-ban ic-del",clip:"fa-paperclip ic-blue",
   chat:"fa-comments",board:"fa-columns",list:"fa-list",team:"fa-building",lock:"fa-lock",bell:"fa-bell",refresh:"fa-refresh ic-add",check:"fa-check ic-blue",close:"fa-times"};
 const ic=n=>FA[n]?`<i class="fa ${FA[n]} ic-fa" aria-hidden="true"></i>`:"";
-const APP_VER="2026-11-25b";
+const APP_VER="2026-11-25c";
 let notifyBusy=false;const diagSent=new Set();
 const withTimeout=(p,ms,stage)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("kẹt ở bước "+stage+" quá "+ms/1000+" giây")),ms))]);
 function pushDiag(stage,err){ // ghi lý do lên máy chủ để kiểm tra từ xa (mỗi lý do 1 lần / phiên)
