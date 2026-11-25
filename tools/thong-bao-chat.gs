@@ -13,7 +13,8 @@ var APP = "https://opsdad.net/";
 var FS = "https://firestore.googleapis.com/v1/projects/" + PID + "/databases/(default)/documents";
 
 function doPost(e) {
-  if (e && e.parameter && e.parameter.zb) return zbHook(e); // tin từ Zalo Bot
+  if (e && e.parameter && e.parameter.zb) return zbHook(e, "S"); // tin từ Bot opsdad (Sổ chung)
+  if (e && e.parameter && e.parameter.zr) return zbHook(e, "R"); // tin từ bot Việc riêng (chỉ chủ sổ)
   var out = { ok: false }, body = null;
   try {
     body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
@@ -613,11 +614,15 @@ function thuThuAI() { // chạy tay: cho AI đọc lại thư mới nhất trong
 }
 
 /* =====================================================================
- * ZALO BOT (bot-api.zaloplatforms.com). Mã bot lưu ở Script Properties: ZALO_BOT_TOKEN (chủ sổ tự dán, không ghi ra nhật ký).
+ * ZALO BOT (bot-api.zaloplatforms.com). 2 bot:
+ *   "S" Bot opsdad: cả nhóm, job vào Sổ chung. Mã: ZALO_BOT_TOKEN, webhook ?zb=ZB_SECRET.
+ *   "R" bot Việc riêng: CHỈ chủ sổ, job vào Việc riêng (không chia sẻ, không báo ai). Mã: ZALO_BOT_TOKEN_R, webhook ?zr=ZR_SECRET.
+ * Mã bot do chủ sổ tự dán vào Thuộc tính tập lệnh, không ghi ra nhật ký.
  * ===================================================================== */
+var ZB = "S"; // bot đang xử lý trong lần chạy này
 function zbGoi(method, body) {
-  var tok = PropertiesService.getScriptProperties().getProperty("ZALO_BOT_TOKEN");
-  if (!tok) throw new Error("Chưa có ZALO_BOT_TOKEN trong Thuộc tính tập lệnh");
+  var ten = ZB === "R" ? "ZALO_BOT_TOKEN_R" : "ZALO_BOT_TOKEN", tok = PropertiesService.getScriptProperties().getProperty(ten);
+  if (!tok) throw new Error("Chưa có " + ten + " trong Thuộc tính tập lệnh");
   var r = UrlFetchApp.fetch("https://bot-api.zaloplatforms.com/bot" + tok + "/" + method,
     { method: "post", contentType: "application/json", payload: JSON.stringify(body || {}), muteHttpExceptions: true });
   var t = r.getContentText(), j; try { j = JSON.parse(t); } catch (e) { j = { raw: t.slice(0, 300) }; }
@@ -626,18 +631,20 @@ function zbGoi(method, body) {
 /* ---------- Zalo Bot: gom tin của từng người; nhắn "tạo job" thì AI đọc hết các tin đã gom rồi tạo job (Mới nhận, Sổ chung) ----------
  * Lệnh (không phân biệt dấu / hoa thường): nối 123456 · tạo job · gắn FDI261125-05 · xem · xoá · hd
  * Người dùng phải nối Zalo với tài khoản Sổ bằng mã 6 số lấy trong app (Cài đặt → Nối Zalo). Người lạ nhắn bot sẽ không làm gì được. */
+function zbHd() { return ZB === "R" ? ZB_HD.replace("ở cột Mới nhận.", "trong Việc riêng (chỉ anh thấy).") : ZB_HD; }
 var ZB_HD = "Cách dùng:\n• Gửi hoặc chuyển tiếp thông tin, ảnh của lô cho bot, bot gom lại.\n• Nhắn \"tạo job\" → AI đọc các tin đã gom và tạo job ở cột Mới nhận.\n• Nhắn \"gắn FDI…\" → ghi các tin đã gom vào Trao đổi của job đó.\n• \"xem\": xem đã gom gì · \"xoá\": bỏ các tin đã gom.";
-function zbHook(e) {
-  var P = PropertiesService.getScriptProperties(), s = P.getProperty("ZB_SECRET"), ok = ContentService.createTextOutput("ok");
-  if (!s || String(e.parameter.zb) !== s) return ContentService.createTextOutput("no");
+function zbHook(e, bot) {
+  ZB = bot === "R" ? "R" : "S";
+  var P = PropertiesService.getScriptProperties(), s = P.getProperty(ZB === "R" ? "ZR_SECRET" : "ZB_SECRET"), ok = ContentService.createTextOutput("ok");
+  if (!s || String(ZB === "R" ? e.parameter.zr : e.parameter.zb) !== s) return ContentService.createTextOutput("no");
   var b = {}; try { b = JSON.parse((e.postData && e.postData.contents) || "{}"); } catch (x) {}
   var m = b.message || {};
   if (b.event_name === "webhook.test" || !m.chat || !m.from || m.from.is_bot) return ok;
   var lock = LockService.getScriptLock(); try { lock.waitLock(25000); } catch (x) { return ok; }
   try {
-    var seen = []; try { seen = JSON.parse(P.getProperty("ZB_SEEN") || "[]"); } catch (x) {}
+    var kSeen = ZB === "R" ? "ZR_SEEN" : "ZB_SEEN", seen = []; try { seen = JSON.parse(P.getProperty(kSeen) || "[]"); } catch (x) {}
     if (seen.indexOf(m.message_id) >= 0) return ok; // Zalo gửi lại cùng một tin: bỏ qua
-    seen.unshift(m.message_id); P.setProperty("ZB_SEEN", JSON.stringify(seen.slice(0, 80)));
+    seen.unshift(m.message_id); P.setProperty(kSeen, JSON.stringify(seen.slice(0, 80)));
     zbXuLy(m, String(b.event_name || ""));
   } catch (x) { Logger.log("zbHook lỗi: " + x); } finally { lock.releaseLock(); }
   return ok;
@@ -659,26 +666,27 @@ function zbNoi(token) {
   return { ok: true, ma: zbMa(mail), noi: noi, bot: "Bot opsdad" };
 }
 function zbBuf(uid, v) {
-  var P = PropertiesService.getScriptProperties(), k = "zbbuf_" + uid;
+  var P = PropertiesService.getScriptProperties(), k = (ZB === "R" ? "zrbuf_" : "zbbuf_") + uid;
   if (v === undefined) { try { return JSON.parse(P.getProperty(k) || "[]"); } catch (e) { return []; } }
   if (!v.length) { P.deleteProperty(k); return v; }
   var s = JSON.stringify(v); while (s.length > 8500 && v.length > 1) { v.shift(); s = JSON.stringify(v); }
   P.setProperty(k, s); return v;
 }
 function zbXuLy(m, ev) {
-  var P = PropertiesService.getScriptProperties(), chat = m.chat.id, uid = m.from.id;
-  var users = {}; try { users = JSON.parse(P.getProperty("ZB_USERS") || "{}"); } catch (x) {}
+  var P = PropertiesService.getScriptProperties(), chat = m.chat.id, uid = m.from.id, kU = ZB === "R" ? "ZR_USERS" : "ZB_USERS";
+  var users = {}; try { users = JSON.parse(P.getProperty(kU) || "{}"); } catch (x) {}
   var text = String(m.text || m.caption || "").trim(), k = zbKhongDau(text), u = users[uid];
   var noi = k.match(/^noi\s*(\d{6})$/);
   if (noi) {
-    var owner = chuSo(), ds = [owner].concat(thanhVien()), mail = ds.filter(function (x) { return zbMa(x) === noi[1]; })[0];
+    var owner = chuSo(), ds = ZB === "R" ? [owner] : [owner].concat(thanhVien()), mail = ds.filter(function (x) { return zbMa(x) === noi[1]; })[0]; // bot Việc riêng: chỉ chủ sổ
     if (!mail) return zbGui(chat, "Mã không đúng. Mở Sổ → Cài đặt → Nối Zalo để lấy mã 6 số của bạn.");
     var ppl = docFs("meta/people") || {}, ten = ((ppl.p || {})[mail] || {}).n || m.from.display_name || mail.split("@")[0];
-    users[uid] = { e: mail, n: ten, chat: chat }; P.setProperty("ZB_USERS", JSON.stringify(users));
-    return zbGui(chat, "✅ Đã nối Zalo với tài khoản Sổ " + mail + " (" + ten + ").\n\n" + ZB_HD);
+    if (ZB === "R") users = {}; // bot Việc riêng chỉ nối 1 Zalo (của chủ sổ)
+    users[uid] = { e: mail, n: ten, chat: chat }; P.setProperty(kU, JSON.stringify(users));
+    return zbGui(chat, "✅ Đã nối Zalo với tài khoản Sổ " + mail + " (" + ten + ")." + (ZB === "R" ? " Bot này tạo job trong Việc riêng." : "") + "\n\n" + zbHd());
   }
-  if (!u) return zbGui(chat, "Bot chưa biết bạn là ai trong Sổ. Mở app Làm hàng FDI → Cài đặt → Nối Zalo, lấy mã 6 số rồi nhắn cho bot: nối 123456");
-  if (k === "hd" || k === "huong dan" || k === "help" || k === "/start") return zbGui(chat, ZB_HD);
+  if (!u) return zbGui(chat, ZB === "R" ? "Bot này chỉ dành cho chủ sổ." : "Bot chưa biết bạn là ai trong Sổ. Mở app Làm hàng FDI → Cài đặt → Nối Zalo, lấy mã 6 số rồi nhắn cho bot: nối 123456");
+  if (k === "hd" || k === "huong dan" || k === "help" || k === "/start") return zbGui(chat, zbHd());
   var buf = zbBuf(uid);
   if (k === "xem") return zbGui(chat, buf.length ? "Đang gom " + buf.length + " mục:\n" + buf.map(function (x, i) { return (i + 1) + ". " + (x.p ? "📷 ảnh" + (x.x ? ": " : "") : "") + String(x.x || "").slice(0, 80).replace(/\n/g, " "); }).join("\n") : "Chưa gom tin nào.");
   if (k === "xoa" || k === "huy" || k === "xoa het") { zbBuf(uid, []); return zbGui(chat, "🗑 Đã bỏ " + buf.length + " mục đã gom."); }
@@ -695,8 +703,8 @@ function zbNoiDung(buf) {
 }
 function zbGan(u, uid, chat, buf, code) {
   if (!buf.length) return zbGui(chat, "Chưa gom tin nào để gắn vào " + code + ".");
-  var j = docHet("jobs").filter(function (x) { return String(x.code || "").toUpperCase() === code && x.shared; })[0];
-  if (!j) return zbGui(chat, "Không thấy job " + code + " ở Sổ chung.");
+  var owner = chuSo(), j = docHet("jobs").filter(function (x) { return String(x.code || "").toUpperCase() === code && (ZB === "R" ? laViecRieng(x, owner) : x.shared); })[0];
+  if (!j) return zbGui(chat, "Không thấy job " + code + (ZB === "R" ? " trong Việc riêng." : " ở Sổ chung."));
   ghiTraoDoi(j, "📥 Từ Zalo (" + u.n + "):\n" + zbNoiDung(buf));
   zbBuf(uid, []);
   zbGui(chat, "✅ Đã ghi " + buf.length + " mục vào Trao đổi của " + code + ".\n" + APP + "?job=" + encodeURIComponent(j._id));
@@ -717,7 +725,8 @@ function zbTao(u, uid, chat, buf) {
   o = o || {};
   var sv = ["HQ", "VC", "HQ+VC"].indexOf(o.dichVu) >= 0 ? o.dichVu : "";
   var type = !sv ? "Khác" : sv === "VC" ? "Vận chuyển" : o.hang === "Xuất khẩu" ? "Khai HQ xuất" : "Khai HQ nhập";
-  var d = homNay(), p = "FDI" + d.slice(2, 4) + d.slice(5, 7) + d.slice(8, 10), tag = u.e === owner ? "" : u.e.replace(/[^a-z]/g, "").slice(0, 2).toUpperCase();
+  var rieng = ZB === "R" && u.e === owner; // bot Việc riêng: job không chia sẻ, mã R…
+  var d = homNay(), p = (rieng ? "R" : "FDI") + d.slice(2, 4) + d.slice(5, 7) + d.slice(8, 10), tag = u.e === owner ? "" : u.e.replace(/[^a-z]/g, "").slice(0, 2).toUpperCase();
   var n = jobs.filter(function (j) { return String(j.code || "").indexOf(p + "-" + tag) === 0; }).length + 1, code = p + "-" + tag + ("0" + n).slice(-2);
   var first = (buf.filter(function (x) { return x.x; })[0] || {}).x || "Job từ Zalo";
   var tieuDe = String(o.tieuDe || first.split("\n")[0]).slice(0, 70);
@@ -727,24 +736,25 @@ function zbTao(u, uid, chat, buf) {
     service: sv, vehicle: sv && sv !== "HQ" ? "Xe cont" : "", yard: "", cbm: "", mst: o.mst || "", bl: o.bl || "", cont: o.cont || "", tkNo: String(o.tkNo || "").replace(/\D/g, "").slice(0, 12),
     lane: "", truck: "", deposit: "", blocker: "", returnNote: "", tasks: [], quote: [], vat: 8, quoteNote: "", quoteSentAt: "", debitAmount: 0, debitCurrency: "VND", debitDate: "", paidDate: "",
     raw: zbNoiDung(buf).slice(0, 6000), images: [], createdAt: now, updatedAt: now, stageAt: now, history: [{ at: now, by: u.n, kind: "create", to: "Mới nhận", note: "Tạo từ Zalo" }],
-    shared: true, createdBy: u.e, createdByName: u.n, assignee: u.e, assigneeName: u.n };
+    shared: !rieng, createdBy: u.e, createdByName: u.n, assignee: u.e, assigneeName: u.n };
   if (!sv) job.svcPending = true;
   var f = {}; for (var key in job) f[key] = veFs(job[key]);
   var w = goi(FS + "/jobs", { method: "post", payload: { fields: f } });
   if (w.code !== 200) { Logger.log("zbTao ghi lỗi " + w.code + " " + w.text); return zbGui(chat, "❌ Chưa tạo được job (lỗi máy chủ " + w.code + "). Các tin đã gom vẫn giữ, thử lại sau."); }
   job._id = w.json.name.split("/").pop();
-  ghiTraoDoi(job, "📥 Thông tin gom từ Zalo (" + u.n + "):\n" + zbNoiDung(buf));
+  ghiTraoDoi(job, "📥 Thông tin gom từ Zalo (" + u.n + "):\n" + zbNoiDung(buf)); // Việc riêng: shared=false nên không hiện ở Chat chung
   zbBuf(uid, []);
-  if (u.e !== owner) guiToi([owner], "📥 Job mới từ Zalo · " + code, job.title + "\nTạo bởi " + u.n, { job: job._id }, APP + "?job=" + encodeURIComponent(job._id), "zalo-" + job._id);
-  zbGui(chat, "✅ Đã tạo " + code + ": " + job.title + (sv ? " · " + sv : "") + (o.congTy ? " · " + o.congTy : "") + "\nJob ở cột Mới nhận, bạn là người phụ trách. Mở: " + APP + "?job=" + encodeURIComponent(job._id));
+  if (!rieng && u.e !== owner) guiToi([owner], "📥 Job mới từ Zalo · " + code, job.title + "\nTạo bởi " + u.n, { job: job._id }, APP + "?job=" + encodeURIComponent(job._id), "zalo-" + job._id);
+  zbGui(chat, "✅ Đã tạo " + code + ": " + job.title + (sv ? " · " + sv : "") + (o.congTy ? " · " + o.congTy : "") + (rieng ? "\nJob ở Việc riêng, cột Mới nhận. Mở: " : "\nJob ở cột Mới nhận, bạn là người phụ trách. Mở: ") + APP + "?job=" + encodeURIComponent(job._id));
 }
 /* Chạy tay 1 lần: tự sinh mã bí mật và báo Zalo đẩy tin về link máy chủ đang triển khai */
+function zaloCaiWebhookR() { ZB = "R"; zaloCaiWebhook(); } // bot Việc riêng
 function zaloCaiWebhook() {
-  var P = PropertiesService.getScriptProperties(), s = P.getProperty("ZB_SECRET");
-  if (!s) { s = Utilities.getUuid().replace(/-/g, ""); P.setProperty("ZB_SECRET", s); }
+  var P = PropertiesService.getScriptProperties(), kS = ZB === "R" ? "ZR_SECRET" : "ZB_SECRET", s = P.getProperty(kS);
+  if (!s) { s = Utilities.getUuid().replace(/-/g, ""); P.setProperty(kS, s); }
   var url = "https://script.google.com/macros/s/AKfycbybwZjSrdEh0xrt0MFKtbwh6dEfCCJuldpqVrQSAgP4e14RwZZs04FB_fPUZ7vKRFP2XQ/exec"; // link máy chủ đang dùng (PUSH_URL)
-  var r = zbGoi("setWebhook", { url: url + "?zb=" + s, secret_token: s });
+  var r = zbGoi("setWebhook", { url: url + (ZB === "R" ? "?zr=" : "?zb=") + s, secret_token: s });
   Logger.log("setWebhook " + r.code + ": " + JSON.stringify(r.json).replace(s, "***"));
 }
 /* Chạy tay: xem trạng thái webhook Zalo (ẩn mã bí mật) */
-function zaloKiemTra() { var s = PropertiesService.getScriptProperties().getProperty("ZB_SECRET") || "~"; Logger.log(JSON.stringify(zbGoi("getWebhookInfo").json).split(s).join("***")); }
+function zaloKiemTra() { var P = PropertiesService.getScriptProperties(); ["S", "R"].forEach(function (b) { ZB = b; var s = P.getProperty(b === "R" ? "ZR_SECRET" : "ZB_SECRET") || "~"; try { Logger.log(b + ": " + JSON.stringify(zbGoi("getWebhookInfo").json).split(s).join("***")); } catch (e) { Logger.log(b + ": " + e); } }); }
