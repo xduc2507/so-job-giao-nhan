@@ -133,7 +133,7 @@ function chanDoan() {
 
 /* =====================================================================
  * TỰ ĐỘNG (chạy theo giờ). Cài một lần: chọn hàm caiLich rồi bấm Chạy.
- *  - theoDoiToKhai: 30 phút/lần, 7h–19h: kiểm tra các lô "Chờ thông quan"; thông quan thì báo điện thoại.
+ *  - theoDoiToKhai: 30 phút/lần, 7h–19h: kiểm tra các lô Đã truyền tờ khai / Trình tờ khai / Kiểm hóa; thông quan thì báo điện thoại.
  *  - nhacViecSang: 8h sáng: báo mỗi người lô đến hạn hôm nay, quá hạn chưa ghi lý do.
  *  - saoLuuDem: 23h: sao lưu toàn bộ dữ liệu vào Google Drive (thư mục "So Job - Sao luu", giữ 30 bản).
  * Việc riêng của chủ sổ không bao giờ đưa vào thông báo.
@@ -196,12 +196,12 @@ function homNay() { return Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd"); }
 function dm(s) { return s ? s.slice(8, 10) + "/" + s.slice(5, 7) : ""; }
 var RE_TQ = /thông quan|giải phóng|mang hàng về/i;
 
-/* 1) Tự theo dõi tờ khai các lô "Chờ thông quan" */
+/* 1) Tự theo dõi tờ khai các lô ở bước chờ hải quan (Đã truyền tờ khai / Trình tờ khai cho Hải quan / Kiểm hóa) */
 function theoDoiToKhai() {
   var gio = Number(Utilities.formatDate(new Date(), TZ, "H"));
   if (gio < 7 || gio >= 19) return { ok: true, msg: "Ngoài giờ" };
   var owner = chuSo(), tv = thanhVien(), kq = [];
-  docHet("jobs").filter(function (j) { return j.status === "Chờ thông quan"; }).forEach(function (j) {
+  docHet("jobs").filter(function (j) { return ["Đã truyền tờ khai", "Trình tờ khai cho Hải quan", "Kiểm hóa"].indexOf(j.status) >= 0; }).forEach(function (j) {
     var tk = String(j.tkNo || "").replace(/\D/g, ""), mst = String(j.mst || "").replace(/[^\d-]/g, ""), hq = String(j.hqCode || "").toUpperCase().trim();
     var d = String(j.tkDate || ""), m = d.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/); if (m) d = m[3] + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[1]).slice(-2);
     if (tk.length !== 12 || !mst || hq.length !== 4 || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
