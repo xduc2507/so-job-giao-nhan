@@ -281,29 +281,8 @@ function goiAI(ai, token) {
   var mail = nguoiGoi(token);
   if (!mail) return { ok: false, code: "sampling_disabled", msg: "Hết phiên đăng nhập, tải lại trang rồi thử lại." };
   if (mail !== chuSo() && !docFs("members/" + encodeURIComponent(mail))) return { ok: false, code: "sampling_disabled", msg: "Tài khoản này chưa là thành viên sổ." };
-  var P = PropertiesService.getScriptProperties(), key = P.getProperty("GEMINI_KEY");
-  if (!key) return { ok: false, code: "sampling_disabled", msg: "Chưa cài AI miễn phí: chủ sổ cần dán key Gemini vào máy chủ (GEMINI_KEY)." };
-  var parts = [{ text: String(ai.prompt || "").slice(0, 200000) }];
-  (ai.files || []).slice(0, 8).forEach(function (f) { if (f && f.data) parts.push({ inline_data: { mime_type: f.mime || "image/jpeg", data: f.data } }); });
-  var body = { contents: [{ role: "user", parts: parts }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } };
-  if (ai.json) body.generationConfig.responseMimeType = "application/json";
-  var models = [P.getProperty("AI_MODEL"), "gemini-flash-lite-latest", "gemini-3.8-flash", "gemini-flash-latest"] // Lite nhanh, ít bị quá tải; lỗi thì thử bản Flash.filter(function (x, i, a) { return x && a.indexOf(x) === i; });
-  var last = "";
-  for (var i = 0; i < models.length; i++) {
-    var r = UrlFetchApp.fetch("https://generativelanguage.googleapis.com/v1beta/models/" + models[i] + ":generateContent", { method: "post", contentType: "application/json", headers: { "x-goog-api-key": key }, payload: JSON.stringify(body), muteHttpExceptions: true });
-    var c = r.getResponseCode(), j = {}; try { j = JSON.parse(r.getContentText()); } catch (e) {}
-    if (c === 404 || c === 403) { last = (c === 404 ? "không có mô hình " : "không có quyền dùng ") + models[i]; continue; }
-    if (c === 503 || c === 500) { last = models[i] + " đang quá tải"; continue; }
-    if (c === 429) return { ok: false, code: "rate_limited", msg: "AI miễn phí đã dùng hết lượt trong phút / ngày. Thử lại sau ít phút." };
-    if (c === 400) return { ok: false, code: "invalid_request", msg: "AI không nhận yêu cầu: " + ((j.error && j.error.message) || c) };
-    if (c !== 200) { last = "lỗi " + c; continue; }
-    var cand = (j.candidates || [])[0] || {}, text = ((cand.content && cand.content.parts) || []).map(function (p) { return p.text || ""; }).join("");
-    if (!text.trim()) return { ok: false, code: "empty_completion", msg: "AI không trả về nội dung (có thể bị chặn vì nội dung nhạy cảm)." };
-    return { ok: true, text: text, truncated: cand.finishReason === "MAX_TOKENS", model: models[i] };
-  }
-  return { ok: false, code: "upstream_error", msg: "AI chưa trả lời được (" + last + "). Thử lại sau." };
+  return aiChay(ai);
 }
-
 /* Ghi 1 tin tự động vào Trao đổi của job (và Chat chung nếu job ở Sổ chung) */
 function ghiTraoDoi(j, text, tagMail) {
   var msg = { text: text, by: "tu-dong", byName: "🤖 Tự động", at: Date.now(), auto: true };
@@ -509,7 +488,8 @@ function thuOp(q, token) {
   return { ok: false, msg: "Không rõ yêu cầu" };
 }
 
-/* Cứ 5 phút: thư mới đến giaonhan → báo cả nhóm; tiêu đề có mã job (FDI…) → ghi vào Trao đổi của job (chỉ job ở Sổ chung) */
+/* Cứ 5 phút: thư mới đến giaonhan → báo cả nhóm; tiêu đề có mã job (FDI…) → ghi vào Trao đổi của job;
+ * thư khác → AI đọc: yêu cầu làm hàng mới → "job chờ duyệt" (mailjobs) để nhóm bấm tạo; thư về lô đang làm → ghi vào Trao đổi của lô đó. Chỉ job ở Sổ chung. */
 function thuMoi() {
   var P = zhP(); if (!P.getProperty("ZOHO_REFRESH")) return;
   var A = zhAcc(), r = zhGoi("/accounts/" + A.id + "/messages/view?folderId=" + A.F.inbox + "&limit=20");
@@ -519,15 +499,85 @@ function thuMoi() {
   if (!L.length) return;
   P.setProperty("ZOHO_LAST", String(L[L.length - 1].t));
   var owner = chuSo(), nguoi = [owner].concat(thanhVien()).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
-  var jobs = null;
+  var jobs = null, kq = [];
   L.forEach(function (m) {
-    guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · Email", m.s + (m.sum ? "\n" + m.sum.slice(0, 120) : ""), { view: "mail" }, APP + "?view=mail", "mail");
+    if (String(m.from).toLowerCase() === String(A.mail).toLowerCase()) return;
+    jobs = jobs || docHet("jobs").filter(function (x) { return x.shared && x.status !== "Hoàn thành" && x.status !== "Thất bại"; });
     var code = (String(m.s).match(/FDI\d{6}-\d+/i) || [])[0];
-    if (code) {
-      jobs = jobs || docHet("jobs");
-      var j = jobs.filter(function (x) { return String(x.code || "").toUpperCase() === code.toUpperCase() && x.shared; })[0];
-      if (j) ghiTraoDoi(j, "✉ Email mới từ " + (m.fromN || m.from) + ": " + m.s);
+    var j = code ? jobs.filter(function (x) { return String(x.code || "").toUpperCase() === code.toUpperCase(); })[0] : null;
+    if (j) { ghiTraoDoi(j, "✉ Email mới từ " + (m.fromN || m.from) + ": " + m.s); guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · " + j.code, m.s, { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "mail"); kq.push(m.s + " → " + j.code); return; }
+    var o = null; try { o = thuDocAI(m, A, jobs); } catch (e) { Logger.log("AI lỗi: " + e); }
+    if (o && o.loai === "cu") {
+      var mc = String(o.maJob || "").toUpperCase();
+      j = jobs.filter(function (x) { return String(x.code || "").toUpperCase() === mc; })[0];
+      if (!j && o.bl) j = jobs.filter(function (x) { return x.bl && String(x.bl).replace(/\W/g, "").toUpperCase() === String(o.bl).replace(/\W/g, "").toUpperCase(); })[0];
+      if (j) { ghiTraoDoi(j, "✉ Email từ " + (m.fromN || m.from) + ": " + m.s + (o.tomTat ? "\n" + o.tomTat : "")); guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · " + j.code, m.s, { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "mail"); kq.push(m.s + " → " + j.code + " (AI)"); return; }
     }
+    if (o && o.loai === "moi") {
+      var doc = { at: Date.now(), status: "cho", mid: m.id, f: m.f, from: m.from, fromN: m.fromN || "", s: m.s, t: m.t,
+        ai: { tieuDe: o.tieuDe || "", congTy: o.congTy || "", fwd: o.fwd || "", dichVu: o.dichVu || "", hang: o.hang || "", bl: o.bl || "", cont: o.cont || "", tkNo: String(o.tkNo || "").replace(/\D/g, "").slice(0, 12), mst: o.mst || "", hangHoa: o.hangHoa || "", han: o.han || "", lienHe: o.lienHe || "", tomTat: o.tomTat || "" } };
+      var f = {}; for (var k in doc) f[k] = veFs(doc[k]);
+      goi(FS + "/mailjobs?documentId=" + encodeURIComponent("m" + m.id), { method: "post", payload: { fields: f } });
+      guiToi(nguoi, "📨 Job mới từ email · chờ duyệt", (o.tieuDe || m.s) + "\nTừ " + (m.fromN || m.from), { view: "mail" }, APP + "?view=mail", "mailjob");
+      kq.push(m.s + " → chờ duyệt"); return;
+    }
+    guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · Email", m.s + (m.sum ? "\n" + m.sum.slice(0, 120) : ""), { view: "mail" }, APP + "?view=mail", "mail");
+    kq.push(m.s + " → " + (o ? o.loai : "AI không đọc được"));
   });
-  Logger.log("thuMoi: " + L.length + " thư mới");
+  Logger.log("thuMoi: " + kq.join(" | "));
+}
+/* Gọi Gemini (dùng chung cho app và máy chủ): Lite trước vì nhanh, ít quá tải; lỗi thì thử bản Flash */
+function aiChay(ai) {
+  var P = PropertiesService.getScriptProperties(), key = P.getProperty("GEMINI_KEY");
+  if (!key) return { ok: false, code: "sampling_disabled", msg: "Chưa cài AI miễn phí: chủ sổ cần dán key Gemini vào máy chủ (GEMINI_KEY)." };
+  var parts = [{ text: String(ai.prompt || "").slice(0, 200000) }];
+  (ai.files || []).slice(0, 8).forEach(function (f) { if (f && f.data) parts.push({ inline_data: { mime_type: f.mime || "image/jpeg", data: f.data } }); });
+  var body = { contents: [{ role: "user", parts: parts }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } };
+  if (ai.json) body.generationConfig.responseMimeType = "application/json";
+  var models = [P.getProperty("AI_MODEL"), "gemini-flash-lite-latest", "gemini-3.8-flash", "gemini-flash-latest"].filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+  var last = "";
+  for (var i = 0; i < models.length; i++) {
+    var r = UrlFetchApp.fetch("https://generativelanguage.googleapis.com/v1beta/models/" + models[i] + ":generateContent", { method: "post", contentType: "application/json", headers: { "x-goog-api-key": key }, payload: JSON.stringify(body), muteHttpExceptions: true });
+    var c = r.getResponseCode(), j = {}; try { j = JSON.parse(r.getContentText()); } catch (e) {}
+    if (c === 404 || c === 403) { last = (c === 404 ? "không có mô hình " : "không có quyền dùng ") + models[i]; continue; }
+    if (c === 503 || c === 500) { last = models[i] + " đang quá tải"; continue; }
+    if (c === 429) return { ok: false, code: "rate_limited", msg: "AI miễn phí đã dùng hết lượt trong phút / ngày. Thử lại sau ít phút." };
+    if (c === 400) return { ok: false, code: "invalid_request", msg: "AI không nhận yêu cầu: " + ((j.error && j.error.message) || c) };
+    if (c !== 200) { last = "lỗi " + c; continue; }
+    var cand = (j.candidates || [])[0] || {}, text = ((cand.content && cand.content.parts) || []).map(function (p) { return p.text || ""; }).join("");
+    if (!text.trim()) return { ok: false, code: "empty_completion", msg: "AI không trả về nội dung (có thể bị chặn vì nội dung nhạy cảm)." };
+    return { ok: true, text: text, truncated: cand.finishReason === "MAX_TOKENS", model: models[i] };
+  }
+  return { ok: false, code: "upstream_error", msg: "AI chưa trả lời được (" + last + "). Thử lại sau." };
+}
+
+/* AI đọc 1 thư mới: yêu cầu làm hàng mới / thư về lô đang làm / thư khác. Trả về đối tượng JSON hoặc null */
+function thuDocAI(m, A, jobs) {
+  var B = "/accounts/" + A.id + "/folders/" + m.f + "/messages/" + m.id;
+  var c = zhGoi(B + "/content"), html = ((c.json && c.json.data) || {}).content || "";
+  var text = String(html).replace(/<(script|style)[\s\S]*?<\/\1>/gi, "").replace(/<br\s*\/?>|<\/(p|div|tr|li)>/gi, "\n").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/[ \t]+/g, " ").replace(/\n\s*\n+/g, "\n").trim().slice(0, 6000);
+  var files = [];
+  if (m.att) {
+    var a = zhGoi(B + "/attachmentinfo");
+    (((a.json && a.json.data) || {}).attachments || []).filter(function (x) { return /\.(pdf|jpe?g|png)$/i.test(x.attachmentName || "") && Number(x.attachmentSize || 0) < 4e6; }).slice(0, 3).forEach(function (x) {
+      var d = zhGoi(B + "/attachments/" + x.attachmentId, { blob: true });
+      if (d.code === 200 && d.blob) files.push({ mime: /\.pdf$/i.test(x.attachmentName) ? "application/pdf" : /\.png$/i.test(x.attachmentName) ? "image/png" : "image/jpeg", data: Utilities.base64Encode(d.blob.getBytes()) });
+    });
+  }
+  var ds = jobs.slice(0, 80).map(function (j) { return [j.code, j.company || "", j.fwd || "", j.bl || "", j.cont || "", j.tkNo || ""].join(" | "); }).join("\n");
+  var prompt = "Bạn là trợ lý bộ phận giao nhận (khai hải quan, vận chuyển container) của công ty FDI tại Việt Nam. Đọc email gửi tới hộp thư giaonhan@opsdad.net (kèm tệp đính kèm nếu có) và trả về DUY NHẤT một JSON.\n" +
+    "Phân loại \"loai\":\n- \"moi\": khách / đại lý (FWD) nhờ làm một lô hàng MỚI (khai báo hải quan, làm thủ tục, vận chuyển, lấy D/O…) chưa có trong danh sách job đang làm.\n- \"cu\": email nói về một lô ĐÃ có trong danh sách job đang làm (trùng số B/L, số cont, số tờ khai, công ty + nội dung). Ghi \"maJob\" là mã job đó.\n- \"khac\": báo giá, quảng cáo, thông báo hệ thống, thư cảm ơn, thư không cần tạo việc.\n" +
+    "Các trường (để chuỗi rỗng nếu không có): loai, maJob, tieuDe (ngắn gọn, VD \"Khai nhập 2x40 máy móc - Cty A\"), congTy (chủ hàng), fwd (đại lý giao nhận / forwarder gửi yêu cầu), dichVu (\"HQ\" nếu chỉ khai hải quan, \"VC\" nếu chỉ vận chuyển, \"HQ+VC\" nếu cả hai, rỗng nếu không rõ), hang (\"Nhập khẩu\" hoặc \"Xuất khẩu\"), bl, cont (số lượng + loại hoặc số cont), tkNo (12 chữ số), mst, hangHoa, han (hạn xử lý dạng YYYY-MM-DD nếu email có nêu), lienHe (tên + số điện thoại người liên hệ), tomTat (1-3 câu tiếng Việt: khách cần làm gì, còn thiếu gì).\n" +
+    "Danh sách job đang làm (mã | công ty | FWD | B/L | cont | tờ khai):\n" + (ds || "(trống)") + "\n\n" +
+    "EMAIL\nTừ: " + (m.fromN || "") + " <" + m.from + ">\nTiêu đề: " + m.s + "\nNội dung:\n" + text;
+  var r = aiChay({ prompt: prompt, files: files, json: true });
+  if (!r.ok) { Logger.log("thuDocAI: " + r.msg); return null; }
+  try { var o = JSON.parse(String(r.text).replace(/^\s*\x60+(json)?|\x60+\s*$/g, "").trim()); return Array.isArray(o) ? o[0] : o; } catch (e) { Logger.log("thuDocAI JSON lỗi"); return null; }
+}
+
+function thuThuAI() { // chạy tay: cho AI đọc lại thư mới nhất trong Inbox (không tạo gì), xem kết quả phân loại
+  var A = zhAcc(), r = zhGoi("/accounts/" + A.id + "/messages/view?folderId=" + A.F.inbox + "&limit=1");
+  var m = ((r.json && r.json.data) || []).map(zhMsg)[0]; if (!m) return Logger.log("Inbox trống");
+  var jobs = docHet("jobs").filter(function (x) { return x.shared && x.status !== "Hoàn thành" && x.status !== "Thất bại"; });
+  Logger.log(m.s + " → " + JSON.stringify(thuDocAI(m, A, jobs)));
 }
