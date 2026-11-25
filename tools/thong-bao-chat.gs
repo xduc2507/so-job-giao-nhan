@@ -206,8 +206,19 @@ function theoDoiToKhai() {
   docHet("jobs").filter(function (j) { return ["Đã truyền tờ khai", "Trình tờ khai cho Hải quan", "Kiểm hóa"].indexOf(j.status) >= 0; }).forEach(function (j) {
     var tk = String(j.tkNo || "").replace(/\D/g, ""), mst = String(j.mst || "").replace(/[^\d-]/g, ""), hq = String(j.hqCode || "").toUpperCase().trim();
     var d = String(j.tkDate || ""), m = d.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/); if (m) d = m[3] + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[1]).slice(-2);
-    if (tk.length !== 12 || !mst || hq.length !== 4 || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
-    var o; try { o = JSON.parse(UrlFetchApp.fetch(TK_URL + "?" + ["mst=" + mst, "hq=" + hq, "tk=" + tk, "date=" + d].join("&"), { muteHttpExceptions: true, followRedirects: true }).getContentText()); } catch (e) { return; }
+    if ((tk.length !== 12 && tk.length !== 11) || !mst || hq.length !== 4 || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    if (tk.length === 11) tk += "0"; // chưa ghi lần sửa: bản gốc
+    var tra = function (so) { try { return JSON.parse(UrlFetchApp.fetch(TK_URL + "?" + ["mst=" + mst, "hq=" + hq, "tk=" + so, "date=" + d].join("&"), { muteHttpExceptions: true, followRedirects: true }).getContentText()); } catch (e) { return null; } };
+    var KHONG = /không tồn tại/i, base = tk.slice(0, 11), s = Number(tk.slice(11)) || 0, o = tra(tk);
+    if (!o) return;
+    if (KHONG.test(o.msg || "")) { while (s > 0) { s--; var x0 = tra(base + s); if (x0 && !KHONG.test(x0.msg || "")) { o = x0; break; } } } // số đang ghi không có: lùi về bản có thật
+    else { while (s < 9) { var x1 = tra(base + (s + 1)); if (!x1 || KHONG.test(x1.msg || "")) break; s++; o = x1; } } // dò lên lần sửa mới nhất
+    var moiNhat = base + s;
+    if (moiNhat !== String(j.tkNo || "") && !KHONG.test(o.msg || "")) { // tự sửa ô Số tờ khai theo bản mới nhất
+      vaFs("jobs/" + j._id, { tkNo: moiNhat });
+      ghiTraoDoi(j, "🔁 Tờ khai đã sửa: số tờ khai cập nhật " + (j.tkNo || "") + " → " + moiNhat + " (lần sửa " + s + ").");
+      j.tkNo = moiNhat; tk = moiNhat;
+    }
     var cu = j.tkCheck || {}, thongQuan = o.ok && RE_TQ.test(o.status || "");
     var moi = o.ok ? { at: Date.now(), q: tk, ok: true, mv: !!o.mv, status: o.status || "", lane: o.lane || "", kind: o.kind || "", tkNo: o.tkNo || "", url: o.url || "", auto: true }
                    : { at: Date.now(), q: tk, ok: false, msg: o.msg || "", auto: true };
