@@ -522,13 +522,20 @@ function thuMoi() {
     var j = code ? jobs.filter(function (x) { return String(x.code || "").toUpperCase() === code.toUpperCase(); })[0] : null;
     if (j) { ganThu(m, j); ghiTraoDoi(j, "✉ Email mới từ " + (m.fromN || m.from) + ": " + m.s); guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · " + j.code, m.s, { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "mail"); kq.push(m.s + " → " + j.code); return; }
     var o = null; try { o = thuDocAI(m, A, jobs); } catch (e) { Logger.log("AI lỗi: " + e); }
-    if (o && o.loai === "cu") o.loai = "moi"; // thư không có mã job trong tiêu đề: luôn thành job mới chờ duyệt, không tự gắn vào job cũ
+    // thư không có mã job trong tiêu đề: luôn thành job chờ duyệt, KHÔNG tự gắn vào job cũ; AI thấy giống lô đang làm thì chỉ ghi gợi ý để người duyệt bấm "Gắn vào job"
+    var goiY = null;
+    if (o && o.loai === "cu") {
+      var gj = jobs.filter(function (x) { return String(x.code || "").toUpperCase() === String(o.maJob || "").toUpperCase(); })[0];
+      if (gj) goiY = { id: gj._id, code: gj.code || "", nhan: String(gj.company || gj.title || "").slice(0, 40), lyDo: String(o.lyDo || "").slice(0, 120) };
+      o.loai = "moi";
+    }
     if (o && o.loai === "moi") {
       var doc = { at: Date.now(), status: "cho", mid: m.id, f: m.f, from: m.from, fromN: m.fromN || "", s: m.s, t: m.t,
         ai: { tieuDe: o.tieuDe || "", congTy: o.congTy || "", fwd: o.fwd || "", dichVu: o.dichVu || "", hang: o.hang || "", bl: o.bl || "", cont: o.cont || "", tkNo: String(o.tkNo || "").replace(/\D/g, "").slice(0, 12), mst: o.mst || "", hangHoa: o.hangHoa || "", han: o.han || "", lienHe: o.lienHe || "", tomTat: o.tomTat || "" } };
+      if (goiY) doc.goiY = goiY;
       var f = {}; for (var k in doc) f[k] = veFs(doc[k]);
       goi(FS + "/mailjobs?documentId=" + encodeURIComponent("m" + m.id), { method: "post", payload: { fields: f } });
-      guiToi(nguoi, "📨 Job mới từ email · chờ duyệt", (o.tieuDe || m.s) + "\nTừ " + (m.fromN || m.from), { view: "mail" }, APP + "?view=mail", "mailjob");
+      guiToi(nguoi, "📨 Email chờ duyệt" + (goiY ? " · có thể thuộc " + goiY.code : ""), (o.tieuDe || m.s) + "\nTừ " + (m.fromN || m.from) + (o.tomTat ? "\n" + String(o.tomTat).slice(0, 140) : ""), { view: "mail", mj: "m" + m.id }, APP + "?view=mail&mj=" + encodeURIComponent("m" + m.id), "mailjob");
       kq.push(m.s + " → chờ duyệt"); return;
     }
     guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · Email", m.s + (m.sum ? "\n" + m.sum.slice(0, 120) : ""), { view: "mail" }, APP + "?view=mail", "mail");
@@ -603,8 +610,8 @@ function thuDocAI(m, A, jobs) {
   }
   var ds = jobs.slice(0, 80).map(function (j) { return [j.code, j.company || "", j.fwd || "", j.bl || "", j.cont || "", j.tkNo || ""].join(" | "); }).join("\n");
   var prompt = "Bạn là trợ lý bộ phận giao nhận (khai hải quan, vận chuyển container) của công ty FDI tại Việt Nam. Đọc email gửi tới hộp thư giaonhan@opsdad.net (kèm tệp đính kèm nếu có) và trả về DUY NHẤT một JSON.\n" +
-    "Phân loại \"loai\":\n- \"moi\": khách / đại lý (FWD) nhờ làm một lô hàng MỚI (khai báo hải quan, làm thủ tục, vận chuyển, lấy D/O…) chưa có trong danh sách job đang làm.\n- \"cu\": email nói về một lô ĐÃ có trong danh sách job đang làm (CHỈ khi trùng mã job, số B/L / AWB, số cont hoặc số tờ khai; cùng tên công ty KHÔNG đủ vì một khách có nhiều lô, B/L / AWB khác thì là lô MỚI). Ghi \"maJob\" là mã job đó.\n- \"khac\": báo giá, quảng cáo, thông báo hệ thống, thư cảm ơn, thư không cần tạo việc.\n" +
-    "Các trường (để chuỗi rỗng nếu không có): loai, maJob, tieuDe (ngắn gọn, VD \"Khai nhập 2x40 máy móc - Cty A\"), congTy (chủ hàng), fwd (đại lý giao nhận / forwarder gửi yêu cầu), dichVu (\"HQ\" nếu chỉ khai hải quan, \"VC\" nếu chỉ vận chuyển, \"HQ+VC\" nếu cả hai, rỗng nếu không rõ), hang (\"Nhập khẩu\" hoặc \"Xuất khẩu\"), bl, cont (số lượng + loại hoặc số cont), tkNo (12 chữ số), mst, hangHoa, han (hạn xử lý dạng YYYY-MM-DD nếu email có nêu), lienHe (tên + số điện thoại người liên hệ), tomTat (1-3 câu tiếng Việt: khách cần làm gì, còn thiếu gì).\n" +
+    "Phân loại \"loai\":\n- \"moi\": khách / đại lý (FWD) nhờ làm một lô hàng MỚI (khai báo hải quan, làm thủ tục, vận chuyển, lấy D/O…) chưa có trong danh sách job đang làm.\n- \"cu\": email nói về một lô ĐÃ có trong danh sách job đang làm (CHỈ khi trùng mã job, số B/L / AWB, số cont hoặc số tờ khai; cùng tên công ty KHÔNG đủ vì một khách có nhiều lô, B/L / AWB khác thì là lô MỚI). Ghi \"maJob\" là mã job đó và \"lyDo\" ngắn gọn trùng gì (VD \"trùng B/L HPH123456\").\n- \"khac\": báo giá, quảng cáo, thông báo hệ thống, thư cảm ơn, thư không cần tạo việc.\n" +
+    "Các trường (để chuỗi rỗng nếu không có): loai, maJob, lyDo, tieuDe (ngắn gọn, VD \"Khai nhập 2x40 máy móc - Cty A\"), congTy (chủ hàng), fwd (đại lý giao nhận / forwarder gửi yêu cầu), dichVu (\"HQ\" nếu chỉ khai hải quan, \"VC\" nếu chỉ vận chuyển, \"HQ+VC\" nếu cả hai, rỗng nếu không rõ), hang (\"Nhập khẩu\" hoặc \"Xuất khẩu\"), bl, cont (số lượng + loại hoặc số cont), tkNo (12 chữ số), mst, hangHoa, han (hạn xử lý dạng YYYY-MM-DD nếu email có nêu), lienHe (tên + số điện thoại người liên hệ), tomTat (1-3 câu tiếng Việt: khách cần làm gì, còn thiếu gì).\n" +
     "Danh sách job đang làm (mã | công ty | FWD | B/L | cont | tờ khai):\n" + (ds || "(trống)") + "\n\n" +
     "EMAIL\nTừ: " + (m.fromN || "") + " <" + m.from + ">\nTiêu đề: " + m.s + "\nNội dung:\n" + text;
   var r = aiChay({ prompt: prompt, files: files, json: true });
