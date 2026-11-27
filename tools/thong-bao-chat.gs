@@ -522,13 +522,7 @@ function thuMoi() {
     var j = code ? jobs.filter(function (x) { return String(x.code || "").toUpperCase() === code.toUpperCase(); })[0] : null;
     if (j) { ganThu(m, j); ghiTraoDoi(j, "✉ Email mới từ " + (m.fromN || m.from) + ": " + m.s); guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · " + j.code, m.s, { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "mail"); kq.push(m.s + " → " + j.code); return; }
     var o = null; try { o = thuDocAI(m, A, jobs); } catch (e) { Logger.log("AI lỗi: " + e); }
-    if (o && o.loai === "cu") {
-      var mc = String(o.maJob || "").toUpperCase();
-      j = jobs.filter(function (x) { return String(x.code || "").toUpperCase() === mc; })[0];
-      if (!j && o.bl) j = jobs.filter(function (x) { return x.bl && String(x.bl).replace(/\W/g, "").toUpperCase() === String(o.bl).replace(/\W/g, "").toUpperCase(); })[0];
-      if (j && !cungLo(j, m, o)) { Logger.log("thuMoi: AI ghép " + m.s + " → " + j.code + " nhưng không trùng mã nào, coi là lô mới"); j = null; o.loai = "moi"; }
-      if (j) { ganThu(m, j); ghiTraoDoi(j, "✉ Email từ " + (m.fromN || m.from) + ": " + m.s + (o.tomTat ? "\n" + o.tomTat : "")); guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · " + j.code, m.s, { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "mail"); kq.push(m.s + " → " + j.code + " (AI)"); return; }
-    }
+    if (o && o.loai === "cu") o.loai = "moi"; // thư không có mã job trong tiêu đề: luôn thành job mới chờ duyệt, không tự gắn vào job cũ
     if (o && o.loai === "moi") {
       var doc = { at: Date.now(), status: "cho", mid: m.id, f: m.f, from: m.from, fromN: m.fromN || "", s: m.s, t: m.t,
         ai: { tieuDe: o.tieuDe || "", congTy: o.congTy || "", fwd: o.fwd || "", dichVu: o.dichVu || "", hang: o.hang || "", bl: o.bl || "", cont: o.cont || "", tkNo: String(o.tkNo || "").replace(/\D/g, "").slice(0, 12), mst: o.mst || "", hangHoa: o.hangHoa || "", han: o.han || "", lienHe: o.lienHe || "", tomTat: o.tomTat || "" } };
@@ -542,8 +536,6 @@ function thuMoi() {
   });
   Logger.log("thuMoi: " + kq.join(" | "));
 }
-/* Thư AI cho là "lô cũ": chỉ nhận khi thư thật sự nhắc tới mã job / B/L / số tờ khai / số cont của job đó (tránh ghép nhầm vì trùng tên khách) */
-function cungLo(j, m, o) { var N = function (s) { return String(s || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase(); }; var hay = N([m.s, m.sum, o.bl, o.cont, o.tkNo].join(" ")); var ids = [j.code, j.bl, j.tkNo].concat(String(j.cont || "").match(/[A-Z]{4}\d{7}/gi) || []).map(N).filter(function (x) { return x.length >= 6; }); return ids.some(function (x) { return hay.indexOf(x) >= 0; }); }
 /* Dung lượng: hộp thư Zoho (KB đã dùng / KB được dùng) cho mọi thành viên; dữ liệu Sổ (ước tính) chỉ cho chủ sổ */
 function dungLuong(laChu, B) {
   var o = { ok: true }, r = zhGoi(B), d = (r.json && r.json.data) || {};
