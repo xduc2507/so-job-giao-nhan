@@ -526,6 +526,7 @@ function thuMoi() {
       var mc = String(o.maJob || "").toUpperCase();
       j = jobs.filter(function (x) { return String(x.code || "").toUpperCase() === mc; })[0];
       if (!j && o.bl) j = jobs.filter(function (x) { return x.bl && String(x.bl).replace(/\W/g, "").toUpperCase() === String(o.bl).replace(/\W/g, "").toUpperCase(); })[0];
+      if (j && !cungLo(j, m, o)) { Logger.log("thuMoi: AI ghép " + m.s + " → " + j.code + " nhưng không trùng mã nào, coi là lô mới"); j = null; o.loai = "moi"; }
       if (j) { ganThu(m, j); ghiTraoDoi(j, "✉ Email từ " + (m.fromN || m.from) + ": " + m.s + (o.tomTat ? "\n" + o.tomTat : "")); guiToi(nguoi, "✉ " + (m.fromN || m.from) + " · " + j.code, m.s, { job: j._id }, APP + "?job=" + encodeURIComponent(j._id), "mail"); kq.push(m.s + " → " + j.code + " (AI)"); return; }
     }
     if (o && o.loai === "moi") {
@@ -541,6 +542,8 @@ function thuMoi() {
   });
   Logger.log("thuMoi: " + kq.join(" | "));
 }
+/* Thư AI cho là "lô cũ": chỉ nhận khi thư thật sự nhắc tới mã job / B/L / số tờ khai / số cont của job đó (tránh ghép nhầm vì trùng tên khách) */
+function cungLo(j, m, o) { var N = function (s) { return String(s || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase(); }; var hay = N([m.s, m.sum, o.bl, o.cont, o.tkNo].join(" ")); var ids = [j.code, j.bl, j.tkNo].concat(String(j.cont || "").match(/[A-Z]{4}\d{7}/gi) || []).map(N).filter(function (x) { return x.length >= 6; }); return ids.some(function (x) { return hay.indexOf(x) >= 0; }); }
 /* Dung lượng: hộp thư Zoho (KB đã dùng / KB được dùng) cho mọi thành viên; dữ liệu Sổ (ước tính) chỉ cho chủ sổ */
 function dungLuong(laChu, B) {
   var o = { ok: true }, r = zhGoi(B), d = (r.json && r.json.data) || {};
@@ -608,7 +611,7 @@ function thuDocAI(m, A, jobs) {
   }
   var ds = jobs.slice(0, 80).map(function (j) { return [j.code, j.company || "", j.fwd || "", j.bl || "", j.cont || "", j.tkNo || ""].join(" | "); }).join("\n");
   var prompt = "Bạn là trợ lý bộ phận giao nhận (khai hải quan, vận chuyển container) của công ty FDI tại Việt Nam. Đọc email gửi tới hộp thư giaonhan@opsdad.net (kèm tệp đính kèm nếu có) và trả về DUY NHẤT một JSON.\n" +
-    "Phân loại \"loai\":\n- \"moi\": khách / đại lý (FWD) nhờ làm một lô hàng MỚI (khai báo hải quan, làm thủ tục, vận chuyển, lấy D/O…) chưa có trong danh sách job đang làm.\n- \"cu\": email nói về một lô ĐÃ có trong danh sách job đang làm (trùng số B/L, số cont, số tờ khai, công ty + nội dung). Ghi \"maJob\" là mã job đó.\n- \"khac\": báo giá, quảng cáo, thông báo hệ thống, thư cảm ơn, thư không cần tạo việc.\n" +
+    "Phân loại \"loai\":\n- \"moi\": khách / đại lý (FWD) nhờ làm một lô hàng MỚI (khai báo hải quan, làm thủ tục, vận chuyển, lấy D/O…) chưa có trong danh sách job đang làm.\n- \"cu\": email nói về một lô ĐÃ có trong danh sách job đang làm (CHỈ khi trùng mã job, số B/L / AWB, số cont hoặc số tờ khai; cùng tên công ty KHÔNG đủ vì một khách có nhiều lô, B/L / AWB khác thì là lô MỚI). Ghi \"maJob\" là mã job đó.\n- \"khac\": báo giá, quảng cáo, thông báo hệ thống, thư cảm ơn, thư không cần tạo việc.\n" +
     "Các trường (để chuỗi rỗng nếu không có): loai, maJob, tieuDe (ngắn gọn, VD \"Khai nhập 2x40 máy móc - Cty A\"), congTy (chủ hàng), fwd (đại lý giao nhận / forwarder gửi yêu cầu), dichVu (\"HQ\" nếu chỉ khai hải quan, \"VC\" nếu chỉ vận chuyển, \"HQ+VC\" nếu cả hai, rỗng nếu không rõ), hang (\"Nhập khẩu\" hoặc \"Xuất khẩu\"), bl, cont (số lượng + loại hoặc số cont), tkNo (12 chữ số), mst, hangHoa, han (hạn xử lý dạng YYYY-MM-DD nếu email có nêu), lienHe (tên + số điện thoại người liên hệ), tomTat (1-3 câu tiếng Việt: khách cần làm gì, còn thiếu gì).\n" +
     "Danh sách job đang làm (mã | công ty | FWD | B/L | cont | tờ khai):\n" + (ds || "(trống)") + "\n\n" +
     "EMAIL\nTừ: " + (m.fromN || "") + " <" + m.from + ">\nTiêu đề: " + m.s + "\nNội dung:\n" + text;
