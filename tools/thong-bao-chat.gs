@@ -18,10 +18,10 @@ function doPost(e) {
   var out = { ok: false }, body = null;
   try {
     body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
-    out = body.ai ? goiAI(body.ai, body.token) : body.zbcode ? zbNoi(body.token) : body.mail ? thuOp(body.mail, body.token) : body.test ? thuMayToi(body.token) : body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
+    out = body.ai ? goiAI(body.ai, body.token) : body.zfile ? zTep(body.zfile, body.token) : body.zbcode ? zbNoi(body.token) : body.mail ? thuOp(body.mail, body.token) : body.test ? thuMayToi(body.token) : body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
   } catch (err) { out = { ok: false, msg: String(err) }; }
   if (!(body && body.mail)) console.log(JSON.stringify(out));
-  if (body && (body.ai || body.test || body.mail || body.zbcode)) return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON); // không ghi nhật ký nội dung AI / thử
+  if (body && (body.ai || body.test || body.mail || body.zbcode || body.zfile)) return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON); // không ghi nhật ký nội dung AI / thử
   try { var P = PropertiesService.getScriptProperties(), L = JSON.parse(P.getProperty("log") || "[]"); L.unshift({ t: new Date().toISOString(), job: (body && body.job) || (body && body.team ? "team" : ""), out: out }); P.setProperty("log", JSON.stringify(L.slice(0, 10))); } catch (x) {}
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -295,6 +295,7 @@ function goiAI(ai, token) {
   var mail = nguoiGoi(token);
   if (!mail) return { ok: false, code: "sampling_disabled", msg: "Hết phiên đăng nhập, tải lại trang rồi thử lại." };
   if (mail !== chuSo() && !docFs("members/" + encodeURIComponent(mail))) return { ok: false, code: "sampling_disabled", msg: "Tài khoản này chưa là thành viên sổ." };
+  if (ai.rieng && mail === chuSo() && coClaude()) return claudeChay(ai); // Việc riêng của chủ sổ: AI trả phí, không dùng dữ liệu để huấn luyện
   return aiChay(ai);
 }
 /* Ghi 1 tin tự động vào Trao đổi của job (và Chat chung nếu job ở Sổ chung) */
@@ -595,6 +596,47 @@ function aiChay(ai) {
   return { ok: false, code: "upstream_error", msg: "AI chưa trả lời được (" + last + "). Thử lại sau." };
 }
 
+/* =====================================================================
+ * CLAUDE API (trả phí, chỉ cho Việc riêng của chủ sổ). Key tạo ở console.anthropic.com → API Keys,
+ * chủ sổ tự dán vào: Cài đặt dự án → Thuộc tính tập lệnh → CLAUDE_KEY (không để key trong code, không ghi nhật ký).
+ * Đổi mô hình bằng thuộc tính CLAUDE_MODEL (mặc định claude-opus-5-5).
+ * ===================================================================== */
+function coClaude() { return !!PropertiesService.getScriptProperties().getProperty("CLAUDE_KEY"); }
+function claudeChay(ai) {
+  var P = PropertiesService.getScriptProperties(), key = P.getProperty("CLAUDE_KEY");
+  if (!key) return { ok: false, code: "sampling_disabled", msg: "Chưa có CLAUDE_KEY trên máy chủ." };
+  var content = [];
+  (ai.files || []).slice(0, 8).forEach(function (f) {
+    if (!f || !f.data) return;
+    if (f.mime === "application/pdf") content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: f.data } });
+    else content.push({ type: "image", source: { type: "base64", media_type: /^image\/(jpeg|png|gif|webp)$/.test(f.mime) ? f.mime : "image/jpeg", data: f.data } });
+  });
+  content.push({ type: "text", text: String(ai.prompt || "").slice(0, 200000) + (ai.json ? "\n\nChỉ trả về JSON, không kèm lời giải thích." : "") });
+  var body = { model: P.getProperty("CLAUDE_MODEL") || "claude-opus-5-5", max_tokens: 16000, messages: [{ role: "user", content: content }],
+    output_config: { effort: "low" }, fallbacks: "default" };
+  var r;
+  try {
+    r = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", { method: "post", contentType: "application/json", muteHttpExceptions: true,
+      headers: { "x-api-key": key, "anthropic-version": "2026-10-21", "anthropic-beta": "server-side-fallback-2026-07-01" }, payload: JSON.stringify(body) });
+  } catch (e) { return { ok: false, code: "unavailable", msg: "Máy chủ không kết nối được Claude API. Thử lại sau." }; }
+  var c = r.getResponseCode(), j = {}; try { j = JSON.parse(r.getContentText()); } catch (e) {}
+  var em = (j.error && j.error.message) || "";
+  if (c === 401 || c === 403) return { ok: false, code: "sampling_disabled", msg: "CLAUDE_KEY không hợp lệ hoặc đã bị thu hồi. Tạo key mới ở console.anthropic.com rồi dán lại vào máy chủ." };
+  if (c === 400 && /credit|balance|billing/i.test(em)) return { ok: false, code: "rate_limited", msg: "Tài khoản Claude API hết tiền. Nạp thêm ở console.anthropic.com → Billing." };
+  if (c === 429) return { ok: false, code: "rate_limited", msg: "Claude API chạm giới hạn lượt gọi. Thử lại sau ít phút." };
+  if (c === 529 || c === 503 || c >= 500) return { ok: false, code: "upstream_error", msg: "Claude đang quá tải. Thử lại sau ít phút." };
+  if (c !== 200) return { ok: false, code: "invalid_request", msg: "Claude không nhận yêu cầu: " + (em || c) };
+  if (j.stop_reason === "refusal") return { ok: false, code: "refused", msg: "Claude không xử lý được nội dung này." };
+  var text = (j.content || []).filter(function (b) { return b.type === "text"; }).map(function (b) { return b.text; }).join("");
+  if (!text.trim()) return { ok: false, code: "empty_completion", msg: "Claude không trả về nội dung." };
+  return { ok: true, text: text, truncated: j.stop_reason === "max_tokens", model: j.model || body.model };
+}
+/* Thử Claude API (chạy tay trong trình soạn): báo key có dùng được không, không in key */
+function thuClaude() {
+  var r = claudeChay({ prompt: "Trả lời đúng một chữ: OK" });
+  Logger.log(r.ok ? "Claude chạy được (" + r.model + "): " + r.text : "Lỗi: " + r.msg);
+}
+
 /* AI đọc 1 thư mới: yêu cầu làm hàng mới / thư về lô đang làm / thư khác. Trả về đối tượng JSON hoặc null */
 function thuDocAI(m, A, jobs) {
   var B = "/accounts/" + A.id + "/folders/" + m.f + "/messages/" + m.id;
@@ -644,7 +686,7 @@ function zbGoi(method, body) {
 /* ---------- Zalo Bot: gom tin của từng người; nhắn "tạo job" thì AI đọc hết các tin đã gom rồi tạo job (Mới nhận, Sổ chung) ----------
  * Lệnh (không phân biệt dấu / hoa thường): nối 123456 · tạo job · gắn FDI261125-05 · xem · xoá · hd
  * Người dùng phải nối Zalo với tài khoản Sổ bằng mã 6 số lấy trong app (Cài đặt → Nối Zalo). Người lạ nhắn bot sẽ không làm gì được. */
-function zbHd() { return ZB === "R" ? ZB_HD.replace("ở cột Mới nhận.", "trong Việc riêng (chỉ anh thấy).") : ZB_HD; }
+function zbHd() { return ZB === "R" ? ZB_HD.replace("ở cột Mới nhận.", "trong Việc riêng (chỉ anh thấy).").replace("gắn FDI…", "gắn R…") + "\n• Gửi tệp PDF, Excel, ảnh, hoặc nén cả thư mục thành .zip rồi gửi: khi tạo job, Sổ tự tạo thư mục lô trên OneDrive và lưu các tệp vào đó." : ZB_HD; }
 var ZB_HD = "Cách dùng:\n• Gửi hoặc chuyển tiếp thông tin, ảnh của lô cho bot, bot gom lại.\n• Nhắn \"tạo job\" → AI đọc các tin đã gom và tạo job ở cột Mới nhận.\n• Nhắn \"gắn FDI…\" → ghi các tin đã gom vào Trao đổi của job đó.\n• \"xem\": xem đã gom gì · \"xoá\": bỏ các tin đã gom.";
 function zbHook(e, bot) {
   ZB = bot === "R" ? "R" : "S";
@@ -685,6 +727,62 @@ function zbBuf(uid, v) {
   var s = JSON.stringify(v); while (s.length > 8500 && v.length > 1) { v.shift(); s = JSON.stringify(v); }
   P.setProperty(k, s); return v;
 }
+/* ---------- bot Việc riêng: tệp gửi qua Zalo (PDF, ảnh, Excel, hoặc .zip của cả thư mục) ----------
+ * Bot cất tạm tệp ở Drive của chủ sổ (thư mục "So Job - Zalo tam"). Khi tạo job, .zip được giải nén (giữ thư mục con)
+ * và danh sách tệp ghi vào job.odPending. App Sổ của chủ sổ (đã nối OneDrive) tự tạo thư mục lô, tải từng tệp lên
+ * rồi bỏ bản tạm vào thùng rác Drive. Chỉ chủ sổ lấy được tệp, và chỉ tệp nằm trong thư mục tạm này. */
+var ZT_THU_MUC = "So Job - Zalo tam";
+function ztDir() { var it = DriveApp.getFoldersByName(ZT_THU_MUC); return it.hasNext() ? it.next() : DriveApp.createFolder(ZT_THU_MUC); }
+function ztTen(n) { return String(n || "tep").replace(/[\\:*?"<>|]+/g, "_").replace(/^\s+|\s+$/g, "").slice(0, 150) || "tep"; }
+function ztMime(n, m) {
+  var e = (/\.([a-z0-9]{1,5})$/i.exec(n || "") || [])[1]; e = e ? e.toLowerCase() : "";
+  var M = { pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp", heic: "image/heic",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xls: "application/vnd.ms-excel", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", doc: "application/msword", zip: "application/zip", txt: "text/plain", csv: "text/csv", xml: "application/xml" };
+  return M[e] || (m && m !== "application/octet-stream" ? m : "application/octet-stream");
+}
+function ztCat(url, ten) { // tải 1 tệp từ Zalo về thư mục tạm (link Zalo không giữ lâu nên phải tải ngay)
+  var r = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
+  if (r.getResponseCode() !== 200) throw new Error("Zalo trả lỗi " + r.getResponseCode());
+  var bl = r.getBlob(), n = ztTen(ten || bl.getName());
+  if (!/\.[a-z0-9]{2,5}$/i.test(n)) n += /png/.test(bl.getContentType() || "") ? ".png" : /pdf/.test(bl.getContentType() || "") ? ".pdf" : ".jpg";
+  var f = ztDir().createFile(bl.setName(n).setContentType(ztMime(n, bl.getContentType())));
+  return { d: f.getId(), n: n, z: f.getSize() };
+}
+function ztMo(x) { // 1 mục đã gom → danh sách tệp [{id,n,sub,sz,mime}]; .zip thì giải nén vào thư mục tạm
+  var f = DriveApp.getFileById(x.d);
+  if (!/\.zip$/i.test(x.n || f.getName())) return [{ id: f.getId(), n: f.getName(), sub: "", sz: f.getSize(), mime: f.getMimeType() }];
+  var L = Utilities.unzip(f.getBlob().setContentType("application/zip")).filter(function (b) {
+    var n = String(b.getName() || "").replace(/\\/g, "/"); return n && !/\/$/.test(n) && !/(^|\/)(__MACOSX|\.DS_Store$|Thumbs\.db$|desktop\.ini$)/i.test(n);
+  });
+  var P = L.map(function (b) { return String(b.getName()).replace(/\\/g, "/").split("/"); });
+  var goc = P.length && P.every(function (p) { return p.length > 1 && p[0] === P[0][0]; }) ? 1 : 0; // zip của 1 thư mục: bỏ tầng thư mục ngoài cùng
+  var dir = ztDir(), out = [];
+  L.slice(0, 150).forEach(function (b, i) {
+    var p = P[i].slice(goc), n = ztTen(p.pop()), mime = ztMime(n, b.getContentType());
+    var nf = dir.createFile(b.setName(n).setContentType(mime));
+    out.push({ id: nf.getId(), n: n, sub: p.map(ztTen).join("/"), sz: nf.getSize(), mime: mime });
+  });
+  f.setTrashed(true);
+  return out;
+}
+function ztBo(buf) { buf.forEach(function (x) { if (x.d) try { DriveApp.getFileById(x.d).setTrashed(true); } catch (e) {} }); }
+function ztDocAI(tep, files) { // lấy tối đa 4 PDF / ảnh nhỏ cho AI đọc
+  tep.filter(function (t) { return /^(application\/pdf|image\/(jpeg|png|webp))$/.test(t.mime) && t.sz < 4e6; }).slice(0, Math.max(0, 4 - files.length)).forEach(function (t) {
+    try { files.push({ mime: t.mime, data: Utilities.base64Encode(DriveApp.getFileById(t.id).getBlob().getBytes()) }); } catch (e) {}
+  });
+}
+/* App gọi (chủ sổ): lấy nội dung 1 tệp tạm (op "get") hoặc bỏ nó vào thùng rác Drive sau khi đã lưu OneDrive (op "del") */
+function zTep(q, token) {
+  var mail = nguoiGoi(token);
+  if (!mail || mail !== chuSo()) return { ok: false, msg: "Chỉ chủ sổ lấy được tệp của bot Việc riêng." };
+  var f = null; try { f = DriveApp.getFileById(String((q && q.id) || "")); } catch (e) {}
+  if (!f || f.isTrashed()) return { ok: false, gone: true, msg: "Tệp tạm không còn trên máy chủ." };
+  var dirId = ztDir().getId(), trong = false, ps = f.getParents(); while (ps.hasNext()) if (ps.next().getId() === dirId) trong = true;
+  if (!trong) return { ok: false, gone: true, msg: "Tệp không nằm trong thư mục tạm của bot." };
+  if (q.op === "del") { f.setTrashed(true); return { ok: true }; }
+  if (f.getSize() > 35e6) return { ok: false, msg: "Tệp lớn hơn 35 MB, tải thẳng từ Zalo." };
+  return { ok: true, n: f.getName(), mime: f.getMimeType(), b64: Utilities.base64Encode(f.getBlob().getBytes()) };
+}
 function zbXuLy(m, ev) {
   var P = PropertiesService.getScriptProperties(), chat = m.chat.id, uid = m.from.id, kU = ZB === "R" ? "ZR_USERS" : "ZB_USERS";
   var users = {}; try { users = JSON.parse(P.getProperty(kU) || "{}"); } catch (x) {}
@@ -701,26 +799,36 @@ function zbXuLy(m, ev) {
   if (!u) return zbGui(chat, ZB === "R" ? "Bot này chỉ dành cho chủ sổ." : "Bot chưa biết bạn là ai trong Sổ. Mở app Làm hàng FDI → Cài đặt → Nối Zalo, lấy mã 6 số rồi nhắn cho bot: nối 123456");
   if (k === "hd" || k === "huong dan" || k === "help" || k === "/start") return zbGui(chat, zbHd());
   var buf = zbBuf(uid);
-  if (k === "xem") return zbGui(chat, buf.length ? "Đang gom " + buf.length + " mục:\n" + buf.map(function (x, i) { return (i + 1) + ". " + (x.p ? "📷 ảnh" + (x.x ? ": " : "") : "") + String(x.x || "").slice(0, 80).replace(/\n/g, " "); }).join("\n") : "Chưa gom tin nào.");
-  if (k === "xoa" || k === "huy" || k === "xoa het") { zbBuf(uid, []); return zbGui(chat, "🗑 Đã bỏ " + buf.length + " mục đã gom."); }
+  if (k === "xem") return zbGui(chat, buf.length ? "Đang gom " + buf.length + " mục:\n" + buf.map(function (x, i) { return (i + 1) + ". " + (x.d ? "📎 " + x.n + (x.x ? ": " : "") : x.p ? "📷 ảnh" + (x.x ? ": " : "") : "") + String(x.x || "").slice(0, 80).replace(/\n/g, " "); }).join("\n") : "Chưa gom tin nào.");
+  if (k === "xoa" || k === "huy" || k === "xoa het") { ztBo(buf); zbBuf(uid, []); return zbGui(chat, "🗑 Đã bỏ " + buf.length + " mục đã gom."); }
   var gan = text.match(/^\s*g[aắ]n\s+([A-Za-z]{1,4}\d{6}-[A-Za-z]*\d+)/i) || k.match(/^gan\s+([a-z]{1,4}\d{6}-[a-z]*\d+)/);
   if (gan) return zbGan(u, uid, chat, buf, gan[1].toUpperCase());
   if (/^tao( 1| mot)?( job| lo| viec)?$/.test(k) || k === "tao job moi") return zbTao(u, uid, chat, buf);
+  if (ZB === "R" && (m.file_url || m.photo_url)) { // bot Việc riêng: cất tệp / ảnh để lưu vào thư mục lô trên OneDrive
+    var t = null; try { t = ztCat(m.file_url || m.photo_url, m.file_name || (m.file_url ? "" : "anh-zalo-" + Utilities.formatDate(new Date(), "Asia/Ho_Chi_Minh", "yyMMdd-HHmmss"))); } catch (e) { Logger.log("ztCat " + e); }
+    if (!t) return zbGui(chat, "⚠ Chưa tải được " + (m.file_name || "ảnh") + " từ Zalo. Gửi lại giúp em.");
+    buf.push({ t: Number(m.date) || Date.now(), x: text.slice(0, 600), d: t.d, n: t.n, z: t.z });
+    buf = zbBuf(uid, buf);
+    return zbGui(chat, "📎 Đã nhận " + t.n + (/\.zip$/i.test(t.n) ? " (sẽ giải nén khi tạo job)" : "") + ". Đang gom " + buf.length + " mục. Gửi tiếp nếu còn, xong nhắn \"tạo job\" (hoặc \"gắn R…\" để lưu vào job có sẵn).");
+  }
   if (!text && !m.photo_url) return; // sticker, tin thoại…: bỏ qua
   buf.push({ t: Number(m.date) || Date.now(), x: text.slice(0, 1500), p: m.photo_url || "" });
   buf = zbBuf(uid, buf);
   zbGui(chat, "📥 Đã gom " + buf.length + " mục. Gửi tiếp nếu còn, xong nhắn \"tạo job\" (hoặc \"gắn FDI…\" để ghi vào job có sẵn).");
 }
 function zbNoiDung(buf) {
-  return buf.map(function (x, i) { return "[" + (i + 1) + "] " + (x.x || "") + (x.p ? (x.x ? "\n" : "") + "📷 " + x.p : ""); }).join("\n\n");
+  return buf.map(function (x, i) { return "[" + (i + 1) + "] " + (x.x || "") + (x.d ? (x.x ? "\n" : "") + "📎 " + x.n : x.p ? (x.x ? "\n" : "") + "📷 " + x.p : ""); }).join("\n\n");
 }
 function zbGan(u, uid, chat, buf, code) {
   if (!buf.length) return zbGui(chat, "Chưa gom tin nào để gắn vào " + code + ".");
   var owner = chuSo(), j = docHet("jobs").filter(function (x) { return String(x.code || "").toUpperCase() === code && (ZB === "R" ? laViecRieng(x, owner) : x.shared); })[0];
   if (!j) return zbGui(chat, "Không thấy job " + code + (ZB === "R" ? " trong Việc riêng." : " ở Sổ chung."));
+  var tep = [];
+  if (ZB === "R") buf.filter(function (x) { return x.d; }).forEach(function (x) { try { tep = tep.concat(ztMo(x)); } catch (e) { Logger.log("ztMo " + e); } });
+  if (tep.length) vaFs("jobs/" + j._id, { odPending: (Array.isArray(j.odPending) ? j.odPending : []).concat(tep), updatedAt: Date.now() });
   ghiTraoDoi(j, "📥 Từ Zalo (" + u.n + "):\n" + zbNoiDung(buf));
   zbBuf(uid, []);
-  zbGui(chat, "✅ Đã ghi " + buf.length + " mục vào Trao đổi của " + code + ".\n" + APP + "?job=" + encodeURIComponent(j._id));
+  zbGui(chat, "✅ Đã ghi " + buf.length + " mục vào Trao đổi của " + code + "." + (tep.length ? "\n📎 " + tep.length + " tệp sẽ tự lưu vào thư mục OneDrive của lô khi anh mở Sổ." : "") + "\n" + APP + "?job=" + encodeURIComponent(j._id));
 }
 function zbTao(u, uid, chat, buf) {
   if (!buf.length) return zbGui(chat, "Chưa có thông tin nào. Gửi hoặc chuyển tiếp thông tin, ảnh của lô trước, rồi nhắn \"tạo job\".");
@@ -730,10 +838,13 @@ function zbTao(u, uid, chat, buf) {
   buf.filter(function (x) { return x.p; }).slice(0, 4).forEach(function (x) {
     try { var r = UrlFetchApp.fetch(x.p, { muteHttpExceptions: true }); if (r.getResponseCode() === 200) { var bl = r.getBlob(), by = bl.getBytes(); if (by.length < 4e6) files.push({ mime: bl.getContentType() || "image/jpeg", data: Utilities.base64Encode(by) }); } } catch (e) {}
   });
+  var tep = [];
+  if (ZB === "R") { buf.filter(function (x) { return x.d; }).forEach(function (x) { try { tep = tep.concat(ztMo(x)); } catch (e) { Logger.log("ztMo " + e); } }); ztDocAI(tep, files); }
   var prompt = "Bạn là trợ lý bộ phận giao nhận (khai hải quan, vận chuyển container) của công ty FDI tại Việt Nam. Nhân viên đã gom các tin nhắn Zalo (và ảnh kèm theo) về MỘT lô hàng cần làm. Đọc hết và trả về DUY NHẤT một JSON mô tả lô đó.\n" +
     "Các trường (để chuỗi rỗng nếu không có): tieuDe (ngắn gọn, VD \"Khai nhập 2x40 máy móc - Cty A\" hoặc \"Xe nhập Hoà Vang - Đà Nẵng\"), congTy (chủ hàng), fwd (đại lý giao nhận / forwarder), dichVu (\"HQ\" nếu chỉ khai hải quan, \"VC\" nếu chỉ vận chuyển, \"HQ+VC\" nếu cả hai, rỗng nếu không rõ), hang (\"Nhập khẩu\" hoặc \"Xuất khẩu\"), bl, cont (số lượng + loại, hoặc số cont / biển số xe), tkNo (12 chữ số), mst, hangHoa, han (hạn xử lý YYYY-MM-DD nếu có, năm hiện tại " + homNay().slice(0, 4) + "), lienHe (tên + số điện thoại người liên hệ / tài xế), pol (nơi lấy hàng), pod (nơi giao hàng), tomTat (1-3 câu tiếng Việt: cần làm gì, còn thiếu gì).\n\n" +
-    "CÁC TIN ĐÃ GOM (người gửi: " + u.n + "):\n" + buf.map(function (x, i) { return "[" + (i + 1) + "] " + (x.x || "(ảnh)"); }).join("\n\n");
-  var o = null, r = aiChay({ prompt: prompt, files: files, json: true });
+    "CÁC TIN ĐÃ GOM (người gửi: " + u.n + "):\n" + buf.map(function (x, i) { return "[" + (i + 1) + "] " + (x.x || "") + (x.d ? " (tệp " + x.n + ")" : x.x ? "" : "(ảnh)"); }).join("\n\n") + (tep.length ? "\n\nTên các tệp: " + tep.map(function (t) { return (t.sub ? t.sub + "/" : "") + t.n; }).slice(0, 60).join(", ") : "");
+  var rq = { prompt: prompt, files: files, json: true };
+  var o = null, r = ZB === "R" && u.e === chuSo() && coClaude() ? claudeChay(rq) : aiChay(rq); // bot Việc riêng: dùng Claude trả phí
   if (r.ok) { try { o = JSON.parse(String(r.text).replace(/^\s*\x60+(json)?|\x60+\s*$/g, "").trim()); if (Array.isArray(o)) o = o[0]; } catch (e) { o = null; } }
   o = o || {};
   var sv = ["HQ", "VC", "HQ+VC"].indexOf(o.dichVu) >= 0 ? o.dichVu : "";
@@ -751,6 +862,7 @@ function zbTao(u, uid, chat, buf) {
     raw: zbNoiDung(buf).slice(0, 6000), images: [], createdAt: now, updatedAt: now, stageAt: now, history: [{ at: now, by: u.n, kind: "create", to: "Mới nhận", note: "Tạo từ Zalo" }],
     shared: !rieng, createdBy: u.e, createdByName: u.n, assignee: u.e, assigneeName: u.n };
   if (!sv) job.svcPending = true;
+  if (rieng && tep.length) job.odPending = tep; // app Sổ của chủ sổ sẽ tạo thư mục lô trên OneDrive và lưu các tệp này
   var f = {}; for (var key in job) f[key] = veFs(job[key]);
   var w = goi(FS + "/jobs", { method: "post", payload: { fields: f } });
   if (w.code !== 200) { Logger.log("zbTao ghi lỗi " + w.code + " " + w.text); return zbGui(chat, "❌ Chưa tạo được job (lỗi máy chủ " + w.code + "). Các tin đã gom vẫn giữ, thử lại sau."); }
@@ -758,7 +870,7 @@ function zbTao(u, uid, chat, buf) {
   ghiTraoDoi(job, "📥 Thông tin gom từ Zalo (" + u.n + "):\n" + zbNoiDung(buf)); // Việc riêng: shared=false nên không hiện ở Chat chung
   zbBuf(uid, []);
   if (!rieng && u.e !== owner) guiToi([owner], "📥 Job mới từ Zalo · " + code, job.title + "\nTạo bởi " + u.n, { job: job._id }, APP + "?job=" + encodeURIComponent(job._id), "zalo-" + job._id);
-  zbGui(chat, "✅ Đã tạo " + code + ": " + job.title + (sv ? " · " + sv : "") + (o.congTy ? " · " + o.congTy : "") + (rieng ? "\nJob ở Việc riêng, cột Mới nhận. Mở: " : "\nJob ở cột Mới nhận, bạn là người phụ trách. Mở: ") + APP + "?job=" + encodeURIComponent(job._id));
+  zbGui(chat, "✅ Đã tạo " + code + ": " + job.title + (sv ? " · " + sv : "") + (o.congTy ? " · " + o.congTy : "") + (rieng ? (tep.length ? "\n📎 " + tep.length + " tệp sẽ tự lưu vào thư mục OneDrive của lô khi anh mở Sổ." : "") + "\nJob ở Việc riêng, cột Mới nhận. Mở: " : "\nJob ở cột Mới nhận, bạn là người phụ trách. Mở: ") + APP + "?job=" + encodeURIComponent(job._id));
 }
 /* Chạy tay 1 lần: tự sinh mã bí mật và báo Zalo đẩy tin về link máy chủ đang triển khai */
 function zaloCaiWebhookR() { ZB = "R"; zaloCaiWebhook(); } // bot Việc riêng
