@@ -18,10 +18,10 @@ function doPost(e) {
   var out = { ok: false }, body = null;
   try {
     body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
-    out = body.ai ? goiAI(body.ai, body.token) : body.zfile ? zTep(body.zfile, body.token) : body.zbcode ? zbNoi(body.token) : body.mail ? thuOp(body.mail, body.token) : body.test ? thuMayToi(body.token) : body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
+    out = body.ai ? goiAI(body.ai, body.token) : body.od ? odMay(body.od, body.token) : body.zfile ? zTep(body.zfile, body.token) : body.zbcode ? zbNoi(body.token) : body.mail ? thuOp(body.mail, body.token) : body.test ? thuMayToi(body.token) : body.team ? guiChatChung() : guiThongBao(String(body.job || ""));
   } catch (err) { out = { ok: false, msg: String(err) }; }
   if (!(body && body.mail)) console.log(JSON.stringify(out));
-  if (body && (body.ai || body.test || body.mail || body.zbcode || body.zfile)) return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON); // không ghi nhật ký nội dung AI / thử
+  if (body && (body.ai || body.test || body.mail || body.zbcode || body.zfile || body.od)) return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON); // không ghi nhật ký nội dung AI / thử
   try { var P = PropertiesService.getScriptProperties(), L = JSON.parse(P.getProperty("log") || "[]"); L.unshift({ t: new Date().toISOString(), job: (body && body.job) || (body && body.team ? "team" : ""), out: out }); P.setProperty("log", JSON.stringify(L.slice(0, 10))); } catch (x) {}
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -727,6 +727,130 @@ function zbBuf(uid, v) {
   var s = JSON.stringify(v); while (s.length > 8500 && v.length > 1) { v.shift(); s = JSON.stringify(v); }
   P.setProperty(k, s); return v;
 }
+/* ---------- OneDrive của chủ sổ: máy chủ giữ phiên đăng nhập ----------
+ * Ứng dụng Microsoft "So Job OneDrive" (tài khoản Microsoft cá nhân). Chủ sổ tạo client secret (Entra → Certificates & secrets)
+ * rồi dán vào Thuộc tính tập lệnh OD_SECRET. Đăng nhập 1 lần trong Sổ: máy chủ giữ refresh token (OD_RT, tự gia hạn khi dùng),
+ * mọi máy của chủ sổ lấy access token tạm từ đây, bot Việc riêng lưu tệp thẳng vào thư mục lô. Thư mục gốc (chứa các FWD): OD_ROOT.
+ * Chỉ chủ sổ gọi được (kiểm tra Firebase token). */
+var OD_CLIENT = "75e45cab-7c6e-4ac4-a1d0-9797e376b79d", OD_AUTH = "https://login.microsoftonline.com/consumers/oauth2/v2.0", OD_SCOPE = "Files.ReadWrite offline_access User.Read", OD_G = "https://graph.microsoft.com/v1.0";
+function odCo() { var P = PropertiesService.getScriptProperties(); return !!P.getProperty("OD_SECRET") && !!P.getProperty("OD_RT") && !!P.getProperty("OD_ROOT"); }
+function odRoot_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty("OD_ROOT") || "null"); } catch (e) { return null; } }
+function odToken_(p) {
+  var P = PropertiesService.getScriptProperties(), sec = P.getProperty("OD_SECRET");
+  if (!sec) throw new Error("nosecret");
+  var body = { client_id: OD_CLIENT, client_secret: sec, scope: OD_SCOPE }; for (var k in p) body[k] = p[k];
+  var r = UrlFetchApp.fetch(OD_AUTH + "/token", { method: "post", payload: body, muteHttpExceptions: true }), j = {};
+  try { j = JSON.parse(r.getContentText()); } catch (e) {}
+  if (r.getResponseCode() !== 200 || !j.access_token) {
+    if (p.grant_type === "refresh_token" && /invalid_grant/.test(j.error || "")) P.deleteProperty("OD_RT");
+    throw new Error(j.error_description ? String(j.error_description).split(/\r?\n/)[0].slice(0, 200) : "Microsoft trả lỗi " + r.getResponseCode());
+  }
+  if (j.refresh_token) P.setProperty("OD_RT", j.refresh_token);
+  var ttl = Math.max(120, Number(j.expires_in || 3600) - 300), o = { t: j.access_token, e: Date.now() + ttl * 1000 };
+  CacheService.getScriptCache().put("od_at", JSON.stringify(o), Math.min(21600, ttl));
+  return o;
+}
+function odTok_() {
+  var c = CacheService.getScriptCache().get("od_at");
+  if (c) { try { var o = JSON.parse(c); if (o.e > Date.now() + 60000) return o; } catch (e) {} }
+  var rt = PropertiesService.getScriptProperties().getProperty("OD_RT");
+  if (!rt) throw new Error("chua-noi");
+  return odToken_({ grant_type: "refresh_token", refresh_token: rt });
+}
+function odG_(path, opt) {
+  opt = opt || {};
+  var o = { method: opt.method || "get", headers: { Authorization: "Bearer " + odTok_().t }, muteHttpExceptions: true };
+  if (opt.json) { o.payload = JSON.stringify(opt.json); o.contentType = "application/json"; }
+  if (opt.bytes) { o.payload = opt.bytes; o.contentType = opt.ctype || "application/octet-stream"; }
+  var r = UrlFetchApp.fetch(/^https:/.test(path) ? path : OD_G + path, o), c = r.getResponseCode(), j = {};
+  try { j = JSON.parse(r.getContentText()); } catch (e) {}
+  if (c >= 300) throw new Error("OneDrive " + c + (j.error && j.error.message ? ": " + String(j.error.message).slice(0, 160) : ""));
+  return j;
+}
+/* so tên thư mục với tên FWD / khách: giống app (bỏ dấu, bỏ "công ty, TNHH, Co., Ltd…") */
+function odN_(s) {
+  return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d")
+    .replace(/\b(cong ty|cty|tnhh|mtv|co|ltd|jsc|corp|corporation|company|inc|limited|viet ?nam|vn|chi nhanh|cn|tm|dv|xnk|sx|thuong mai|dich vu|xuat nhap khau|san xuat|dau tu|logistics?)\b/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+}
+function odScore_(folder, name) {
+  var a = odN_(folder), b = odN_(name); if (!a || !b) return 0; if (a === b) return 1;
+  if ((" " + a + " ").indexOf(" " + b + " ") >= 0 || (" " + b + " ").indexOf(" " + a + " ") >= 0) return 0.92;
+  var A = a.split(" ").filter(function (w) { return w.length > 1; }), B = b.split(" ").filter(function (w) { return w.length > 1; });
+  if (!A.length || !B.length) return 0;
+  var hit = B.filter(function (w) { return A.some(function (x) { return x === w || (Math.min(x.length, w.length) >= 3 && (x.indexOf(w) === 0 || w.indexOf(x) === 0)); }); }).length;
+  return hit / Math.max(A.length, B.length) * 0.88;
+}
+function odBest_(L, name) { var best = null, sc = 0; L.forEach(function (f) { if (f.folder) { var v = odScore_(f.name, name); if (v > sc) { sc = v; best = f; } } }); return sc >= 0.5 ? { f: best, sc: sc } : null; }
+function odSafe_(s) { return String(s || "").replace(/["*:<>?\/\\|#%]/g, " ").replace(/\s+/g, " ").trim().replace(/[. ]+$/, "").slice(0, 110) || "Thu muc"; }
+function odShort_(j) { return String(j.title || "").replace(/^\s*\d{1,2}\/\d{1,2}(\/\d{2,4})?\s*-\s*/, "").slice(0, 60) || j.company || ""; }
+function odKids_(id) {
+  var L = [], u = "/me/drive/items/" + encodeURIComponent(id) + "/children?$select=id,name,folder,webUrl&$top=999";
+  while (u) { var r = odG_(u); L = L.concat(r.value || []); u = r["@odata.nextLink"] || null; }
+  return L.filter(function (x) { return x.folder; });
+}
+function odMk_(pid, name) { return odG_("/me/drive/items/" + encodeURIComponent(pid) + "/children", { method: "post", json: { name: odSafe_(name), folder: {}, "@microsoft.graph.conflictBehavior": "rename" } }); }
+/* thư mục lô của job: tìm FWD → khách → lô; thiếu tầng nào thì tạo (giống app) */
+function odLo_(j) {
+  var root = odRoot_(); if (!root) throw new Error("Chưa chọn thư mục gốc OneDrive.");
+  var fwds = odKids_(root.id), fwd = j.fwd ? (odBest_(fwds, j.fwd) || {}).f || null : null, kh = null;
+  if (fwd && j.company) kh = (odBest_(odKids_(fwd.id), j.company) || {}).f || null;
+  if (!kh && j.company) { var bs = 0; fwds.forEach(function (f) { var b = odBest_(odKids_(f.id), j.company); if (b && b.sc > bs) { bs = b.sc; kh = b.f; fwd = f; } }); }
+  if (!fwd) fwd = (odBest_(fwds, j.fwd || "Khác") || {}).f || odMk_(root.id, j.fwd || "Khác");
+  if (!kh) kh = odMk_(fwd.id, j.company || "Chưa rõ khách");
+  var keys = [j.code, j.bl, j.tkNo].map(function (x) { return String(x || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase(); }).filter(function (x) { return x.length >= 6; });
+  var lo = odKids_(kh.id).filter(function (f) { var n = f.name.replace(/[^A-Za-z0-9]/g, "").toUpperCase(); return keys.some(function (k) { return n.indexOf(k) >= 0; }); })[0] || odMk_(kh.id, j.code + " - " + odShort_(j));
+  return { id: lo.id, name: lo.name, url: lo.webUrl || "", path: [fwd.name, kh.name, lo.name].join(" / "), kh: { id: kh.id, name: kh.name }, fwd: { id: fwd.id, name: fwd.name }, at: Date.now() };
+}
+function odSub_(base, sub) {
+  var id = base;
+  String(sub || "").split("/").filter(String).forEach(function (p) { var nm = odSafe_(p).toLowerCase(), f = odKids_(id).filter(function (x) { return x.name.toLowerCase() === nm; })[0]; id = (f || odMk_(id, p)).id; });
+  return id;
+}
+function odUp_(pid, n, blob) {
+  var nm = encodeURIComponent(odSafe_(n)), by = blob.getBytes(), base = "/me/drive/items/" + encodeURIComponent(pid) + ":/" + nm + ":";
+  if (by.length <= 4 * 1024 * 1024) return odG_(base + "/content?@microsoft.graph.conflictBehavior=rename", { method: "put", bytes: by, ctype: blob.getContentType() || "application/octet-stream" });
+  var s = odG_(base + "/createUploadSession", { method: "post", json: { item: { "@microsoft.graph.conflictBehavior": "rename" } } }), CH = 327680 * 10, r = null;
+  for (var o = 0; o < by.length; o += CH) {
+    var e = Math.min(by.length, o + CH);
+    r = UrlFetchApp.fetch(s.uploadUrl, { method: "put", payload: by.slice(o, e), headers: { "Content-Range": "bytes " + o + "-" + (e - 1) + "/" + by.length }, muteHttpExceptions: true });
+    if (r.getResponseCode() >= 300) throw new Error("Tải lên lỗi " + r.getResponseCode());
+  }
+  return JSON.parse(r.getContentText());
+}
+/* bot Việc riêng: lưu thẳng các tệp tạm vào thư mục lô. Trả về { od, con: [tệp chưa lưu được → để app lưu sau] } */
+function odLuuTep_(j, tep) {
+  var tong = tep.reduce(function (a, t) { return a + (Number(t.sz) || 0); }, 0);
+  if (!odCo() || tep.length > 40 || tong > 40e6) return null; // nhiều / nặng quá: để app tải lên (tránh quá 6 phút)
+  var od = j.od && j.od.id ? j.od : odLo_(j), con = [], sub = {};
+  tep.forEach(function (t) {
+    try {
+      var f = DriveApp.getFileById(t.id), pid = t.sub ? (sub[t.sub] = sub[t.sub] || odSub_(od.id, t.sub)) : od.id;
+      odUp_(pid, t.n || f.getName(), f.getBlob()); f.setTrashed(true);
+    } catch (e) { Logger.log("odLuu " + t.n + ": " + e); con.push(t); }
+  });
+  return { od: od, con: con };
+}
+/* App gọi (chủ sổ): op "code" đổi mã đăng nhập lấy phiên · "tok" lấy access token tạm · "root" đặt thư mục gốc · "out" ngắt */
+function odMay(q, token) {
+  var mail = nguoiGoi(token);
+  if (!mail || mail !== chuSo()) return { ok: false, msg: "Chỉ chủ sổ dùng được OneDrive của Việc riêng." };
+  var P = PropertiesService.getScriptProperties(); q = q || {};
+  if (!P.getProperty("OD_SECRET")) return { ok: false, code: "nosecret", msg: "Máy chủ chưa có OD_SECRET." };
+  try {
+    if (q.op === "out") { P.deleteProperty("OD_RT"); P.deleteProperty("OD_ACCT"); CacheService.getScriptCache().remove("od_at"); return { ok: true, linked: false, root: odRoot_() }; }
+    if (q.op === "root" && q.root && q.root.id) P.setProperty("OD_ROOT", JSON.stringify({ id: String(q.root.id), name: String(q.root.name || "").slice(0, 200) }));
+    if (q.op === "code") {
+      odToken_({ grant_type: "authorization_code", code: String(q.code || ""), redirect_uri: String(q.redirect || ""), code_verifier: String(q.ver || "") });
+      try { var u = odG_("/me?$select=displayName,mail,userPrincipalName"); P.setProperty("OD_ACCT", u.mail || u.userPrincipalName || u.displayName || ""); } catch (e) {}
+    }
+    if (!P.getProperty("OD_RT")) return { ok: true, linked: false, root: odRoot_() };
+    var t = odTok_();
+    return { ok: true, linked: true, tok: t.t, exp: t.e, root: odRoot_(), acct: P.getProperty("OD_ACCT") || "" };
+  } catch (e) {
+    if (String(e.message) === "chua-noi") return { ok: true, linked: false, root: odRoot_() };
+    return { ok: false, msg: String(e.message || e) };
+  }
+}
 /* ---------- bot Việc riêng: tệp gửi qua Zalo (PDF, ảnh, Excel, hoặc .zip của cả thư mục) ----------
  * Bot cất tạm tệp ở Drive của chủ sổ (thư mục "So Job - Zalo tam"). Khi tạo job, .zip được giải nén (giữ thư mục con)
  * và danh sách tệp ghi vào job.odPending. App Sổ của chủ sổ (đã nối OneDrive) tự tạo thư mục lô, tải từng tệp lên
@@ -825,10 +949,21 @@ function zbGan(u, uid, chat, buf, code) {
   if (!j) return zbGui(chat, "Không thấy job " + code + (ZB === "R" ? " trong Việc riêng." : " ở Sổ chung."));
   var tep = [];
   if (ZB === "R") buf.filter(function (x) { return x.d; }).forEach(function (x) { try { tep = tep.concat(ztMo(x)); } catch (e) { Logger.log("ztMo " + e); } });
-  if (tep.length) vaFs("jobs/" + j._id, { odPending: (Array.isArray(j.odPending) ? j.odPending : []).concat(tep), updatedAt: Date.now() });
+  var luu = null;
+  if (tep.length) {
+    try { luu = odLuuTep_(j, tep); } catch (e) { Logger.log("odLuuTep " + e); }
+    var upd = { odPending: (Array.isArray(j.odPending) ? j.odPending : []).concat(luu ? luu.con : tep), updatedAt: Date.now() };
+    if (luu) upd.od = luu.od;
+    vaFs("jobs/" + j._id, upd);
+  }
   ghiTraoDoi(j, "📥 Từ Zalo (" + u.n + "):\n" + zbNoiDung(buf));
   zbBuf(uid, []);
-  zbGui(chat, "✅ Đã ghi " + buf.length + " mục vào Trao đổi của " + code + "." + (tep.length ? "\n📎 " + tep.length + " tệp sẽ tự lưu vào thư mục OneDrive của lô khi anh mở Sổ." : "") + "\n" + APP + "?job=" + encodeURIComponent(j._id));
+  zbGui(chat, "✅ Đã ghi " + buf.length + " mục vào Trao đổi của " + code + "." + zbTepMsg(tep, luu) + "\n" + APP + "?job=" + encodeURIComponent(j._id));
+}
+function zbTepMsg(tep, luu) {
+  if (!tep.length) return "";
+  var da = luu ? tep.length - luu.con.length : 0, con = tep.length - da;
+  return (da ? "\n📁 Đã lưu " + da + " tệp vào OneDrive: " + luu.od.path : "") + (con ? "\n📎 " + con + " tệp sẽ tự lưu vào thư mục OneDrive của lô khi anh mở Sổ." : "");
 }
 function zbTao(u, uid, chat, buf) {
   if (!buf.length) return zbGui(chat, "Chưa có thông tin nào. Gửi hoặc chuyển tiếp thông tin, ảnh của lô trước, rồi nhắn \"tạo job\".");
@@ -867,10 +1002,15 @@ function zbTao(u, uid, chat, buf) {
   var w = goi(FS + "/jobs", { method: "post", payload: { fields: f } });
   if (w.code !== 200) { Logger.log("zbTao ghi lỗi " + w.code + " " + w.text); return zbGui(chat, "❌ Chưa tạo được job (lỗi máy chủ " + w.code + "). Các tin đã gom vẫn giữ, thử lại sau."); }
   job._id = w.json.name.split("/").pop();
+  var luu = null;
+  if (rieng && tep.length) {
+    try { luu = odLuuTep_(job, tep); } catch (e) { Logger.log("odLuuTep " + e); }
+    if (luu) vaFs("jobs/" + job._id, { od: luu.od, odPending: luu.con });
+  }
   ghiTraoDoi(job, "📥 Thông tin gom từ Zalo (" + u.n + "):\n" + zbNoiDung(buf)); // Việc riêng: shared=false nên không hiện ở Chat chung
   zbBuf(uid, []);
   if (!rieng && u.e !== owner) guiToi([owner], "📥 Job mới từ Zalo · " + code, job.title + "\nTạo bởi " + u.n, { job: job._id }, APP + "?job=" + encodeURIComponent(job._id), "zalo-" + job._id);
-  zbGui(chat, "✅ Đã tạo " + code + ": " + job.title + (sv ? " · " + sv : "") + (o.congTy ? " · " + o.congTy : "") + (rieng ? (tep.length ? "\n📎 " + tep.length + " tệp sẽ tự lưu vào thư mục OneDrive của lô khi anh mở Sổ." : "") + "\nJob ở Việc riêng, cột Mới nhận. Mở: " : "\nJob ở cột Mới nhận, bạn là người phụ trách. Mở: ") + APP + "?job=" + encodeURIComponent(job._id));
+  zbGui(chat, "✅ Đã tạo " + code + ": " + job.title + (sv ? " · " + sv : "") + (o.congTy ? " · " + o.congTy : "") + (rieng ? zbTepMsg(tep, luu) + "\nJob ở Việc riêng, cột Mới nhận. Mở: " : "\nJob ở cột Mới nhận, bạn là người phụ trách. Mở: ") + APP + "?job=" + encodeURIComponent(job._id));
 }
 /* Chạy tay 1 lần: tự sinh mã bí mật và báo Zalo đẩy tin về link máy chủ đang triển khai */
 function zaloCaiWebhookR() { ZB = "R"; zaloCaiWebhook(); } // bot Việc riêng
